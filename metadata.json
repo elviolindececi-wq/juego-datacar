@@ -1,0 +1,6 @@
+{
+  "name": "ApexSpec - Simulador Físico de Carreras y Telemetría",
+  "description": "Simulador dinámico de carreras virtuales basado en fichas técnicas reales de vehículos: velocidad, aceleración, peso, prueba de carga con potencia y consumo de combustible.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
