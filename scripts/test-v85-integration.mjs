@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+const race = readFileSync(new URL('../src/components/Race3DPerspectiveView.tsx',import.meta.url),'utf8');
+const audio = readFileSync(new URL('../src/utils/soundEngine.ts',import.meta.url),'utf8');
+const effect = new URL('../public/audio/sfx/ovacion_meta.mp3',import.meta.url);
+assert.ok(existsSync(effect),'Falta MP3 de ovación');
+assert.match(race,/interpolateRenderPose\(lastPhysicsPose\.get\(car\.id\), car, interpolationAlpha\)/);
+assert.match(race,/snapshotRenderPose\(c\)/);
+assert.match(race,/soundEngine\.stopAll\(0\.22\)/);
+assert.match(race,/experience === 'race'\) soundEngine\.playFinishCheer\(\)/);
+assert.match(race,/renderer\.setPixelRatio\(renderDpr\)/);
+assert.match(audio,/gain\.gain\.linearRampToValueAtTime\(0\.0001, endAt\)/);
+assert.match(audio,/playFinishCheer\(\)/);
+assert.match(audio,/\/audio\/sfx\/ovacion_meta\.mp3/);
+assert.match(audio,/const token = \+\+this\.finishToken/);
+// El MP3 no debe estar corrupto y debe durar el plano final.
+const seconds = Number(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','default=nokey=1:noprint_wrappers=1',new URL(effect).pathname],{encoding:'utf8'}).trim());
+assert.ok(seconds > 3 && seconds < 4.5, `Ovación inesperada ${seconds}s`);
+console.log('OK V8.5: render interpolado, resolución adaptable, motores con fade y ovación de',seconds.toFixed(1),'s.');

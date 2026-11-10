@@ -1,0 +1,27 @@
+DATACAR ARENA V7.7 — BACHES URBANOS MAS REALISTAS
+
+Requiere V7.6 o el proyecto completo V7.7.
+
+CAMBIOS:
+- Baches irregulares en lugar de círculos negros perfectos.
+- Superficie con grietas, grava, bordes fracturados y sombras de profundidad.
+- En circuitos húmedos, pequeños charcos en el interior.
+- Variedad de textura y orientación, sin crear un mapa de 4K por cada bache.
+- Se conserva exactamente el motor de colisiones, agarre y desaceleración.
+- La geometría de la carretera sigue siendo plana: el relieve es visual.
+
+INSTALACIÓN DEL PARCHE EN POWERSHELL:
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V7_7_BACHES_REALISTAS_PARCHE*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw "No se encontró el parche V7.7" }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm run test:v77
+npm run dev
+
+Abrí la URL que diga Vite, generalmente http://localhost:3001/.
+Refrescá Chrome con Ctrl+Shift+R. Elegí modo Carrera y probá los circuitos
+Avelino Martínez (cráteres), Herrera y Caballero (baches y charcos)
+y Artigas y Mburicaó (zonas inundadas).
+
+IMPORTANTE: La mejora es gráfica; para agujeros excavados físicamente en la malla
+del asfalto se necesitaría adaptar el terreno y la suspensión por rueda.

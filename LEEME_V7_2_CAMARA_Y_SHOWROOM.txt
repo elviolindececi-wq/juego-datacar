@@ -1,0 +1,50 @@
+DATACAR ARENA V7.2 — SHOWROOM GRANDE + CAMARA NFS (TERCERA PERSONA)
+=================================================================
+
+BASE COMPATIBLE: DATACAR ARENA V7.0 o V7.1, sobre la misma carpeta
+C:\Users\User\Documents\Ceci\Juego\DATACAR-ARENA-V5.7
+
+NOVEDADES
+- MODO CARRERA: la cámara de persecución por defecto se ancla AL AUTO DEL JUGADOR
+  (no al centro de los 3 participantes), se ubica detrás y algo elevada,
+  mira la pista por delante del vehículo y suaviza la posición y orientación.
+- Cámara ligeramente más abierta con la velocidad, sin cambios bruscos.
+- El auto elegido continúa visible cuando dobla o se separa de los rivales.
+- Botón 'Mi auto · 3ª persona' para recuperar esta cámara cuando usaste Libre.
+- COMPARAR conserva cámara grupal, no cambia sus resultados calculados.
+- DIRECTOR TV queda solo en VER REPETICIÓN y conserva sus planos cinematográficos.
+- SHOWROOM: giro manual horizontal (120 fotogramas) activado por defecto,
+  sin reproducción automática. El video MP4 queda disponible mediante botón.
+- COMPARAR: visor grande central y catálogo lateral de los 3 autos.
+  Primero explorás el modelo, después lo añadís a los 2 slots.
+- MODO CARRERA: conserva catálogo por swipe y usa giro manual inicialmente.
+
+IMPORTANTE SOBRE EL 'GIRO LIBRE'
+Los Nissan/Kia/Tracker disponen de 120 fotografías de giro horizontal;
+esto permite inspección 360° por arrastre, pero NO es una cámara 3D libre
+con elevación arbitraria. Para ello harían falta modelos 3D individuales.
+
+INSTALACIÓN EN VS CODE (POWERSHELL)
+1. Descargá DATACAR_ARENA_V7_2_CAMARA_Y_SHOWROOM_PARCHE.zip en Descargas.
+2. En el terminal actual de VS Code detené el juego con Ctrl + C.
+3. Copiá únicamente estos comandos:
+
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter 'DATACAR_ARENA_V7_2_CAMARA_Y_SHOWROOM_PARCHE*.zip' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw 'No se encontró el parche V7.2 en Descargas' }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm run test:v7
+npm run dev
+
+4. Abrí la dirección indicada por Vite y recargá con Ctrl + Shift + R.
+5. Probá Modo Carrera: elegí la Tracker y verificá cámara trasera.
+6. Arrastrá mousepad para cámara Libre y presioná 'Mi auto · 3ª persona'
+   para recuperar seguimiento.
+7. Probá COMPARAR: seleccioná un modelo para verlo en grande y rotarlo;
+   después pulsá 'Elegir este auto'. Repetí con otro modelo.
+
+VERIFICACIONES
+- Parseo de TSX: tres componentes modificados, sin errores.
+- Pruebas de motor originales: test:v7, test:interactive, test:director OK.
+- La ejecución gráfica en el navegador y la compilación completa con Vite
+  deben ser validadas en el equipo del usuario.

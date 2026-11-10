@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import { PRESET_VEHICLES } from '../src/data/presetVehicles.ts';
+import { getVehicleDynamicsProfile, tractionForceFromSpec, tireRadiusFromSpec } from '../src/utils/vehicleDynamicsProfile.ts';
+import { hasVerifiedSystem, getSafetyState, assessAeb, safetyDriveModifiers } from '../src/utils/vehicleSafetySystems.ts';
+import { validateNewVehicle, registerVehicleInCatalog } from '../src/data/vehicleCatalog.ts';
+import { InteractiveRacePhysics } from '../src/utils/interactiveRacePhysics.ts';
+assert.equal(PRESET_VEHICLES.length,7);
+const get = name=>PRESET_VEHICLES.find(v=>v.name===name);
+const corolla=get('COROLLA CROSS'),tracker=get('TRACKER'),kicks=get('KICKS'),carens=get('CARENS');
+assert.ok(corolla && tracker && kicks && carens);
+assert.equal(tireRadiusFromSpec('215/60 R17')?.toFixed(3),'0.345');
+assert.equal(hasVerifiedSystem(corolla,'abs'),true);
+assert.equal(hasVerifiedSystem(corolla,'esc'),true);
+assert.equal(hasVerifiedSystem(corolla,'tcs'),true);
+assert.equal(getSafetyState(corolla,'aeb'),'absent');
+for(const v of [tracker,kicks]) {
+  assert.equal(getSafetyState(v,'abs'),'present','ABS confirmado por ficha recibida');
+  assert.equal(hasVerifiedSystem(v,'aeb'),true,'AEB documentado para versión exacta');
+  assert.equal(validateNewVehicle(v).length,0);
+}
+assert.equal(getSafetyState(carens,'abs'),'unknown','Carens mantiene ficha previa pendiente');
+assert.equal(validateNewVehicle(carens).length,0);
+const p=getVehicleDynamicsProfile(corolla,0,0), speed=getVehicleDynamicsProfile(corolla,0,27);
+assert.ok(p.maxSteerRad > speed.maxSteerRad,'disminuye sensibilidad a velocidad');
+assert.ok(p.massKg > 1100 && p.wheelbaseM >2.2);
+assert.ok(getVehicleDynamicsProfile(corolla,300).massKg===p.massKg+300,'carga aumenta masa');
+const moreTorque={...corolla, torqueNm: corolla.torqueNm*1.5};
+const original=tractionForceFromSpec(corolla,p,2,1,10);
+const torquey=tractionForceFromSpec(moreTorque,getVehicleDynamicsProfile(moreTorque),2,1,10);
+assert.ok(torquey>original,'torque afecta fuerza a baja velocidad');
+const heavy={...corolla, weightKg:corolla.weightKg*2};
+const track={ id:'circuit', name:'Prueba V8.7',distanceMeters:500,cargoPayloadKg:0,inclineGradePercent:0,surfaceGripFactor:1,surfaceRoughnessFactor:1};
+function oneSecond(v){const phy=new InteractiveRacePhysics([v],track,v.id,false);for(let i=0;i<100;i++)phy.step(.01,{steer:0,throttle:1,brake:0});return phy.getCar(v.id).speed;}
+assert.ok(oneSecond(corolla)>oneSecond(heavy),'más masa = menor aceleración');
+assert.equal(assessAeb({vehicle:corolla,speedMps:20,distanceM:4,relativeSpeedMps:12}).active,false);
+const withAeb={...corolla,equipment:{...corolla.equipment,safetySystems:{...corolla.equipment.safetySystems,aeb:'present'}}};
+assert.ok(assessAeb({vehicle:withAeb,speedMps:20,distanceM:6,relativeSpeedMps:12}).active);
+const tcs=safetyDriveModifiers({vehicle:corolla,throttle:1,slip:.8,yawRate:.3,neededLateralAccel:10,availableLateralAccel:7});
+assert.ok(tcs.tcsActive && tcs.escActive && tcs.tractionFactor<1);
+const future=structuredClone(corolla);future.id='new-car-2028';future.name='AUTO NUEVO';future.brand='PRUEBA';future.trim='FICHA VERIFICADA';
+assert.equal(validateNewVehicle(future).length,0);
+assert.equal(registerVehicleInCatalog(PRESET_VEHICLES,future).length,8,'vehículo adicional admitido');
+assert.throws(()=>registerVehicleInCatalog(PRESET_VEHICLES,corolla),/duplicado/);
+console.log('OK V8.7: torque, masa, dirección adaptativa, ABS/ESC/TCS/AEB por evidencia y alta de quinto vehículo.');

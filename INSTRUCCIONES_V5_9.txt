@@ -1,0 +1,28 @@
+DATACAR ARENA V5.9 — Controles de teclado, cámara libre y faros mejorados
+
+ESTE PARCHE SE INSTALA ENCIMA DE DATACAR ARENA V5.8.
+NO sustituye el archivo GLB; conserva public/models/tracker-rs-wheels.glb de V5.8.
+
+CAMBIOS
+- Flecha izquierda/derecha: voltear gradualmente el volante del auto seleccionado.
+- Al soltar la flecha, el volante regresa al centro de modo gradual.
+- El vehículo se desplaza lateralmente con la dirección, dentro de los límites de la pista.
+- Clic sostenido y arrastre en la vista 3D (mouse o mousepad): cámara libre orbital.
+- Desplazamiento de dos dedos horizontal en el mousepad: giro de cámara.
+- Desplazamiento de dos dedos vertical: zoom; Shift+desplazamiento vertical: inclinación.
+- Botón Libre: habilita cámara libre que sigue al vehículo seleccionado.
+- Faros: ópticas pequeñas de brillo moderado, proyección 3D suave y luz difusa en el asfalto.
+- El botón Faros ON/OFF sigue funcionando.
+- Controles y cámara se desacoplan de los tiempos/ranking de la simulación.
+
+INSTALACION EN VS CODE (POWER SHELL)
+1. Detener el servidor Vite (Ctrl+C en la terminal).
+2. Descargar DATACAR_ARENA_V5_9_CONTROL_CAMARA_Y_FAROS.zip en Descargas.
+3. Abrir VS Code en la carpeta de juego existente.
+4. Usar la instrucción de Expand-Archive suministrada en ChatGPT para extraer con -Force.
+5. Ejecutar npm run dev (sin necesidad de npm install, las dependencias no cambiaron).
+
+NOTA TECNICA
+Se validó el parseo de sintaxis de los archivos TypeScript/TSX con TypeScript y
+las pruebas puras de VehicleSteeringDynamics. No fue posible instalar dependencias
+ni ejecutar una prueba de renderizado WebGL completa en este entorno.

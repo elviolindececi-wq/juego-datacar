@@ -14,6 +14,11 @@ export interface VehicleEquipment {
   groundClearanceMm: number;
   seatingCapacity: number;
   priceUsd: number;
+  safetyFeatures?: string[];
+  /** ABS confirmado en ficha. Sin valor: no verificado (no asumir false). */
+  abs?: boolean;
+  /** Matriz con evidencia por versión exacta. unknown NO implica ausencia. */
+  safetySystems?: Partial<Record<import('../utils/vehicleSafetySystems.ts').SafetySystem, import('../utils/vehicleSafetySystems.ts').FeatureState>>;
 }
 
 export interface VehiclePhotoAngles {
@@ -81,6 +86,31 @@ export interface Vehicle {
   equipment: VehicleEquipment;
   
   description: string;
+  /** Datos de simulación estimados; no presentarlos como prestaciones certificadas. */
+  estimatedSimulationParameters?: boolean;
+  /** Valores obligatorios para el solver pero no publicados en la ficha: NO son cifras oficiales. */
+  estimatedFieldNames?: string[];
+  hybridSystem?: {
+    kind: 'self-charging-hev' | 'mild-12v';
+    combustionHp?: number;
+    combustionTorqueNm?: number;
+    electricHp?: number;
+    electricTorqueNm?: number;
+    batteryKWh?: number;
+    /** La ficha puede informar torque eléctrico sin indicar torque combinado. */
+    torqueNmIsElectricOnly?: boolean;
+  };
+  technicalDetails?: {
+    tireSize?: string;
+    wheelDiameterInches?: number;
+    engineDisplacementCc?: number;
+    wheelbaseMm?: number;
+    frontSuspension?: string;
+    rearSuspension?: string;
+    brakeDetails?: string;
+  };
+  /** Estado de auditoría del par año / motorización / versión. */
+  specEvidence?: { status: 'exact-user-sheet' | 'exact-official' | 'partial-reference' | 'pending'; sourceLabel: string; sourceUrl?: string; notes?: string };
   isCustom?: boolean;
 }
 
@@ -102,7 +132,17 @@ export interface VehicleMatchScore {
   matchReasons: string[];
 }
 
-export type RaceMode = 'drag_quarter' | 'drag_half' | 'circuit' | 'brake_slalom' | 'load_hillclimb' | 'endurance' | 'fuel_critical';
+export type RaceMode = 
+  | 'drag_quarter' 
+  | 'drag_half' 
+  | 'circuit' 
+  | 'brake_slalom' 
+  | 'load_hillclimb' 
+  | 'endurance' 
+  | 'fuel_critical'
+  | 'family_challenge'
+  | 'smart_buy'
+  | 'route_500km';
 
 export interface RaceTrackConfig {
   id: RaceMode;
@@ -115,6 +155,11 @@ export interface RaceTrackConfig {
   initialFuelPercent?: number; // Nivel de combustible o batería al inicio (1% a 100%)
   description: string;
   imageBanner?: string;
+  // Configuración lúdica de circuitos inspirados en Asunción (no datos viales en tiempo real).
+  cityCircuitId?: string;
+  routeHazardProfile?: 'craters' | 'chains' | 'trenches' | 'flood' | 'cobbles' | 'traffic';
+  surfaceGripFactor?: number;
+  surfaceRoughnessFactor?: number;
 }
 
 export interface SimulationTelemetrySample {
@@ -130,6 +175,30 @@ export interface SimulationTelemetrySample {
   rpm: number;
   pitStops: number;
   isBraking?: boolean;
+  absActive?: boolean;
+  tcsActive?: boolean;
+  escActive?: boolean;
+  aebActive?: boolean;
+  fcwWarning?: boolean;
+  laneDepartureWarning?: boolean;
+  brakeIntensity?: number;
+  brakeSlip?: number;
+  /** Diagnóstico V8.9: magnitudes de modelo estimado, no ensayos de fabricante. */
+  lateralAccelerationG?: number;
+  tireGripUsage?: number;
+  slipAngleDegrees?: number;
+  normalLoadFrontN?: number;
+  normalLoadRearN?: number;
+  // Grabación de la trayectoria real para la repetición de Director TV.
+  lateralX?: number;
+  yawRad?: number;
+  steerRad?: number;
+  slip?: number;
+  bump?: number;
+  suspensionHeaveM?: number;
+  suspensionPitchRad?: number;
+  suspensionRollRad?: number;
+  wheelRoadHeights?: { FL: number; FR: number; RL: number; RR: number };
   inCorner?: boolean;
   brakeTempC?: number;
   currentCornerRadiusM?: number;
@@ -151,6 +220,8 @@ export interface VehicleRaceResult {
   effectivePowerToWeight: number; // HP/Tonelada con la carga incluida
   verdict: string;
   telemetryHistory: SimulationTelemetrySample[];
+  /** Eventos reales de esta partida; sirven exclusivamente para Driving IQ. */
+  drivingEvents?: import('../utils/drivingIQ.ts').DrivingEventStats;
   matchScore?: VehicleMatchScore;
   weightedOverallScore?: number;
   isDnf?: boolean;                // No completó la carrera (Did Not Finish)

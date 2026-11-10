@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Vehicle } from '../types/vehicle';
-import { RotateCw, Play, Pause } from 'lucide-react';
+import { RotateCw, Play, Pause, ZoomIn } from 'lucide-react';
 
 // Memoria caché global de fotogramas por URL base para que el cambio entre vehículos sea instantáneo
 const globalVehicleFramesCache = new Map<string, HTMLImageElement[]>();
@@ -58,8 +58,10 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
 
   // Estado del ángulo (0 a totalFrames - 1)
   const [frameIndex, setFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false); // NO se reproduce sin fin por defecto
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [rotationSpeed, setRotationSpeed] = useState<0.5 | 1 | 2>(1);
+  const [zoomLevel, setZoomLevel] = useState<1 | 1.25 | 1.5>(1);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -78,7 +80,6 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
       turntable.framesCount || 120,
       turntable.framesExtension || '.jpg',
       () => {
-        // Renderizar frame 1 cuando esté listo
         renderFrameToCanvas(1);
       }
     );
@@ -145,7 +146,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     if (!isPlaying) return;
 
     let lastTime = performance.now();
-    const fps = 24; // 24 FPS continuos
+    const fps = 24 * rotationSpeed; // Velocidad configurable
     const interval = 1000 / fps;
 
     const tick = (now: number) => {
@@ -163,7 +164,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, totalFrames]);
+  }, [isPlaying, totalFrames, rotationSpeed]);
 
   // Cálculo del ángulo en grados (0° a 360°)
   const currentAngleDeg = Math.round((frameIndex / totalFrames) * 360);
@@ -258,8 +259,8 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     : vehicle.imageUrl;
 
   return (
-    <div className={`relative flex flex-col ${compact ? 'w-full' : 'w-full bg-slate-900/95 rounded-2xl border border-slate-800 p-4 sm:p-6 shadow-2xl'}`}>
-      {/* Escenario de Video 360 / Turntable (Completamente limpio, sin textos que tapen el video) */}
+    <div className={`relative flex flex-col ${compact ? 'w-full' : 'w-full bg-[#080d1a] rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-2xl overflow-hidden'}`}>
+      {/* Cinematic Studio Turntable Stage */}
       <div
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -269,73 +270,157 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
-        className={`relative w-full rounded-xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center select-none ${
-          compact ? 'h-48 cursor-grab active:cursor-grabbing' : 'h-72 sm:h-96 cursor-grab active:cursor-grabbing'
+        className={`relative w-full rounded-xl overflow-hidden bg-gradient-to-b from-slate-950 via-[#060a12] to-[#04070e] border border-slate-800/90 flex items-center justify-center select-none ${
+          compact ? 'h-52 cursor-grab active:cursor-grabbing' : 'h-80 sm:h-[420px] cursor-grab active:cursor-grabbing'
         }`}
       >
-        {/* Canvas de renderizado instantáneo a 60 FPS sin parpadeos */}
-        {hasFrames ? (
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full object-contain pointer-events-none"
-          />
-        ) : vehicle.video360Url ? (
-          <video
-            ref={videoRef}
-            src={vehicle.video360Url}
-            playsInline
-            muted
-            preload="auto"
-            onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration || 10.0)}
-            className="w-full h-full object-contain pointer-events-none"
-          />
-        ) : (
-          <img
-            src={currentFallbackSrc}
-            alt={`${vehicle.brand} ${vehicle.name}`}
-            className="w-full h-full object-contain pointer-events-none"
-            referrerPolicy="no-referrer"
-            draggable={false}
-          />
-        )}
+        {/* Subtle Studio Lighting & Radial Floor Reflection */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(56,189,248,0.06),transparent_65%)] pointer-events-none" />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-4/5 h-16 bg-sky-500/10 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
-        {/* Indicador discreto y elegante de ángulo 360° en la esquina superior */}
-        <div className="absolute top-2.5 right-2.5 pointer-events-none flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-slate-800 text-[10px] font-mono font-bold text-sky-400">
-          <RotateCw className="w-3 h-3 text-sky-400" />
-          <span>{currentAngleDeg}°</span>
+        {/* Scaled Car Canvas / Video with Zoom Support */}
+        <div 
+          className="w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
+          style={{ transform: `scale(${zoomLevel})` }}
+        >
+          {hasFrames ? (
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full object-contain pointer-events-none"
+            />
+          ) : vehicle.video360Url ? (
+            <video
+              ref={videoRef}
+              src={vehicle.video360Url}
+              playsInline
+              muted
+              preload="auto"
+              onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration || 10.0)}
+              className="w-full h-full object-contain pointer-events-none"
+            />
+          ) : (
+            <img
+              src={currentFallbackSrc}
+              alt={`${vehicle.brand} ${vehicle.name}`}
+              className="w-full h-full object-contain pointer-events-none"
+              referrerPolicy="no-referrer"
+              draggable={false}
+            />
+          )}
         </div>
 
-        {/* Botón sutil de Play / Pausa en esquina inferior izquierda */}
-        <div className="absolute bottom-2.5 left-2.5 z-10">
+        {/* Top-Right HUD: Angle & Circular Continuity */}
+        <div className="absolute top-3 right-3 pointer-events-none flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800/90 text-xs font-mono font-bold text-sky-400 shadow-lg">
+            <RotateCw className="w-3.5 h-3.5 text-sky-400 animate-spin-slow" />
+            <span>{currentAngleDeg}°</span>
+            <span className="text-slate-500 text-[10px]">
+              {currentAngleDeg < 45 || currentAngleDeg > 315
+                ? 'FRONTAL'
+                : currentAngleDeg >= 45 && currentAngleDeg < 135
+                ? 'LATERAL DER.'
+                : currentAngleDeg >= 135 && currentAngleDeg < 225
+                ? 'TRASERA'
+                : 'LATERAL IZQ.'}
+            </span>
+          </div>
+        </div>
+
+        {/* Top-Left Contextual Badge: Model & Official Price */}
+        {!compact && (
+          <div className="absolute top-3 left-3 pointer-events-none flex flex-col gap-1 z-10">
+            <div className="bg-slate-950/90 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl shadow-lg">
+              <span className="text-[10px] font-mono text-sky-400 uppercase tracking-wider block font-bold">
+                {vehicle.brand}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-black text-white font-display uppercase tracking-wide">
+                  {vehicle.name}
+                </span>
+                <span className="text-xs font-mono font-bold text-emerald-400">
+                  US$ {vehicle.equipment.priceUsd.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Floating Verified Spec Badges (Non-obstructive) */}
+        {!compact && (
+          <div className="absolute bottom-3 right-3 pointer-events-none hidden sm:flex items-center gap-2 z-10 text-[11px] font-mono">
+            <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800/80 text-slate-300 flex items-center gap-1.5">
+              <span className="text-sky-400 font-bold">{vehicle.powerHp} HP</span>
+              <span className="text-slate-600">·</span>
+              <span>{vehicle.torqueNm} Nm</span>
+            </div>
+            <div className="bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800/80 text-emerald-400 font-bold flex items-center gap-1.5">
+              <span>{vehicle.consumptionBase} L/100km</span>
+            </div>
+            {vehicle.equipment.seatingCapacity === 7 && (
+              <div className="bg-cyan-500/15 backdrop-blur-md px-2.5 py-1 rounded-lg border border-cyan-400/40 text-cyan-300 font-bold">
+                7 Plazas
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bottom-Left Controls Bar: Play/Pause, Speed, Zoom */}
+        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-800/90 shadow-xl">
+          {/* Play / Pause Auto-spin */}
           <button
-            onClick={(_e) => {
-              setIsPlaying(!isPlaying);
-            }}
-            title={isPlaying ? 'Pausar giro automático' : 'Iniciar giro automático'}
-            className={`p-1.5 rounded-lg border transition-all ${
+            onClick={() => setIsPlaying(!isPlaying)}
+            title={isPlaying ? 'Pausar rotación continua' : 'Iniciar rotación continua'}
+            className={`p-2 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1 ${
               isPlaying
                 ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/20'
-                : 'bg-slate-950/80 backdrop-blur-md border-slate-800 text-slate-400 hover:text-white'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
           >
-            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isPlaying ? 'Pausa' : 'Auto 360°'}</span>
           </button>
+
+          {/* Speed Selector (0.5x, 1x, 2x) */}
+          <div className="flex items-center border-l border-slate-800 pl-1.5 ml-0.5 gap-1">
+            {([0.5, 1, 2] as const).map((spd) => (
+              <button
+                key={spd}
+                onClick={() => setRotationSpeed(spd)}
+                title={`Velocidad ${spd}x`}
+                className={`px-1.5 py-1 rounded text-[10px] font-mono font-bold transition-colors ${
+                  rotationSpeed === spd
+                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {spd}x
+              </button>
+            ))}
+          </div>
+
+          {/* Zoom Selector (1x, 1.25x, 1.5x) */}
+          <div className="flex items-center border-l border-slate-800 pl-1.5 ml-0.5 gap-1">
+            <button
+              onClick={() => setZoomLevel((prev) => (prev === 1 ? 1.25 : prev === 1.25 ? 1.5 : 1))}
+              title="Acercar / Alejar cámara"
+              className="px-2 py-1 rounded text-[10px] font-mono font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 flex items-center gap-1"
+            >
+              <ZoomIn className="w-3 h-3 text-sky-400" />
+              <span>{zoomLevel}x</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Barra de progreso de giro 360° intuitiva */}
-      <div className="mt-2.5 px-1 space-y-1">
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-          <span className="font-semibold text-slate-300">
-            {currentAngleDeg < 45 || currentAngleDeg > 315
-              ? 'Frontal'
-              : currentAngleDeg >= 45 && currentAngleDeg < 135
-              ? 'Lateral Derecho'
-              : currentAngleDeg >= 135 && currentAngleDeg < 225
-              ? 'Trasera'
-              : 'Lateral Izquierdo'}
+      {/* 360° Circular Dial & Scrubbing Range */}
+      <div className="mt-3 px-1 space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span className="flex items-center gap-1.5 text-slate-300 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+            Arrastrá con el mouse o dedo para girar en 360°
           </span>
-          <span className="text-sky-400 font-bold tabular-nums">{currentAngleDeg}°</span>
+          <span className="text-sky-400 font-bold tabular-nums">{currentAngleDeg}° / 360°</span>
         </div>
 
         <div className="relative flex items-center">
@@ -354,7 +439,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
                 videoRef.current.currentTime = (val / totalFrames) * videoDuration;
               }
             }}
-            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400"
+            className="w-full h-2 bg-slate-800/90 rounded-lg appearance-none cursor-pointer accent-sky-400 hover:bg-slate-700 transition-colors"
           />
         </div>
       </div>

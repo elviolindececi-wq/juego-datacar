@@ -1,0 +1,11 @@
+DATACAR ARENA V6.0 — ACTUALIZACIÓN LOCAL
+
+1. Descargar ZIP de parche, guardar en Descargas.
+2. Detener Vite en VS Code con Ctrl+C.
+3. Extraer el ZIP en la misma carpeta DATACAR-ARENA-V5.7 (sobrescribir).
+4. Ejecutar npm run dev y abrir el enlace Vite.
+5. Seleccionar Director TV. Probar flechas con cámara Persecución:
+   derecha = derecha de pantalla, izquierda = izquierda.
+6. Al llegar, cámara frontal durante 3,2 segundos antes de los resultados.
+
+Se mantienen el GLB de V5.9, controles de mousepad, faros, telemetría y showroom.

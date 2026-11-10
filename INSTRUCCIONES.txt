@@ -1,0 +1,7 @@
+DATACAR ARENA - CORRECCION PANTALLA AZUL (V7.2 y V7.3)
+
+Extraer este ZIP sobre la carpeta de proyecto existente, sobreescribiendo el archivo src/utils/physicsEngine.ts.
+
+Se agrega un guard en simulateFullRace para devolver [] cuando la lista de vehículos está vacía. Evita el error de JavaScript al entrar a la aplicación con el comparador aún vacío.
+
+Luego ejecutar npm run dev y recargar con Ctrl+Shift+R.

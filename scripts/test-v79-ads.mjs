@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const scenery = readFileSync(new URL('../src/utils/urbanTrackScenery.ts', import.meta.url), 'utf8');
+assert.match(scenery, /createAdvertisingTexture\('DATACARPY\.COM'/);
+assert.match(scenery, /new THREE\.MeshBasicMaterial\(\{[\s\S]*toneMapped: false/);
+assert.match(scenery, /const fixedAdZ = \[42,/);
+assert.match(scenery, /anuncio_DATACARPY_COM_visible_/);
+assert.match(scenery, /publicidad_datacarpy_com_fachada_/);
+assert.match(scenery, /board\.rotation\.y = Math\.PI/);
+assert.match(scenery, /face\.rotation\.y = Math\.PI/);
+assert.match(scenery, /group\.userData\.datacarAdvertisements/);
+console.log('OK V7.9: anuncios legibles DATACARPY.COM en fachadas frontales y junto a pista, orientados al avance de la cámara.');

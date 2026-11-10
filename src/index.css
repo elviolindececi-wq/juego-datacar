@@ -41,3 +41,16 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #3b82f6;
 }
+
+/* Siluetas urbanas procedimentales, livianas y propias de DATACAR ARENA. */
+.dc-city-building {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 9px, rgba(62, 196, 224, .20) 10px 12px, transparent 13px 23px),
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(161, 210, 220, .17) 10px 12px, transparent 13px 26px),
+    linear-gradient(180deg, #203b4a 0%, #06101a 100%);
+  box-shadow: inset 0 0 22px rgba(0,0,0,.75), 0 0 18px rgba(4,10,20,.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-city-building, .dc-city-skyline { animation: none !important; }
+}

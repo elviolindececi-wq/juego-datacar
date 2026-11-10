@@ -13,118 +13,119 @@ export function calculateVehicleScores(
 } {
   const reasons: string[] = [];
 
-  // 1. MOTOR (0 - 100)
-  // Factores: Potencia HP, Par motor Nm, Relación peso/potencia, Tipo de transmisión, Desempeño en pista
+  // 1. MOTOR & DESEMPEÑO (0 - 100)
+  // Factores: Potencia HP, Par motor Nm, Rendimiento en subida/carga, Peso y Transmisión
   let motorPoints = 0;
   // Potencia
-  if (vehicle.powerHp >= 120) motorPoints += 30;
-  else if (vehicle.powerHp >= 115) motorPoints += 26;
-  else motorPoints += 22;
+  if (vehicle.powerHp >= 120) motorPoints += 25;
+  else if (vehicle.powerHp >= 115) motorPoints += 22;
+  else motorPoints += 20;
 
-  // Torque
+  // Torque real a las ruedas
   if (vehicle.torqueNm >= 240) {
-    motorPoints += 30; // Carens Turbo Diésel 250 Nm
-    reasons.push('Mayor par motor del segmento (250 Nm Turbo Diésel)');
-  } else if (vehicle.torqueNm >= 200) {
-    motorPoints += 27; // Kicks 220 Nm
-    reasons.push('Excelente entrega de par a 2500 RPM (220 Nm)');
+    motorPoints += 38; // Carens Turbo Diésel 250 Nm
+    reasons.push('Mayor par motor del segmento (250 Nm Turbo Diésel) con empuje imparable bajo carga');
+  } else if (vehicle.torqueNm >= 160) {
+    motorPoints += 28; // Tracker 1.0T 160 Nm
+    reasons.push('Excelente respuesta de torque en bajas RPM (160 Nm Turbo)');
   } else {
-    motorPoints += 22; // Tracker 180 Nm
+    motorPoints += 22; // Kicks 149 Nm atmosférico
+    reasons.push('Motor 1.6L lineal y progresivo con 118 HP');
   }
 
-  // Transmisión
-  if (vehicle.transmissionDescription.toLowerCase().includes('doble embrague') || vehicle.transmissionDescription.includes('6DCT')) {
-    motorPoints += 25; // Caja 6DCT rápida
-    reasons.push('Caja automática 6DCT de doble embrague con cambios inmediatos');
+  // Transmisión y agilidad
+  if (vehicle.transmissionDescription.toLowerCase().includes('cvt')) {
+    motorPoints += 20; // CVT suave y eficiente
   } else {
-    motorPoints += 20; // Caja automática tradicional de 6 vel
+    motorPoints += 22; // Automática con convertidor de par y marchas fijas
   }
 
-  // Relación peso potencia o aceleración en pista
+  // Desempeño en pista o peso pluma
   if (raceResult && raceResult.finishPosition === 1) {
     motorPoints += 15;
     reasons.push(`Ganador en pista con tiempo de ${raceResult.finishTimeSec.toFixed(2)}s`);
-  } else if (vehicle.weightKg <= 1250) {
-    motorPoints += 14; // Tracker liviano
+  } else if (vehicle.weightKg <= 1180) {
+    motorPoints += 14; // Kicks ultraliviana
+    reasons.push('Carrocería ultraliviana (1.142 kg) con excelente agilidad urbana');
   } else {
     motorPoints += 10;
   }
   const motorScore = Math.min(100, Math.max(30, motorPoints));
 
   // 2. SEGURIDAD (0 - 100)
-  // Factores: Asistencias ADAS, Frenos (4 discos vs tambores traseros), Sensores, Cámaras
-  let seguridadPoints = 30; // Base por 6 airbags en todos
+  // Factores: Asistencias activas ADAS, Frenos (4 discos vs tambores), Airbags, Cámara
+  let seguridadPoints = 35; // Base de 6 airbags de serie en todos
   if (vehicle.equipment.adasFeatures.length > 0) {
-    seguridadPoints += 45; // Paquete completo ADAS en Kicks
-    reasons.push('Exclusivo paquete de asistencias ADAS (Frenado autónomo peatones, Control crucero inteligente, Alerta carril)');
+    seguridadPoints += 35; // Kicks paquete completo ADAS ProPILOT
+    reasons.push('Exclusivo paquete de asistencias ADAS (Frenado autónomo de emergencia, Crucero inteligente, Alerta carril)');
   }
   if (vehicle.equipment.brakesType === '4_discs') {
-    seguridadPoints += 15; // Kicks y Carens
+    seguridadPoints += 18; // Kicks y Carens
+    reasons.push('Frenos a disco ventilados en las 4 ruedas para frenadas más cortas y sin fatiga');
   } else {
-    seguridadPoints += 5; // Tracker tambores traseros
+    seguridadPoints += 6; // Tracker tambores traseros
   }
   if (vehicle.equipment.rearCamera) {
-    seguridadPoints += 10;
+    seguridadPoints += 12; // Cámara de retroceso
   }
   const seguridadScore = Math.min(100, Math.max(25, seguridadPoints));
 
-  // 3. TECNOLOGÍA & CONFORT (0 - 100)
-  let techPoints = 20;
-  // Pantalla
+  // 3. HABITABILIDAD, CONFORT & TECNOLOGÍA (0 - 100)
+  let techPoints = 15;
+  // Pantalla multimedia
   if (vehicle.equipment.screenSize.includes('12.3')) {
-    techPoints += 30;
-    reasons.push('Pantalla multimedia panorámica de 12.3" con CarPlay/Android Auto inalámbrico');
+    techPoints += 25;
+    reasons.push('Pantalla panorámica de 12.3" con conectividad inalámbrica');
   } else if (vehicle.equipment.screenSize.includes('8')) {
-    techPoints += 20;
+    techPoints += 15;
   }
 
   // Conectividad Wi-Fi
   if (vehicle.equipment.connectivity.includes('Wi-Fi') || vehicle.equipment.connectivity.includes('OnStar')) {
-    techPoints += 12;
-    reasons.push('Conectividad OnStar con Wi-Fi Nativo');
+    techPoints += 16;
+    reasons.push('Conectividad OnStar con Wi-Fi Nativo para hasta 7 dispositivos');
   }
 
-  // Capacidad de pasajeros o baulera
+  // HABITABILIDAD FAMILIAR Y 7 PLAZAS (Factor clave e insustituible para familias numerosas)
   if (vehicle.equipment.seatingCapacity === 7) {
-    techPoints += 25;
-    reasons.push('Exclusivo habitáculo de 3 filas de asientos para 7 pasajeros con posavasos térmicos');
-  } else if (vehicle.equipment.trunkLiters >= 450) {
-    techPoints += 20;
-    reasons.push(`Mayor capacidad de baulera (${vehicle.equipment.trunkLiters} Litros)`);
-  } else {
-    techPoints += 12;
-  }
-
-  // Equipamiento confort (Autohold, smart key, etc.)
-  if (vehicle.equipment.comfortFeatures.some((f) => f.includes('Autohold'))) {
+    techPoints += 55; // Ventaja colosal de Carens frente a rivales de 5 plazas
+    reasons.push('Única con 3 filas de asientos para 7 pasajeros, climatizador con salidas en techo y posavasos térmicos');
+  } else if (vehicle.equipment.trunkLiters >= 430) {
     techPoints += 15;
+    reasons.push(`Baúl espacioso de ${vehicle.equipment.trunkLiters} Litros`);
   } else {
     techPoints += 10;
   }
+
+  // Confort adicional (Autohold, etc.)
+  if (vehicle.equipment.comfortFeatures.some((f) => f.includes('Autohold'))) {
+    techPoints += 12;
+    reasons.push('Freno de mano electrónico con función AutoHold');
+  }
   const tecnologiaScore = Math.min(100, Math.max(25, techPoints));
 
-  // 4. ECONOMÍA (0 - 100)
-  // Factores: Precio contado oficial, Consumo oficial, Tipo de combustible
+  // 4. ECONOMÍA & PRECIO DE COMPRA (0 - 100)
+  // Factores: Precio contado oficial y costo de combustible
   let ecoPoints = 0;
-  // Precio contado (Tracker US$ 19.990 vs Kicks US$ 24.990 vs Carens US$ 26.990)
+  // Precio contado oficial (Tracker US$ 19.990 vs Kicks US$ 24.990 vs Carens US$ 26.990)
   if (vehicle.equipment.priceUsd <= 20000) {
-    ecoPoints += 60; // Gran ventaja en precio
-    reasons.push(`Precio contado imbatible: US$ ${vehicle.equipment.priceUsd.toLocaleString()} (ahorro de hasta US$ 7.000)`);
+    ecoPoints += 65; // Tracker imbatible
+    reasons.push(`Precio contado imbatible: US$ ${vehicle.equipment.priceUsd.toLocaleString()} (ahorro de hasta US$ 7.000 frente a rivales)`);
   } else if (vehicle.equipment.priceUsd <= 25000) {
-    ecoPoints += 35;
+    ecoPoints += 30;
   } else {
-    ecoPoints += 25;
+    ecoPoints += 20;
   }
 
-  // Rendimiento de combustible
+  // Costo por km y consumo
   if (vehicle.fuelType === 'diesel') {
-    ecoPoints += 35;
-    reasons.push('Motor Turbo Diésel con menor costo por kilómetro y máxima autonomía');
-  } else if (vehicle.consumptionBase <= 6.5) {
-    ecoPoints += 32;
-    reasons.push(`Bajo consumo combinado de combustible (${vehicle.consumptionBase} L/100km)`);
+    ecoPoints += 35; // Carens diésel
+    reasons.push('Motor Turbo Diésel con menor costo por kilómetro y más de 800 km de autonomía en ruta');
+  } else if (vehicle.consumptionBase <= 6.3) {
+    ecoPoints += 30; // Tracker 1.0T
+    reasons.push(`Excelente rendimiento urbano (${vehicle.consumptionBase} L/100km)`);
   } else {
-    ecoPoints += 25;
+    ecoPoints += 24; // Kicks
   }
   const economiaScore = Math.min(100, Math.max(25, ecoPoints));
 
@@ -156,8 +157,8 @@ export function calculatePreferencesMatch(
        tecnologiaScore * weights.tecnologia +
        economiaScore * weights.economia) / totalWeight;
 
-    // Normalizado al rango de afininidad visible (ej: 40% a 85% para mantener escala similar a captura)
-    const normalizedMatch = Math.round(weightedSum * 0.85);
+    // Normalizado a porcentaje de afinidad realista (ej: 50% a 88%)
+    const normalizedMatch = Math.round(weightedSum * 0.88);
 
     return {
       vehicleId: v.id,
@@ -194,15 +195,15 @@ export const PREFERENCE_PROFILES: Record<string, { label: string; weights: Prefe
     weights: { motor: 50, seguridad: 50, tecnologia: 50, economia: 50 },
   },
   familiar: {
-    label: 'FAMILIAR',
-    weights: { motor: 35, seguridad: 90, tecnologia: 85, economia: 45 },
+    label: 'FAMILIAR (7 PLAZAS)',
+    weights: { motor: 20, seguridad: 45, tecnologia: 95, economia: 30 },
   },
   economico: {
-    label: 'ECONÓMICO',
-    weights: { motor: 30, seguridad: 40, tecnologia: 35, economia: 95 },
+    label: 'ECONÓMICO (PRECIO)',
+    weights: { motor: 15, seguridad: 25, tecnologia: 15, economia: 95 },
   },
-  potencia: {
-    label: 'POTENCIA',
-    weights: { motor: 95, seguridad: 40, tecnologia: 40, economia: 25 },
+  tecnologia: {
+    label: 'SEGURIDAD & ADAS',
+    weights: { motor: 30, seguridad: 95, tecnologia: 75, economia: 20 },
   },
 };

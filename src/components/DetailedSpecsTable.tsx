@@ -19,7 +19,7 @@ export const DetailedSpecsTable: React.FC<DetailedSpecsTableProps> = ({ vehicles
             Ficha Técnica Detallada
           </h3>
           <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-            · Comparativa homologada de concesionarias
+            · Fichas cargadas y simulación referencial
           </span>
         </div>
 
@@ -38,6 +38,11 @@ export const DetailedSpecsTable: React.FC<DetailedSpecsTableProps> = ({ vehicles
         </button>
       </div>
 
+      {vehicles.some(v => v.estimatedSimulationParameters) && (
+        <div className="border-b border-amber-500/20 bg-amber-500/5 px-6 py-2 text-[11px] text-amber-300">
+          El Corolla Cross utiliza parámetros estimados de peso, consumo, aceleración y velocidad máxima para la simulación. No son mediciones homologadas.
+        </div>
+      )}
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs font-mono">
@@ -250,7 +255,7 @@ export const DetailedSpecsTable: React.FC<DetailedSpecsTableProps> = ({ vehicles
                       ))}
                     </ul>
                   ) : (
-                    <span className="text-slate-500 font-bold">SIN ADAS</span>
+                    <span className="text-slate-500 font-bold">ADAS SIN CONFIRMAR EN FICHA</span>
                   )}
                 </td>
               ))}

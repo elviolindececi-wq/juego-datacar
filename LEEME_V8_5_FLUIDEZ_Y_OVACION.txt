@@ -1,0 +1,29 @@
+DATACAR ARENA V8.5 — FLUIDEZ Y OVACIÓN FINAL
+============================================
+
+Instalar sobre V8.4 (sin reinstalar los modelos 3D):
+1. Descargar DATACAR_ARENA_V8_5_FLUIDEZ_Y_OVACION_PARCHE.zip.
+2. Detener Vite con Ctrl+C.
+3. Extraer el ZIP dentro de la carpeta de proyecto, conservando la estructura y reemplazando archivos.
+4. Ejecutar npm run test:v85.
+5. Ejecutar npm run dev; refrescar Chrome con Ctrl+Shift+R.
+
+CAMBIOS
+- Render de autos/cámara interpolado entre los pasos físicos fijos de 100 Hz.
+- Ajuste dinámico y espaciado de resolución 3D en equipos con FPS bajos.
+- RPM de audio conectadas a la lectura real del motor físico.
+- Fades cortos al apagar los motores (evitan chasquidos al cruzar la meta).
+- Ovación/aplausos originales de 3,6 s durante el plano frontal de meta.
+- Sin cambios en la física oficial, trayectoria, rivales, colisiones ni resultados.
+
+PRUEBA
+- Modo Carrera, cámara Arcade, auto elegido, Audio ON.
+- Girar y acelerar: observar suavidad de auto/cámara.
+- Cruzar meta: los motores bajan volumen y comienza una ovación corta.
+- Comparar niveles de FPS con el panel de diagnósticos de la app.
+
+LIMITACIONES
+- No se dispone de la prueba visual en Chrome desde este entorno.
+- La gran densidad de triángulos de los GLB puede seguir limitando FPS en algunos equipos.
+- Ovación creada como sonido provisional original (no grabación de espectadores reales).
+- Para audio más realista, reemplazar public/audio/sfx/ovacion_meta.mp3 por una grabación licenciada.

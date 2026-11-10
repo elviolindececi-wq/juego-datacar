@@ -1,0 +1,26 @@
+DATACAR ARENA V6.1 — INSTALACIÓN EN VS CODE
+
+1. Descargá DATACAR_ARENA_V6_1_PARCHE_FISICA.zip en Descargas.
+2. Detené Vite en VS Code con Ctrl+C.
+3. En Terminal PowerShell, pegá SOLO estos comandos:
+
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V6_1_PARCHE_FISICA*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw "No se encontro el ZIP en Descargas" }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm run test:interactive
+npm run dev
+
+4. Abrí el URL que aparezca en la terminal. Si usás Vite desde antes, Ctrl+Shift+R en Chrome.
+5. Elegí un vehículo en Telemetría en foco.
+6. ACTIVÁ Física interactiva ON (predeterminado en pistas cortas).
+7. Teclas: FLECHA ARRIBA/W acelera, ABAJO/S/ESPACIO frena, IZQUIERDA/DERECHA dobla.
+8. Baches/obstáculos ON: probá + Bache, + Obstáculo o Colocar con mouse y clic sobre pista.
+9. Los rivales buscan trayectorias libres y pueden frenar; las colisiones/baches cambian velocidad y podio.
+
+Notas:
+- El paquete no cambia el GLB ni depende de Blender/AI Studio.
+- El modelo es una simulación física simplificada, no ingeniería automotriz certificada.
+- La carrera clásica sigue disponible para comparación precalculada.
+- En pistas de más de 3.500 metros se utiliza la carrera clásica.
+- La revisión visual en Chrome y la compilación completa deben verificarse en tu PC.

@@ -1,0 +1,37 @@
+DATACAR ARENA V9.5 — DRIVING IQ + CALIBRACIÓN DE ESCALA
+
+BASE: DATACAR ARENA V9.3
+
+NOVEDADES
+- Dos clasificaciones independientes al terminar Modo Carrera:
+  (1) primero en llegar; (2) mejor conducción según reglas DATACAR Driving IQ.
+- Driving IQ 100 puntos: rendimiento virtual 35, conducción segura 30,
+  gestión de obstáculos 20, control del vehículo 15.
+- La puntuación usa eventos reales de la física: colisiones, severidad de contacto,
+  baches, reductores a velocidad excesiva, agua, pérdida de control, ABS/TCS/ESC/AEB.
+- Diagnóstico explicativo del jugador. No se equipara con crash-test ni con
+  una calificación de seguridad real.
+- Rivales automáticos: más anticipación de baches y obstáculos y maniobra de
+  recuperación con marcha atrás cuando quedan inmovilizados. No son infalibles.
+- Carens: longitud visual provisional corregida de 4,27 a 4,54 metros
+  (registro interno de ficha). La carrocería GLB SIGUE SIENDO la Tracker RS,
+  por lo que no equivale a una representación exacta de la Carens.
+
+NO CAMBIÓ
+- Fichas técnicas oficiales ni sus números.
+- Motor físico de potencia/torque, ABS y ADAS existentes.
+- Climas, curvas, cámara, baches, circuitos ni modelos GLB.
+
+INSTALACIÓN PARCHE SOBRE V9.3:
+1. Detener Vite con Ctrl+C.
+2. Extraer el ZIP de parche en la raíz de la carpeta V9.3 con reemplazo.
+3. npm run test:v95
+4. npm run build
+5. npm run dev
+
+SI TENÉS VERSIONES ANTERIORES, USÁ EL PROYECTO COMPLETO V9.5.
+
+IMPORTANTE:
+Los resultados de Driving IQ son reglas educativas de videojuego. Un torque
+no documentado, un modelo 3D provisional o una asistencia sin confirmación
+no se convierten en afirmaciones oficiales.

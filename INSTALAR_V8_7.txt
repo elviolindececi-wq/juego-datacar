@@ -1,0 +1,10 @@
+DATACAR ARENA V8.7 — INSTALACIÓN
+
+1. Tener instalado DATACAR ARENA V8.6. Este parche es acumulativo SOLO desde V8.6.
+2. Descomprimir el ZIP del parche SOBRE la carpeta actual del proyecto, conservando la estructura `src/` y sobrescribiendo archivos.
+3. En la terminal de VS Code, dentro de la carpeta del proyecto:
+   npm run test:v87
+   npm run dev
+4. Comprobar en navegador: Corolla Cross (ABS/ESC/TCS), masa/aceleración, velocidad/ángulo de dirección, fichas y controles de motor.
+5. Para compilación de distribución: npm run build
+6. Consultar VERIFICACION_FICHAS_V8_7.md antes de atribuir equipamiento a una versión exacta.

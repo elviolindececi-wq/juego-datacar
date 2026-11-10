@@ -1,0 +1,30 @@
+DATACAR ARENA V8.4 — BACHES CON PROFUNDIDAD Y FINAL DE CARRERA
+===============================================================
+
+INSTALACIÓN SOBRE V8.3
+1. Descargar DATACAR_ARENA_V8_4_BACHES_META_CINEMATOGRAFICA_PARCHE.zip.
+2. Detener Vite con Ctrl+C en VS Code.
+3. Extraer el ZIP encima de tu carpeta del proyecto y aceptar reemplazos.
+4. Ejecutar: npm run test:v84
+5. Ejecutar: npm run dev
+6. Abrir la dirección indicada por Vite y refrescar con Ctrl+Shift+R.
+
+CAMBIOS:
+- Calzada perforada geométricamente donde hay baches, con paredes y fondo
+  a -17 cm. El cálculo de la suspensión continúa usando la misma profundidad.
+- Si agregás un bache durante la carrera, la malla de la calzada se reconstruye
+  una sola vez. NO genera una nueva geometría por cada fotograma.
+- Suelo urbano de apoyo a -32 cm para no tapar los agujeros.
+- Golpe seco original en audio de suspensión, con grave y capa de grava/chasis.
+- Cuando el JUGADOR cruza la meta, la física se congela y cambia a cámara frontal
+  durante aproximadamente 3,2 segundos; después se muestra el resultado.
+- Rivales que todavía no cruzaron la meta quedan identificados como no terminados.
+- Director TV sigue exclusivo de repeticiones.
+
+LIMITACIONES IMPORTANTES:
+- La profundidad es un modelo simplificado de apoyo rueda-suelo, no un sistema
+  4x4 de cuerpos rígidos ni destrucción dinámica de la carrocería.
+- La forma de la depresión y sus 17 cm son parámetros de jugabilidad, no
+  mediciones de las calles reales de Asunción.
+- Se probaron las reglas físicas, el estado de meta y la sintaxis de TS/TSX.
+  La compilación completa y revisión visual de WebGL quedan pendientes en tu PC.

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const scene = readFileSync(new URL('../src/components/Race3DPerspectiveView.tsx', import.meta.url), 'utf8');
+const decals = readFileSync(new URL('../src/utils/realisticPotholes3D.ts', import.meta.url), 'utf8');
+const physics = readFileSync(new URL('../src/utils/interactiveRacePhysics.ts', import.meta.url), 'utf8');
+assert.match(scene, /createPotholeVisualKit\(track\.routeHazardProfile\)/);
+assert.match(scene, /visual\.add\(potholeVisualKit\.create\(hazard\)\)/);
+assert.match(scene, /potholeVisualKit\.dispose\(\)/);
+assert.doesNotMatch(scene, /new THREE\.CircleGeometry\(hazard\.radius/);
+assert.match(decals, /function jaggedPath/);
+assert.match(decals, /profile === 'flood'/);
+assert.match(decals, /getContext\('2d'\)/);
+assert.match(decals, /texture\.dispose\(\)/);
+assert.match(physics, /car\.pothole = onPothole/);
+assert.match(physics, /onPothole \? 0\.48 : 1/);
+console.log('OK V7.7: baches orgánicos, grietas, charcos por circuito, recursos liberados y física conservada.');

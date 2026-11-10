@@ -1,0 +1,28 @@
+DATACAR ARENA V9.6 — Pitidos de largada + cápsulas DATACAR
+============================================================
+
+Novedades:
+- 3 pitidos cortos y un pitido largo al largar, sincronizados con el movimiento real.
+- La física comienza al sonar el último pitido (2,1 segundos después de la primera señal).
+- La secuencia se vuelve a reproducir al pulsar "Reiniciar carrera".
+- Tarjeta breve "DATACAR · DATO EN CARRERA" cada 5,2 segundos.
+- Mensajes cuando hay colisiones o baches; notas sobre turbo, CVT, DCT, HEV, mild hybrid, torque, frenos y agarre.
+- NO muestra potencia/torque estimados del Chery T2 Pro Max como valores oficiales.
+- En modo comparación y repetición no se muestran cápsulas de conducción.
+- No modifica las fichas técnicas ni los siete vehículos.
+
+Para instalar PARCHE sobre V9.5:
+1) Detener Vite con Ctrl+C.
+2) Descomprimir el parche V9.6 en la RAIZ del proyecto V9.5, reemplazando archivos.
+3) En PowerShell dentro de esa carpeta:
+   npm run test:v96
+   npm run build
+   npm run dev
+4) Abrir el enlace que indique Vite y actualizar con Ctrl+Shift+R.
+
+Archivo demo: DATACAR_ARENA_V9_6_PITIDOS_DEMO.wav (solo para preescuchar; en el juego suena con Web Audio).
+
+Avisos:
+- Chrome y otros navegadores requieren una interacción del usuario antes de reproducir audio; el botón de largada desbloquea el motor de sonido.
+- Esta versión utiliza audio sintético original, no grabaciones exactas de fabricantes.
+- Los mensajes educativos no son pruebas homologadas ni diagnósticos mecánicos.

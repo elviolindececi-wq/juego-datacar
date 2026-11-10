@@ -1,0 +1,33 @@
+DATACAR ARENA V8.2 — CÁMARA CERCANA Y SUSPENSIÓN POR RUEDA
+
+Instalación sobre DATACAR ARENA V8.0 o V8.1 (parche acumulativo de audio V8.1 incluido):
+1. Descargar DATACAR_ARENA_V8_2_FISICA_SUSPENSION_CAMARA_PARCHE.zip en Descargas.
+2. Detener npm run dev con Ctrl+C en VS Code.
+3. Extraer sobre la carpeta de DATACAR ARENA, reemplazando archivos existentes.
+4. En la terminal del proyecto ejecutar:
+   npm run test:v82
+   npm run dev
+5. Actualizar Chrome con Ctrl+Shift+R.
+
+CAMBIOS:
+- Cámara ARCADE acercada: 5.5–6.48 m de distancia según tamaño de pantalla y velocidad.
+- Cámara trasera: 5.7–6.3 m. FOV Arcade 61–67° (62–67° en vista compacta).
+- Bache: cada neumático consulta la depresión (hasta 0.12 m). La carrocería responde con muelles
+  amortiguados de cuatro apoyos, incluyendo descenso, inclinación y recuperación.
+- Lomos de burro: se utiliza la misma función seno del perfil 3D de relieve existente (6.5–9 cm aprox.).
+  El vehículo comprime la suspensión y recibe sacudidas según velocidad. Ya existía penalización de velocidad;
+  se conserva y se agrega leve daño a velocidades extremas.
+- Las cuatro ruedas animables conservan contacto visual aproximado con el terreno; no se fusionan los GLB.
+- Director TV reproduce desplazamiento vertical, cabeceo, balanceo y altura de ruedas registrados.
+- Golpes de terreno ligeros sincronizados al contacto con el suelo, con limitador de repetición.
+- Conservar clips originales de V8.1; el parche también contiene esos recursos.
+
+LIMITACIONES FÍSICAS:
+- Es una simulación de 4 puntos amortiguados, NO un solver completo de cuerpos rígidos 3D.
+- El pavimento bajo el bache aún utiliza textura y reborde visual: no tiene excavación completa
+  de la malla del asfalto. El perfil del lomo sí tiene relieve geométrico.
+- La malla GLB y las ruedas se desplazan visualmente sin deformar neumáticos ni aplicar rig de suspensión.
+- Pueden requerirse ajustes de escala, performance y cámara tras prueba visual en tu PC.
+- No se verificó npm run build en el entorno de desarrollo porque no se pudieron resolver dependencias offline.
+
+Mantener el proyecto anterior como respaldo antes de instalar el parche.

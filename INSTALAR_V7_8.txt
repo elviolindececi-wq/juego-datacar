@@ -1,0 +1,26 @@
+DATACAR ARENA V7.8 - INTERSECCIONES ASUNCION / CARTELES / DATACARPY.COM / LOMOS DE BURRO
+
+Instalar sobre DATACAR ARENA V7.7 (o sobre una instalacion mas reciente que ya incluya V7.7).
+
+1. Descargue el archivo DATACAR_ARENA_V7_8_ASUNCION_Y_LOMOS_DE_BURRO_PARCHE.zip
+2. Detenga el servidor Vite en la terminal de VS Code con Ctrl+C.
+3. Extraiga el contenido del ZIP sobre la carpeta principal del proyecto, respetando src/, scripts/ y package.json.
+4. Ejecute "npm run test:v78".
+5. Ejecute "npm run dev" y abra la URL local indicada por Vite.
+6. Actualice Chrome con Ctrl+Shift+R.
+
+QUE CAMBIA
+- Dos cruces transversales estilizados por circuito de Asuncion, con pasos peatonales.
+- Carteles negros de nombres de calles, borde blanco, postes rojo y blanco.
+- Publicidad DATACARPY.COM en algunas fachadas.
+- Postes y cables aereos ligeros.
+- Lomos de burro con relieve curvo y franjas amarillas.
+- Efecto fisico de desaceleracion, sacudida y recuperacion de suspension por lomo.
+- Los bots procuran frenar ante lomos que detectan por delante.
+- No cambia el numero de autos, los GLB, los videos, la ficha del Toyota ni la carrera comparativa.
+
+LIMITACIONES
+- Las rutas son ambientes ficticios inspirados en Asuncion, NO reproducciones exactas de la geometria real de las intersecciones.
+- Las calles transversales son visuales: la conduccion sigue la ruta longitudinal actual. Los giros reales en las esquinas necesitaran un motor de red vial.
+- El relieve visual del lomo no es todavia un sistema 4 ruedas / suspension multibody; hay una reaccion fisica simplificada.
+- El trafico transversal no esta implementado.

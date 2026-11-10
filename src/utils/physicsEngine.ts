@@ -24,6 +24,10 @@ export function simulateFullRace(
   track: RaceTrackConfig,
   timeStep = 0.02
 ): VehicleRaceResult[] {
+  // La pantalla de Comparar empieza con 0 autos seleccionados en V7.2+.
+  // Sin este guard, `winner` sería undefined y React deja la pantalla en blanco.
+  if (!vehicles.length) return [];
+
   const results: VehicleRaceResult[] = [];
 
   for (const vehicle of vehicles) {
@@ -55,7 +59,23 @@ export function simulateFullRace(
 
     // Relación de transmisión y eficiencias
     const drivetrainEfficiency = vehicle.drivetrain === 'AWD' ? 0.84 : vehicle.drivetrain === 'RWD' ? 0.88 : 0.86;
-    const maxPowerWatts = vehicle.powerHp * 745.7 * drivetrainEfficiency;
+    
+    // En subida con pendiente y/o carga pesada, el par motor (torque) a medio régimen dicta la potencia utilizable real:
+    // Los motores Turbo Diésel (250 Nm) entregan par plano desde 1.500 RPM sin caer; los turbo nafteros sostienen ~88%,
+    // mientras que los motores atmosféricos dependen de altas RPM (6.000+) y sufren caída de empuje en subida.
+    let powerBandFactor = 1.0;
+    if (track.inclineGradePercent > 0 || cargoMass > 200) {
+      const isDiesel = vehicle.fuelType === 'diesel' || vehicle.fuelFeeding?.toLowerCase().includes('diésel');
+      const isTurbo = vehicle.fuelFeeding?.toLowerCase().includes('turbo') || vehicle.engineDescription?.toLowerCase().includes('turbo');
+      if (isDiesel) {
+        powerBandFactor = 0.98; // Par diésel masivo y continuo
+      } else if (isTurbo) {
+        powerBandFactor = 0.88; // Turbo naftero
+      } else {
+        powerBandFactor = 0.77; // Atmosférico sin sobrealimentación
+      }
+    }
+    const maxPowerWatts = vehicle.powerHp * 745.7 * drivetrainEfficiency * powerBandFactor;
 
     // Par y rueda efectiva
     const effectiveWheelRadius = 0.33; // ~0.33m radio rueda medio
@@ -130,7 +150,7 @@ export function simulateFullRace(
 
         // Fuerza motriz del motor a la velocidad actual
         const speedKmh = speedMs * 3.6;
-        const lowSpeedThresholdMs = 8.0; // ~28 km/h transición de torque puro a potencia
+        const lowSpeedThresholdMs = vehicle.torqueNm >= 240 ? 10.0 : 8.0; // Motores diésel de alto par estiran más el empuje inicial
 
         if (speedMs < lowSpeedThresholdMs) {
           // Régimen de par motor multiplicado por caja
@@ -260,13 +280,13 @@ export function simulateFullRace(
         time400m = parseFloat(timeSec.toFixed(3));
       }
 
-      // Guardar telemetría a frecuencia controlada (~25 muestras por segundo para no saturar memoria)
-      if (history.length === 0 || timeSec - history[history.length - 1].timeSec >= 0.04 || distanceM >= targetDistance) {
+      // Guardar telemetría a alta frecuencia (50 muestras por segundo) con precisión de coma flotante continua
+      if (history.length === 0 || timeSec - history[history.length - 1].timeSec >= 0.02 || distanceM >= targetDistance) {
         history.push({
           timeSec: parseFloat(timeSec.toFixed(3)),
-          distanceMeters: Math.min(targetDistance, Math.round(distanceM * 10) / 10),
-          speedKmh: Math.round(speedKmh * 10) / 10,
-          accelerationG: Math.round((netAccel / GRAVITY) * 100) / 100,
+          distanceMeters: Math.min(targetDistance, distanceM),
+          speedKmh: speedKmh,
+          accelerationG: netAccel / GRAVITY,
           fuelRemaining: Math.round(fuelRemaining * 100) / 100,
           fuelBurned: Math.round(fuelBurned * 100) / 100,
           powerDeliveredHp,
@@ -391,8 +411,28 @@ function generatePhysicsVerdict(
     return `Potencia sostenida en alta velocidad, cruzando a ${trapSpeed} km/h.`;
   }
 
-  if (track.id === 'endurance') {
-    return `Consumo bajo exigencia de competición: quemó combustible a ritmo de carrera gestionando el peso dinámico conforme se aligeraba el depósito.`;
+  if (track.id === 'route_500km' || track.id === 'endurance') {
+    if (vehicle.fuelType === 'diesel') {
+      return `Eficiencia diésel dominante: consumo ultra bajo de ${vehicle.consumptionBase} L/100km, reduciendo el costo por kilómetro y rindiendo más de 800 km de autonomía en ruta continua.`;
+    }
+    return `Buen promedio de rendimiento en carretera con ${vehicle.consumptionBase} L/100km, completando el trayecto a ritmo sostenido de ${trapSpeed} km/h.`;
+  }
+
+  if (track.id === 'family_challenge') {
+    if (vehicle.equipment?.seatingCapacity === 7) {
+      return `Dominio familiar absoluto (7 plazas en 3 filas): la Carens transporta a toda la familia cómodamente con climatización trasera y sus 250 Nm de torque no se inmutan con 450 kg de carga.`;
+    }
+    return `Habitáculo compacto de 5 plazas: ágil para parejas o familias pequeñas, pero insuficiente para trasladar a 6 o 7 ocupantes simultáneamente.`;
+  }
+
+  if (track.id === 'smart_buy') {
+    if (vehicle.equipment?.priceUsd && vehicle.equipment.priceUsd <= 20000) {
+      return `La compra inteligente por precio: a US$ ${vehicle.equipment.priceUsd.toLocaleString()} ofrece un ahorro directo de hasta US$ 7.000 manteniendo motor turbo y conectividad OnStar Wi-Fi.`;
+    }
+    if (vehicle.equipment?.adasFeatures && vehicle.equipment.adasFeatures.length > 0) {
+      return `Inversión orientada a la seguridad: el mayor valor agregado está en su suite ADAS con frenado autónomo y control crucero inteligente.`;
+    }
+    return `Propuesta de valor enfocada en versatilidad familiar y motor diésel de larga durabilidad.`;
   }
 
   return `Rendimiento global óptimo, combinando velocidad punta de ${trapSpeed} km/h y maniobrabilidad en sectores con ${vehicle.tireGrip}x de agarre mecánico.`;

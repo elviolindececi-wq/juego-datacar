@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { VehicleRaceResult, RaceTrackConfig, PreferenceWeights, VehicleMatchScore } from '../types/vehicle';
-import { Trophy, Medal, Timer, Gauge, Fuel, Zap, X, RotateCcw, Shield, Sparkles, DollarSign, Star, CheckCircle2 } from 'lucide-react';
+import { Trophy, Medal, Timer, Gauge, Fuel, Zap, X, RotateCcw, Shield, Sparkles, DollarSign, Star, CheckCircle2, Info } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface RaceResultsModalProps {
@@ -236,6 +236,26 @@ export const RaceResultsModal: React.FC<RaceResultsModalProps> = ({
                 ? `¡Coincidencia absoluta! El ${physicalWinner.vehicle.brand} ${physicalWinner.vehicle.name} no solo dominó la pista física con un tiempo de ${physicalWinner.finishTimeSec.toFixed(3)}s, sino que también cumplió a la perfección tus preferencias actuales con un ${bestMatchScore?.totalMatchPercent}% de Match.`
                 : `Divergencia técnica: El ${physicalWinner.vehicle.brand} ${physicalWinner.vehicle.name} se llevó la victoria en el asfalto gracias a su rendimiento dinámico (${physicalWinner.finishTimeSec.toFixed(3)}s), pero de acuerdo a tu ponderador de preferencias (${weights.economia}% Economía, ${weights.seguridad}% Seguridad, ${weights.motor}% Motor, ${weights.tecnologia}% Confort), el ${preferenceWinnerResult.vehicle.brand} ${preferenceWinnerResult.vehicle.name} resulta ser el ganador del Match con un ${bestMatchScore?.totalMatchPercent}% de afinidad total.`}
             </p>
+          </div>
+
+          {/* Disclaimer Legal & Referencial datacarpy.com */}
+          <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] font-mono text-slate-400 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="text-slate-300 font-bold block">Aviso Informativo y Metodología:</span>
+              <p>
+                Esta simulación y carrera de atributos tiene carácter <strong className="text-white">referencial y lúdico</strong> para comparar de forma intuitiva la relación potencia/peso, torque y equipamiento oficial. Los valores reales en calle pueden variar según el combustible, carga y estilo de conducción. Para consultar las fichas técnicas oficiales y cotizaciones completas, te recomendamos ingresar a{' '}
+                <a
+                  href="https://datacarpy.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-400 hover:text-sky-300 underline font-bold"
+                >
+                  datacarpy.com
+                </a>
+                .
+              </p>
+            </div>
           </div>
         </div>
 

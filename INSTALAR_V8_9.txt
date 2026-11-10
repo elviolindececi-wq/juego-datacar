@@ -1,0 +1,17 @@
+DATACAR ARENA V8.9 — FÍSICA DINÁMICA MEJORADA
+
+SI TENÉS V8.8:
+1. Detener Vite con Ctrl+C.
+2. Descargar DATACAR_ARENA_V8_9_FISICA_AVANZADA_PARCHE.zip en Descargas.
+3. Descomprimir encima de la carpeta V8.8 existente.
+4. Ejecutar npm run test:v89, npm run build y npm run dev.
+
+SI TENÉS UNA VERSIÓN ANTERIOR:
+1. Utilizar DATACAR_ARENA_V8_9_PROYECTO_COMPLETO.zip.
+2. Extraer en una carpeta NUEVA.
+3. Ejecutar npm install, npm run test:v89, npm run build y npm run dev.
+
+IMPORTANTE: HP, torque y seguridad provienen de las fichas cargadas. Geometría
+suspensión, neumáticos, ratios y aceleraciones no documentadas son estimaciones.
+V8.9 NO es una homologación, gemelo digital ni simulador OEM certificado.
+Consulta docs/AUDITORIA_FISICA_V8_9.md.

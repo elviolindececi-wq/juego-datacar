@@ -1,4 +1,4 @@
-import { Vehicle } from '../types/vehicle';
+import type { Vehicle } from '../types/vehicle';
 
 export const DEALERSHIP_VEHICLES: Vehicle[] = [
   {
@@ -9,7 +9,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2027,
     category: 'suv_compact',
     color: '#eab308', // Amber / Gold highlight like Nissan signature
-    imageUrl: '/src/assets/images/nissan_kicks_sense_1793824276957.jpg',
+    imageUrl: '/assets/vehicle-previews/nissan-kicks-2027.jpg',
     video360Url: '/assets/aistudio/Nissan_Kicks_f04e26bd.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Nissan_Kicks_f04e26bd.mp4',
@@ -25,33 +25,33 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
       rear: '/src/assets/images/kicks_rear_direct_1793825659532.jpg',
       topZenith: '/assets/top_zenith/kicks_zenith.png',
     },
-    engineDescription: '1.2L 3 Cilindros 12V',
-    transmissionDescription: 'Automática 6DCT de doble embrague',
-    powerHp: 120,
-    torqueNm: 220,
-    weightKg: 1285,
-    topSpeedKmh: 185,
-    accel0100: 9.8,
+    engineDescription: '1.6L 16V DOHC (HR16DE)',
+    transmissionDescription: 'Automática Xtronic CVT con D-Step Logic',
+    powerHp: 118,
+    torqueNm: 149,
+    weightKg: 1142,
+    topSpeedKmh: 175,
+    accel0100: 10.8,
     drivetrain: 'FWD',
-    dragCoeff: 0.33,
+    dragCoeff: 0.34,
     frontalArea: 2.45,
     dimensions: {
-      lengthMm: 4365,
-      widthMm: 2090,
-      heightMm: 1620,
+      lengthMm: 4310,
+      widthMm: 1760,
+      heightMm: 1610,
       clearanceMm: 180,
     },
     fuelCapacityL: 41,
     fuelType: 'flex',
-    fuelFeeding: 'Inyección Multipunto / Flex',
+    fuelFeeding: 'Inyección Multipunto Naftero',
     consumptionBase: 6.8,
     consumptionRacing: 16.5,
     maxPayloadKg: 470, // Capacidad baulera y carga
-    brakingDistance100: 36.2,
-    tireGrip: 1.08,
+    brakingDistance100: 36.8,
+    tireGrip: 1.06,
     equipment: {
       priceUsd: 24990,
-      trunkLiters: 470,
+      trunkLiters: 432,
       groundClearanceMm: 180,
       seatingCapacity: 5,
       screenSize: '12.3"',
@@ -59,13 +59,10 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
       brakesType: '4_discs',
       airbags: 6,
       rearCamera: true,
-      adasFeatures: [
-        'I-CC (Control Crucero Inteligente)',
-        'FCW (Alerta de Colisión Frontal)',
-        'FEB + I-EB PED (Frenado Inteligente de Emergencia con Detector de Peatones)',
-        'LDW (Alerta de Cambio/Salida de Carril)',
-        'RCTA (Alerta de Tráfico Cruzado)',
-      ],
+      // El catálogo público DATACAR no permite validar Sense 2027 1.6 CVT.
+      // No atribuir ADAS de un All New Kicks DCT a este registro sin ficha exacta.
+      adasFeatures: [],
+      safetySystems: {}, // unknown: no equivale a NO equipado
       comfortFeatures: [
         'Volante con ajuste de altura y telescópico',
         'Consola central con apoyabrazos',
@@ -78,7 +75,9 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
         'Freno de estacionamiento electrónico con Autohold',
       ],
     },
-    description: 'Mayor tecnología y seguridad activa ADAS completa. Su caja 6DCT de doble embrague brinda cambios rápidos y 120 HP con 220 Nm.',
+    description: 'Nissan Kicks Sense: la combinación 2027 / 1.6 CVT del registro requiere corroboración contra ficha exacta. Hasta entonces, masa, prestaciones y ADAS no están certificados.',
+    estimatedSimulationParameters: true,
+    specEvidence: { status: 'pending', sourceLabel: 'DATACAR: Nissan Kicks (detalle por versión no accesible)', sourceUrl: 'https://www.datacarpy.com/catalogo/nissan/all-new-kicks', notes:'Revisar si el vehículo corresponde a Sense DCT o a generación anterior 1.6 CVT. No atribuir ADAS por similitud.' },
   },
   {
     id: 'kia-carens-ex',
@@ -88,7 +87,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2024,
     category: 'suv_familiar',
     color: '#06b6d4', // Cyan
-    imageUrl: '/src/assets/images/kia_carens_ex_1793824276943.jpg',
+    imageUrl: '/assets/vehicle-previews/kia-carens-ex.jpg',
     video360Url: '/assets/aistudio/Kia_Carens_12bf1817.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Kia_Carens_12bf1817.mp4',
@@ -104,11 +103,11 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
       rear: '/src/assets/images/carens_rear_direct_1793825692834.jpg',
       topZenith: '/assets/top_zenith/carens_zenith.png',
     },
-    engineDescription: '1.5L Turbo Diésel',
-    transmissionDescription: 'Automático 6 velocidades',
-    powerHp: 113,
+    engineDescription: '1.5L CRDi Turbo Diésel',
+    transmissionDescription: 'Automático secuencial 6 velocidades',
+    powerHp: 115,
     torqueNm: 250, // Mayor par de los tres
-    weightKg: 1420,
+    weightKg: 1380,
     topSpeedKmh: 178,
     accel0100: 10.9,
     drivetrain: 'FWD',
@@ -127,7 +126,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     consumptionRacing: 13.8,
     maxPayloadKg: 620,
     brakingDistance100: 38.0,
-    tireGrip: 1.04,
+    tireGrip: 1.05,
     equipment: {
       priceUsd: 26990,
       trunkLiters: 216, // con 3 filas
@@ -139,6 +138,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
       airbags: 6,
       rearCamera: true,
       adasFeatures: [],
+      safetySystems: {}, // Folleto EX AT Full de otro año: pendiente validar MY24
       comfortFeatures: [
         '3 filas de asientos para 7 pasajeros',
         'Asientos en 2da fila deslizables y plegables 60:40',
@@ -150,7 +150,92 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
         'Rack en el techo y 195mm de despeje',
       ],
     },
-    description: 'Enfocado en la familia (7 plazas) y torque diésel (250 Nm). Excelente capacidad de arrastre con carga y bajo consumo de combustible.',
+    estimatedSimulationParameters: true,
+    specEvidence: {status:'partial-reference',sourceLabel:'Kia Paraguay, folleto Carens EX AT Full (2022)',sourceUrl:'https://kia.com.py/images/ficha_tecnica/ficha_tecnica_carens.pdf',notes:'ABS publicado para EX AT Full en folleto anterior; falta validar año 2024. Potencia: folleto indica 113 HP frente a 115 HP registrados.'},
+    description: 'La opción indiscutida para familias (7 plazas en 3 filas) y fuerza de tiro: sus 250 Nm de torque Turbo Diésel y 620 kg de carga útil dominan en pendientes pronunciadas y entregan más de 800 km de autonomía.',
+  },
+  {
+    id: 'toyota-corolla-cross-seg-2027',
+    name: 'COROLLA CROSS',
+    brand: 'TOYOTA',
+    trim: 'SEG 2027 · TOP DE LÍNEA',
+    year: 2027,
+    category: 'suv_compact',
+    color: '#e5e7eb',
+    imageUrl: '/assets/vehicle-previews/toyota-corolla-cross-seg-2027.jpg',
+    video360Url: '/assets/aistudio/Toyota_Corolla_Cross_SEG_2027.mp4',
+    turntable360: {
+      videoUrl: '/assets/aistudio/Toyota_Corolla_Cross_SEG_2027.mp4',
+      framesCount: 120,
+      framesBaseUrl: '/assets/360_frames/corolla/frame_',
+      framesExtension: '.jpg',
+    },
+    engineDescription: '2.0 L Dynamic Force M20A-FKS · 4 cilindros · 1.987 cc',
+    transmissionDescription: 'Automática CVT · 10 marchas preprogramadas',
+    powerHp: 171,
+    torqueNm: 203,
+    drivetrain: 'FWD',
+    fuelType: 'gasoline',
+    fuelFeeding: 'Inyección mixta D-4S (directa e indirecta)',
+    dimensions: { lengthMm: 4460, widthMm: 1825, heightMm: 1620, clearanceMm: 161 },
+    // PARÁMETROS DE SIMULACIÓN, NO DATOS DE FICHA:
+    // Reemplazar al recibir peso homologado, aerodinámica, consumo y ensayos reales.
+    weightKg: 1420,
+    topSpeedKmh: 190,
+    accel0100: 9.8,
+    dragCoeff: 0.35,
+    frontalArea: 2.58,
+    fuelCapacityL: 47,
+    consumptionBase: 7.2,
+    consumptionRacing: 16.8,
+    maxPayloadKg: 450,
+    brakingDistance100: 39,
+    tireGrip: 1.04,
+    estimatedSimulationParameters: true,
+    technicalDetails: {
+      tireSize: '215/60 R17',
+      wheelDiameterInches: 17,
+      engineDisplacementCc: 1987,
+      wheelbaseMm: 2640,
+      frontSuspension: 'Independiente McPherson, amortiguadores telescópicos, resortes helicoidales y barra estabilizadora',
+      rearSuspension: 'Barra de torsión con bujes de corrección y barra estabilizadora',
+      brakeDetails: 'Discos ventilados delanteros y discos sólidos traseros',
+    },
+    equipment: {
+      priceUsd: 36800,
+      trunkLiters: 440,
+      groundClearanceMm: 161,
+      seatingCapacity: 5,
+      screenSize: '10"',
+      connectivity: 'Pantalla de 10" · conectividad no detallada en la ficha recibida',
+      brakesType: '4_discs',
+      airbags: 7,
+      rearCamera: true,
+      adasFeatures: [],
+      safetySystems: {abs:'present',ebd:'present',esc:'present',tcs:'present',hillAssist:'present',aeb:'absent',fcw:'absent',laneDeparture:'absent',laneKeeping:'absent',adaptiveCruise:'absent',blindSpot:'absent'},
+      safetyFeatures: [
+        'ABS con EBD',
+        'Alarma antirrobo',
+        'Control de estabilidad (VSC)',
+        'Faros antiniebla delanteros LED',
+        'Tuercas de seguridad para llantas',
+        'Asistencia de arranque en pendientes (HAC)',
+        'Control de tracción (TRC)',
+        'Sistema ISOFIX',
+      ],
+      comfortFeatures: [
+        'Aire acondicionado con climatizador automático digital',
+        'Asientos traseros con respaldos plegables 60/40',
+        'Display de información múltiple 4,2"',
+        'Volante revestido en cuero con controles de audio, display y teléfono',
+        'Asiento del conductor con regulación de altura y profundidad (según ficha recibida)',
+        'Columna de dirección regulable en altura y profundidad',
+        'Levantacristales eléctricos One Touch en las cuatro puertas',
+        'Modos de conducción (POWER)',
+      ],
+    },
+    specEvidence: {status:'exact-user-sheet',sourceLabel:'Ficha técnica SEG 2027 adjuntada por usuario',notes:'ABS/EBD, VSC, TRC y HAC documentados. SIN ADAS en la ficha adjunta.'},
+    description: 'Toyota Corolla Cross SEG 2027, versión tope de línea, 171 HP y 203 Nm. Precio proporcionado: USD 36.800. La física usa estimaciones para prestaciones no indicadas en la ficha.',
   },
   {
     id: 'chevrolet-tracker-lite',
@@ -160,7 +245,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2024,
     category: 'suv_compact',
     color: '#3b82f6', // Cobalt Blue
-    imageUrl: '/src/assets/images/chevrolet_tracker_lite_1793824277485.jpg',
+    imageUrl: '/assets/vehicle-previews/chevrolet-tracker-lite.jpg',
     video360Url: '/assets/aistudio/Chevrole_tracker_d0c39633.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Chevrole_tracker_d0c39633.mp4',
@@ -211,6 +296,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
       airbags: 6,
       rearCamera: false,
       adasFeatures: [],
+      safetySystems: {}, // Existe ficha oficial MY26, pero no de MY24 exacto
       comfortFeatures: [
         'Dirección eléctrica progresiva',
         'Control de velocidad crucero con limitador',
@@ -220,9 +306,147 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
         'Vidrios eléctricos con función One Touch',
       ],
     },
+    estimatedSimulationParameters: true,
+    specEvidence: {status:'partial-reference',sourceLabel:'Chevrolet Paraguay Tracker Lite MY26 (referencia, no MY24)',sourceUrl:'https://www.chevrolet.com.py/content/dam/chevrolet/south-america/paraguay/espanol/index/visid/suvs/2026-tracker/pdfs/ft-tracker-my26-py.pdf',notes:'MY26 Lite publica ABS/EBD, ESC/TCS. Pendiente corroborar la unidad Lite 2024 antes de activar sus asistencias.'},
     description: 'Líder en economía y accesibilidad a US$ 19.990. Su bajo peso (1228 kg) y motor 1.0L Turbo le dan agilidad urbana y excelente valor.',
   }
 ];
+
+
+// V8.8: fichas recibidas del usuario (capturas DATACAR de noviembre de 2026).
+// En el juego ya existían Carens y Corolla; Carens se conserva como vehículo legado.
+// La ausencia de masa, aceleración oficial, Cx o velocidad máxima implica una CALIBRACIÓN de SIMULACIÓN.
+// Chery T4 HEV: la ficha da 310 Nm del MOTOR ELÉCTRICO, no torque combinado homologado.
+const NO_ADAS_EXPLICIT = {
+  aeb:'absent',fcw:'absent',laneDeparture:'absent',laneKeeping:'absent',adaptiveCruise:'absent',blindSpot:'absent',
+  rearCrossTraffic:'absent',laneChangeAssist:'absent',trafficJamAssist:'absent',autoHighBeam:'absent',
+} as const;
+
+const DATACAR_V88_VEHICLES: Vehicle[] = [
+  {
+    id:'chery-t4-pro-luxury-hev', brand:'CHERY', name:'T4 PRO', trim:'LUXURY HEV',year:2026,
+    category:'suv_compact',color:'#b7c2c6',imageUrl:'/assets/vehicle-previews/chery-t4-pro-luxury-hev.jpg',
+    engineDescription:'HEV 1.5 L (1.498 cc) · naftero 100 HP + eléctrico 95 HP · potencia conjunta 195 HP',
+    transmissionDescription:'DHT automática híbrida',fuelType:'hybrid',fuelFeeding:'Híbrido autorrecargable (HEV), nafta + motor eléctrico, batería 1,86 kWh',
+    hybridSystem:{kind:'self-charging-hev',combustionHp:100,combustionTorqueNm:125,electricHp:95,electricTorqueNm:310,batteryKWh:1.86,torqueNmIsElectricOnly:true},
+    powerHp:195,torqueNm:310,weightKg:1500,topSpeedKmh:175,accel0100:9.5,drivetrain:'FWD',dragCoeff:.35,frontalArea:2.55,
+    dimensions:{lengthMm:4320,widthMm:1831,heightMm:1653,clearanceMm:160},fuelCapacityL:45,consumptionBase:5.6,consumptionRacing:12.3,
+    maxPayloadKg:420,brakingDistance100:39,tireGrip:1.02,
+    technicalDetails:{tireSize:'215/60 R17',wheelDiameterInches:17,engineDisplacementCc:1498,
+      frontSuspension:'McPherson',rearSuspension:'Eje de torsión',brakeDetails:'Discos en las cuatro ruedas'},
+    equipment:{priceUsd:22990,trunkLiters:340,groundClearanceMm:160,seatingCapacity:5,screenSize:'10.25" (instrumental; multimedia 10.25")',
+      connectivity:'Pantalla multimedia 10,25", instrumental digital 10,25", carga inalámbrica',brakesType:'4_discs',airbags:7,rearCamera:true,
+      adasFeatures:['Frenado autónomo','Asistencia en congestión (TJA)','Alerta frontal (FCW)','Tráfico cruzado trasero (RCTA)',
+      'Punto ciego (BSD)','Alerta de carril (LDW)','Asistencia de cambio de carril (LCA)','Crucero adaptativo (ACC)','Luces altas inteligentes (IHC)'],
+      safetySystems:{abs:'present',esc:'present',tcs:'present',hillAssist:'present',aeb:'present',fcw:'present',
+        laneDeparture:'present',blindSpot:'present',adaptiveCruise:'present',rearCrossTraffic:'present',
+        laneChangeAssist:'present',trafficJamAssist:'present',autoHighBeam:'present'},
+      safetyFeatures:['ABS + ESP + EBA','Control de tracción TCS','Asistente de arranque en pendiente HAC','TPMS','7 airbags'],
+      comfortFeatures:['Climatizador bizona','Eco cuero','Techo solar eléctrico','Autohold','Cámara 360°','Pantalla 10,25"']},
+    estimatedSimulationParameters:true,estimatedFieldNames:['weightKg','topSpeedKmh','accel0100','torqueNm','dragCoeff','fuelCapacityL','consumptionBase','brakingDistance100'],
+    specEvidence:{status:'exact-user-sheet',sourceLabel:'DATACAR · captura CHERY T4 PRO LUXURY HEV recibida (10/11/2026)',
+      notes:'195 HP combinados; 125 Nm nafta y 310 Nm motor eléctrico (NO torque combinado). Masa, 0-100, aerodinámica y consumo son supuestos de simulación.'},
+    description:'HEV autorrecargable. Asistencia eléctrica en el despegue y frenada regenerativa simulada; ficha con ADAS completo.'
+  },
+  {
+    id:'suzuki-fronx',brand:'SUZUKI',name:'FRONX',trim:'1.5 DUALJET MILD HYBRID AT',year:2026,
+    category:'suv_compact',color:'#f97316',imageUrl:'/assets/vehicle-previews/suzuki-fronx.jpg',
+    engineDescription:'1.5 L Dualjet, 1.462 cc, 102 HP @ 6.000 rpm, 137 Nm @ 4.400 rpm + ISG 3 HP / 55 Nm',
+    transmissionDescription:'Automática de 6 velocidades',fuelType:'hybrid',fuelFeeding:'Inyección multipunto · Mild Hybrid ISG 12 V',
+    hybridSystem:{kind:'mild-12v',combustionHp:102,combustionTorqueNm:137,electricHp:3,electricTorqueNm:55},
+    powerHp:102,torqueNm:137,weightKg:1080,topSpeedKmh:170,accel0100:12.2,drivetrain:'FWD',dragCoeff:.34,frontalArea:2.25,
+    dimensions:{lengthMm:3995,widthMm:1765,heightMm:1550,clearanceMm:170},fuelCapacityL:37,consumptionBase:5.7,consumptionRacing:13.8,
+    maxPayloadKg:385,brakingDistance100:40,tireGrip:1.0,
+    technicalDetails:{tireSize:'195/60 R16',wheelDiameterInches:16,engineDisplacementCc:1462,
+      frontSuspension:'McPherson con resortes helicoidales',rearSuspension:'Viga de torsión con resorte helicoidal',
+      brakeDetails:'Discos ventilados delanteros / discos traseros'},
+    equipment:{priceUsd:15990,trunkLiters:304,groundClearanceMm:170,seatingCapacity:5,screenSize:'9"',
+      connectivity:'Pantalla 9", Head-Up Display, carga inalámbrica',brakesType:'4_discs',airbags:6,rearCamera:true,adasFeatures:[],
+      safetySystems:{...NO_ADAS_EXPLICIT,abs:'present',ebd:'present',esc:'present',hillAssist:'present'},
+      safetyFeatures:['ABS con BA y EBD','ESP','Hill Hold','6 airbags','ISOFIX'],
+      comfortFeatures:['Cámara periférica 360°','Pantalla 9"','Aire acondicionado automático','Head-Up Display','Keyless','Paddle Shift']},
+    estimatedSimulationParameters:true,estimatedFieldNames:['weightKg','topSpeedKmh','accel0100','dragCoeff','fuelCapacityL','consumptionBase','brakingDistance100'],
+    specEvidence:{status:'exact-user-sheet',sourceLabel:'DATACAR · captura SUZUKI FRONX recibida (10/11/2026)',
+      notes:'102 HP y 137 Nm del motor naftero; el ISG 12 V no se suma como potencia continua de tracción. Sin ADAS según ficha.'},
+    description:'Motor 1.5 de 102 HP con ayuda suave del ISG 12 V; arrancada estimada conforme a potencia y masa.'
+  },
+  {
+    id:'chery-t2-pro-max',brand:'CHERY',name:'T2 PRO MAX',trim:'1.5 CVT',year:2026,
+    category:'suv_compact',color:'#ef4444',imageUrl:'/assets/vehicle-previews/chery-t2-pro-max.jpg',
+    engineDescription:'1.5 L Euro 6B · potencia y torque NO declarados en la ficha recibida',
+    transmissionDescription:'Automática CVT (CVT18)',fuelType:'gasoline',fuelFeeding:'Atmosférico',
+    // Valores necesarios para motor físico: NO son valores de fabricante ni se muestran como oficiales.
+    powerHp:105,torqueNm:140,weightKg:1280,topSpeedKmh:168,accel0100:12.6,drivetrain:'FWD',dragCoeff:.37,frontalArea:2.35,
+    dimensions:{lengthMm:4200,widthMm:1760,heightMm:1570,clearanceMm:180},fuelCapacityL:46,consumptionBase:7.6,consumptionRacing:16,
+    maxPayloadKg:400,brakingDistance100:41,tireGrip:1.0,
+    technicalDetails:{tireSize:'205/55 R17',wheelDiameterInches:17,engineDisplacementCc:1500,
+      frontSuspension:'McPherson',rearSuspension:'Eje de torsión',brakeDetails:'Discos ventilados delanteros / sólidos traseros'},
+    equipment:{priceUsd:12500,trunkLiters:420,groundClearanceMm:180,seatingCapacity:5,screenSize:'10.25"',
+      connectivity:'Pantalla 10,25" · carga inalámbrica',brakesType:'4_discs',airbags:4,rearCamera:true,adasFeatures:[],
+      safetySystems:{...NO_ADAS_EXPLICIT,abs:'present',ebd:'present',esc:'present',tcs:'present',hillAssist:'present',hillDescent:'present'},
+      safetyFeatures:['ABS/EBD','ESP/TCS','Asistente de arranque en pendiente HAC','Descenso HDC','4 airbags','TPMS'],
+      comfortFeatures:['Techo solar eléctrico','Freno de estacionamiento electrónico','Climatizador automático','Pantalla 10,25"','Control crucero']},
+    estimatedSimulationParameters:true,
+    estimatedFieldNames:['powerHp','torqueNm','weightKg','topSpeedKmh','accel0100','dragCoeff','fuelCapacityL','consumptionBase','brakingDistance100'],
+    specEvidence:{status:'exact-user-sheet',sourceLabel:'DATACAR · captura CHERY T2 PRO MAX recibida (10/11/2026)',
+      notes:'La ficha recibida NO publica HP ni Nm. El motor de juego usa 105 HP/140 Nm como CALIBRACIÓN PROVISIONAL; no se atribuye al fabricante.'},
+    description:'1.5 atmosférico CVT; torque y potencia de simulación provisional hasta recibir datos de fabricante.'
+  }
+];
+
+// Actualizar entradas antiguas con las versiones EXACTAS de las fichas nuevas.
+const trackerFicha = DEALERSHIP_VEHICLES.find(v=>v.id==='chevrolet-tracker-lite');
+if (trackerFicha) {
+  Object.assign(trackerFicha,{
+    trim:'1.2 TURBO AT · ficha DATACAR',year:2026,
+    engineDescription:'1.2 L Turbo 3 cilindros · 1.199 cc · 139 CV (≈137 HP) @ 5.000 rpm',
+    transmissionDescription:'Automática de 6 velocidades',fuelFeeding:'Turbo inyección directa',
+    powerHp:137.1,torqueNm:220,
+    dimensions:{lengthMm:4304,widthMm:1791,heightMm:1626,clearanceMm:157},
+    estimatedSimulationParameters:true,
+    estimatedFieldNames:['weightKg','topSpeedKmh','accel0100','dragCoeff','fuelCapacityL','consumptionBase','brakingDistance100'],
+    technicalDetails:{tireSize:'215/55 R17',wheelDiameterInches:17,engineDisplacementCc:1199,
+      frontSuspension:'McPherson independiente',rearSuspension:'Semi-independiente eje de torsión',brakeDetails:'Discos ventilados delanteros / tambores traseros'},
+    description:'Chevrolet Tracker 1.2 Turbo 3 cilindros; 139 CV, 220 Nm y caja automática de seis marchas. El resto de los parámetros no presentes en ficha son estimaciones de simulación.',
+    specEvidence:{status:'exact-user-sheet',sourceLabel:'DATACAR · captura Chevrolet Tracker 1.2 Turbo recibida (10/11/2026)',
+      notes:'139 CV (≈137 HP)/220 Nm. Masa, Cx, 0-100 y consumo siguen siendo parámetros de simulación. Ficha distinta de la anterior Lite 1.0T.'},
+  });
+  Object.assign(trackerFicha.equipment,{
+    airbags:6,screenSize:'11"',rearCamera:true,
+    adasFeatures:['Alerta de punto ciego','Frenado autónomo a baja velocidad','Indicador distancia vehículo delantero',
+      'Alerta de colisión frontal','Easy Park'],
+    safetySystems:{abs:'present',ebd:'present',esc:'present',tcs:'present',hillAssist:'present',
+      aeb:'present',fcw:'present',blindSpot:'present',parkingAssist:'present'},
+    safetyFeatures:['6 airbags','Frenos ABS/EBD','ESC / control de tracción','Asistente de partida en pendiente','TPMS'],
+    comfortFeatures:['Techo panorámico','Pantalla 11"','Cargador inalámbrico','Climatizador digital','Easy Park'],
+  });
+}
+const kicksFicha = DEALERSHIP_VEHICLES.find(v=>v.id==='nissan-kicks-2027');
+if (kicksFicha) {
+  Object.assign(kicksFicha,{
+    trim:'1.2 L 6DCT · ficha DATACAR',year:2027,
+    engineDescription:'1.2 L · 3 cilindros / 12 V · 120 HP @ 5.000 rpm',
+    transmissionDescription:'Automática 6DCT doble embrague',fuelFeeding:'Inyección multipunto / flex',
+    powerHp:120,torqueNm:220,
+    dimensions:{lengthMm:4365,widthMm:2090,heightMm:1620,clearanceMm:180},
+    estimatedSimulationParameters:true,
+    estimatedFieldNames:['weightKg','topSpeedKmh','accel0100','dragCoeff','fuelCapacityL','consumptionBase','brakingDistance100','dimensions.clearanceMm'],
+    technicalDetails:{tireSize:'225/45 R19',wheelDiameterInches:19,engineDisplacementCc:1200,
+      brakeDetails:'Discos en las cuatro ruedas'},
+    description:'Nissan Kicks 1.2L 120 HP / 220 Nm y doble embrague 6DCT. La masa y el 0–100 utilizado por el juego son calibraciones provisionales.',
+    specEvidence:{status:'exact-user-sheet',sourceLabel:'DATACAR · captura Nissan Kicks 1.2 6DCT recibida (10/11/2026)',
+      notes:'La ficha señala 1.2 L/120 HP/220 Nm/6DCT. Despeje listado como 0 mm: dato faltante; 180 mm se usa SOLO como valor provisional de simulación. Ancho 2.090 mm copiado literalmente; confirmar si incluye espejos.'},
+  });
+  Object.assign(kicksFicha.equipment,{
+    airbags:6,screenSize:'12.3"',rearCamera:true,trunkLiters:470,
+    adasFeatures:['Crucero inteligente I-CC','Alerta colisión frontal FCW','Frenado inteligente FEB/IEB con detección de peatones',
+       'Alerta de salida de carril LDW','Alerta tráfico cruzado RCTA'],
+    safetySystems:{abs:'present',ebd:'present',esc:'present',hillAssist:'present',aeb:'present',fcw:'present',
+      laneDeparture:'present',rearCrossTraffic:'present',adaptiveCruise:'present'},
+    safetyFeatures:['ABS + EBD','VDC','Asistente de pendiente HSA','TPMS','6 airbags'],
+  });
+}
+DEALERSHIP_VEHICLES.push(...DATACAR_V88_VEHICLES);
 
 export const PRESET_VEHICLES: Vehicle[] = [
   ...DEALERSHIP_VEHICLES,
@@ -231,73 +455,73 @@ export const PRESET_VEHICLES: Vehicle[] = [
 export const PRESET_TRACKS = [
   {
     id: 'drag_quarter' as const,
-    name: 'Cuarto de Milla (402 m)',
-    subtitle: 'Prueba pura de aceleración, caja de cambios y arrancada',
+    name: 'Modo 1 — ACELERACIÓN (0-100 / 402m)',
+    subtitle: 'Prueba predeterminada de aceleración sobre asfalto plano y velocidad final',
     distanceMeters: 402,
     inclineGradePercent: 0,
     cargoPayloadKg: 0,
-    description: 'Evalúa la arrancada desde 0 km/h: la respuesta del motor turbo de Tracker vs la caja 6DCT de doble embrague de Kicks vs el torque de Carens.',
+    description: 'Evalúa la arrancada desde 0 km/h: la potencia, torque, masa y tipo de transmisión de los modelos elegidos.',
     imageBanner: '/src/assets/images/drag_race_launch_1792620341868.jpg',
   },
   {
     id: 'load_hillclimb' as const,
-    name: 'Prueba de Carga & Pendiente (Hillclimb)',
-    subtitle: 'Prueba con 4 pasajeros + baulera llena en pendiente del 8%',
+    name: 'Modo 2 — SUBIDA CON CARGA (Hillclimb)',
+    subtitle: 'Pendiente pronunciada del 8% con 400 kg de pasajeros y equipaje',
     distanceMeters: 1000,
     inclineGradePercent: 8,
-    cargoPayloadKg: 350, // 4 ocupantes y equipaje
-    description: 'Ensayo exigente de torque motor y potencia en ascenso. Observa cómo los 250 Nm del motor Turbo Diésel de Carens marcan la diferencia.',
+    cargoPayloadKg: 400,
+    description: 'Ensayo exigente de fuerza de tiro y par motor en subida: los 250 Nm de torque Turbo Diésel de Carens frente a motores nafteros.',
     imageBanner: '/src/assets/images/truck_heavy_load_1792620343364.jpg',
   },
   {
     id: 'brake_slalom' as const,
-    name: 'Circuito Técnico de Curvas & Frenada Brusca',
-    subtitle: 'Horquillas cerradas (Hairpins) y chicanas: pone a prueba 4 discos vs tambores',
+    name: 'Modo 3 — FRENADA BRUSCA & SLALOM',
+    subtitle: 'Desaceleración violenta de 100 a 0 km/h: 4 discos ventilados vs tambores traseros',
     distanceMeters: 1400,
     inclineGradePercent: 0,
     cargoPayloadKg: 0,
-    description: 'Trazado revirado con 4 curvas cerradas sucesivas después de rectas rápidas. Los vehículos con frenos de disco en las 4 ruedas (Kicks y Carens) pueden frenar mucho más tarde y disipar mejor el calor que aquellos con tambores traseros (Tracker), reduciendo metros críticos.',
+    description: 'Trazado revirado con 4 horquillas cerradas sucesivas. Compara la distancia de frenado y disipación térmica (Kicks y Carens con 4 discos vs Tracker con tambores).',
     imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
   },
   {
-    id: 'circuit' as const,
-    name: 'Circuito Urbano y Frenada (1.8 km)',
-    subtitle: 'Curvas, aceleraciones y distancia de frenado con 4 discos vs tambores',
-    distanceMeters: 1800,
-    inclineGradePercent: 1.0,
-    cargoPayloadKg: 0,
-    description: 'Pone a prueba el chasis, la estabilidad, la capacidad de recuperación en curva y la frenada (discos en las 4 ruedas de Kicks y Carens vs tambores traseros de Tracker).',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
-  },
-  {
-    id: 'drag_half' as const,
-    name: 'Media Milla de Autopista (804 m)',
-    subtitle: 'Ensayo de velocidad final y penetración aerodinámica',
-    distanceMeters: 804,
-    inclineGradePercent: 0,
-    cargoPayloadKg: 0,
-    description: 'Los 120 HP del Kicks frente a los 115 CV del Tracker y los 113 HP del Carens a fondo en recta de velocidad sostenida.',
-    imageBanner: '/src/assets/images/drag_race_launch_1792620341868.jpg',
-  },
-  {
-    id: 'endurance' as const,
-    name: 'Prueba de Consumo y Autonomía',
-    subtitle: 'Ruta de 4.000m calculando litros consumidos y costo por km',
-    distanceMeters: 4000,
+    id: 'route_500km' as const,
+    name: 'Modo 4 — RUTA 500 KM (Consumo & Autonomía)',
+    subtitle: 'Trayecto interurbano a velocidad constante evaluando costo por kilómetro',
+    distanceMeters: 5000,
     inclineGradePercent: 0.5,
     cargoPayloadKg: 150,
-    description: 'Compara el costo de combustible: el motor Turbo Diésel de la Carens frente a la inyección directa de la Tracker y la tecnología Flex del Kicks.',
+    description: 'Compara el consumo real en ruta y costo total de combustible (Diésel 5.4 L/100km de Carens vs 6.2 L/100km de Tracker vs Flex 6.8 L/100km de Kicks).',
+    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+  },
+  {
+    id: 'family_challenge' as const,
+    name: 'Modo 5 — FAMILY CHALLENGE (7 vs 5 Plazas)',
+    subtitle: 'Simulación con familia completa (450 kg), 3 filas de asientos y baúl cargado',
+    distanceMeters: 1200,
+    inclineGradePercent: 4.0,
+    cargoPayloadKg: 450,
+    description: 'Compara habitabilidad real para 7 ocupantes: la Carens cuenta con 3 filas de asientos y 620 kg de carga útil, mientras que Kicks y Tracker tienen 5 plazas.',
+    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+  },
+  {
+    id: 'smart_buy' as const,
+    name: 'Modo 6 — COMPRA INTELIGENTE (Precio / Valor)',
+    subtitle: 'Comparativa de relación equipamiento recibido por cada dólar invertido',
+    distanceMeters: 1000,
+    inclineGradePercent: 0,
+    cargoPayloadKg: 100,
+    description: 'Evalúa el costo-beneficio oficial: Tracker lidera en precio de entrada (US$ 19.990), Kicks en seguridad activa ADAS, y Carens en versatilidad de 7 plazas.',
     imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
   },
   {
     id: 'fuel_critical' as const,
     name: 'Prueba de Reserva Crítica (Sin Energía)',
-    subtitle: 'Simulación con 1.5% de combustible o batería: corte de motor y varado en pista',
+    subtitle: 'Simulación con 1.5% de combustible: corte de motor y varado en pista con balizas',
     distanceMeters: 800,
     inclineGradePercent: 1.0,
     cargoPayloadKg: 0,
     initialFuelPercent: 1.5,
-    description: 'Demuestra qué ocurre cuando se agota la energía en plena marcha: el motor o batería se corta al 0%, el vehículo rueda por inercia hasta detenerse varado en la pista y activa sus balizas de emergencia.',
+    description: 'Demuestra qué ocurre si se agota la energía motriz en marcha: el motor se apaga, rueda por inercia hasta detenerse varado con balizas de emergencia.',
     imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
   }
 ];

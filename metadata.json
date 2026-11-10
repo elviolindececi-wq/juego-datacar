@@ -1,6 +1,6 @@
 {
-  "name": "ApexSpec - Simulador Físico de Carreras y Telemetría",
-  "description": "Simulador dinámico de carreras virtuales basado en fichas técnicas reales de vehículos: velocidad, aceleración, peso, prueba de carga con potencia y consumo de combustible.",
+  "name": "DATACAR ARENA — Simulador Automotriz 3D y Showroom 360°",
+  "description": "Experiencia automotriz interactiva con showroom 360°, carreras tridimensionales con modelos GLB reales y telemetría de precisión.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -1,0 +1,19 @@
+DATACAR ARENA V9.3 — Llegada con tu auto + viaductos DATACAR
+
+Requisitos:
+- Proyecto base: V9.2.1 (el hotfix de createAsphaltMicroRelief está incluido).
+
+MEJORAS
+1. Toma de llegada frontal/3-4 centrada en la posición global REAL y orientación del coche; funciona sobre trayectos curvos.
+2. Sin cartel molesto de META y sin HUD que tape la carrocería durante la toma final.
+3. Resultado principal con una fotografía grande del vehículo del jugador, aunque otro coche termine primero.
+4. Viaductos ficticios en circuitos urbanos largos, con anuncios de datacarpy.com integrados a las barandas.
+5. Pilares fuera de los carriles y 6,2 m de altura libre: ambientación, no obstáculos físicos.
+6. Conserva los siete vehículos, la comparación, la física, la lluvia, los raudales y la repetición de Director TV.
+
+Para instalar el parche V9.3 sobre V9.2.1, copiar/extraer el contenido sobre la carpeta del proyecto.
+
+Para instalar completo en carpeta nueva: npm install, npm run test:v93, npm run build, npm run dev.
+Si npm install falla por versión de dependencias, no usar --force sin revisar el error.
+
+La prueba visual de la cámara con GLB en navegador sigue siendo necesaria.

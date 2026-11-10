@@ -3,6 +3,8 @@ import { Vehicle, VehicleMatchScore } from '../types/vehicle';
 import { Star, MessageCircle, Check, Plus, Info, Eye } from 'lucide-react';
 import { Photographic360Viewer } from './Photographic360Viewer';
 
+import { hasVehicle3DModel } from '../utils/vehicle3DModelLoader';
+
 interface DealershipCardsHeaderProps {
   vehicles: Vehicle[];
   matchScores: VehicleMatchScore[];
@@ -48,10 +50,15 @@ export const DealershipCardsHeader: React.FC<DealershipCardsHeaderProps> = ({
                 className="cursor-pointer group flex-1"
                 onClick={() => onSelectShowroom && onSelectShowroom(v.id)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold block">
                     {v.brand}
                   </span>
+                  {hasVehicle3DModel(v.id) && (
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold font-mono px-1.5 py-0.2 rounded uppercase">
+                      3D GLB
+                    </span>
+                  )}
                   {isActiveInShowroom && (
                     <span className="text-[9px] bg-sky-500 text-slate-950 font-bold font-mono px-1.5 py-0.2 rounded-full uppercase">
                       Activo 360°
@@ -153,13 +160,15 @@ export const DealershipCardsHeader: React.FC<DealershipCardsHeaderProps> = ({
                 </span>
               </div>
 
-              <button
-                onClick={() => alert(`Conectando con la concesionaria oficial para el ${v.brand} ${v.name} (${v.trim}) - Precio Oficial: US$ ${v.equipment.priceUsd.toLocaleString()}`)}
+              <a
+                href={`https://datacarpy.com`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-mono text-xs font-bold tracking-wider uppercase border border-slate-700 hover:border-sky-500 transition-colors flex items-center gap-1.5 whitespace-nowrap shadow-md"
               >
                 <MessageCircle className="w-3.5 h-3.5 text-sky-400" />
-                <span>HABLAR CON GARDEN</span>
-              </button>
+                <span>CONSULTAR</span>
+              </a>
             </div>
           </div>
         );
