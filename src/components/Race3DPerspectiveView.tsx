@@ -72,6 +72,7 @@ interface Race3DPerspectiveViewProps {
   replayHazards?: TrackHazard[];
   replayWeather?: WeatherMode;
   initialWeather?: WeatherMode;
+  onExitRace?: () => void;
 }
 
 const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
@@ -178,7 +179,7 @@ const ArcadeRaceHud: React.FC<{
   ].filter((b) => b.available);
 
   return (
-    <div className="absolute bottom-4 right-4 z-20 pointer-events-none select-none">
+    <div className="dc100-race-gauges absolute bottom-4 right-4 z-20 pointer-events-none select-none">
       <div className="relative rounded-[26px] border border-sky-400/20 bg-[linear-gradient(180deg,rgba(2,6,23,0.84),rgba(2,6,23,0.96))] px-4 pt-3 pb-2 shadow-[0_20px_45px_rgba(2,6,23,0.6)] backdrop-blur-md overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400/80 to-transparent" />
         <div className="flex items-end gap-3">
@@ -267,7 +268,7 @@ const RaceMiniMap: React.FC<{
   const finishPoint = project(finish.x, finish.z);
   const canShowFinish = path.length - player.distance < 250;
   return (
-    <div className="absolute left-4 bottom-5 z-20 pointer-events-none rounded-[22px] border border-cyan-400/30 bg-slate-950/90 p-2 shadow-[0_12px_45px_rgba(2,6,23,.7)] backdrop-blur-md">
+    <div className="dc100-race-map absolute left-4 bottom-5 z-20 pointer-events-none rounded-[22px] border border-cyan-400/30 bg-slate-950/90 p-2 shadow-[0_12px_45px_rgba(2,6,23,.7)] backdrop-blur-md">
       <div className="text-[9px] font-black tracking-[.22em] uppercase text-cyan-300 pl-2 pt-0.5">Ruta · Asunción</div>
       <svg viewBox="0 0 170 170" className="block w-[150px] h-[150px] sm:w-[170px] sm:h-[170px] overflow-hidden" aria-label="Minimapa de la carretera real y posición de rivales">
         <circle cx="85" cy="85" r="80" fill="rgba(13,20,34,.70)" stroke="rgba(148,163,184,.18)" strokeWidth="1"/>
@@ -303,6 +304,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   replayHazards,
   replayWeather,
   initialWeather,
+  onExitRace,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const steeringKeysRef = useRef({ left: false, right: false, throttle: false, reverse: false, brake: false });
@@ -1752,10 +1754,16 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       renderer.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
+    const viewportResizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      if (container.clientWidth > 0 && container.clientHeight > 0) handleResize();
+    }) : null;
+    viewportResizeObserver?.observe(container);
+    requestAnimationFrame(handleResize);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      viewportResizeObserver?.disconnect();
       renderer.domElement.removeEventListener('pointerdown', pointerDown);
       renderer.domElement.removeEventListener('pointermove', pointerMove);
       renderer.domElement.removeEventListener('pointerup', pointerUp);
@@ -1977,6 +1985,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           <button className="dc-mobile-resume" onClick={() => { soundEngine.unlock(); setIsPlaying(true); stateRef.current.isPlaying = true; setMobileMenuOpen(false); }}><Play size={18}/> CONTINUAR</button>
           <button onClick={toggleMute}>{isMuted ? 'Activar sonido' : 'Silenciar sonido'}</button>
           <button onClick={() => setHeadlightsOn(v => !v)}>{headlightsOn ? 'Apagar faros' : 'Encender faros'}</button>
+          {onExitRace && <button onClick={onExitRace}>ABANDONAR CARRERA</button>}
           <label>CLIMA <select value={weatherMode} onChange={e => setWeatherMode(e.target.value as WeatherMode)}>{WEATHER_OPTIONS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         </div>}
 
@@ -2007,7 +2016,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           <ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState} />
         )}
         {experience === 'race' && !hasFinished && countdown === null && raceInsight && (
-          <div key={raceInsight.id} className={`absolute top-[96px] left-3 z-20 pointer-events-none w-[min(320px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg ${
+          <div key={raceInsight.id} className={`dc100-race-insight absolute top-[96px] left-3 z-20 pointer-events-none w-[min(320px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg ${
             raceInsight.kind === 'warning'
               ? 'border-amber-500/45 border-l-amber-400 bg-slate-950/85'
               : raceInsight.kind === 'event'
@@ -2067,7 +2076,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         )}
 
         {/* Floating Mini Camera Selector (Top Right of Canvas) */}
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-800/80 shadow-xl flex-wrap">
+        <div className="dc100-race-camera-desktop absolute top-3 right-3 z-20 flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-800/80 shadow-xl flex-wrap">
           {experience === 'race' && <button
             onClick={() => setCameraMode('arcade')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${cameraMode === 'arcade' ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'}`}
@@ -2170,7 +2179,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         )}
 
         {/* Live Race Positions Pill (Top Left of Canvas) */}
-        <div className="absolute top-3 left-3 z-20 flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none">
+        <div className="dc100-race-ranking absolute top-3 left-3 z-20 flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none">
           {vehicles.map((v) => {
             const st = interactiveMode && liveVehicleStates[v.id]
               ? liveVehicleStates[v.id]

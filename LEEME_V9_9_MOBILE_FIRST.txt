@@ -1,0 +1,25 @@
+DATACAR ARENA V9.9 - MOBILE FIRST (actualización liviana sobre V9.8)
+
+QUÉ CAMBIA
+- App mobile independiente desde la primera pantalla, conservando el desktop actual.
+- La primera vez en portrait: pantalla de orientación; intento de fullscreen y landscape al tocar ENTRAR AL JUEGO.
+- Pantalla principal y menú estilo videojuego; swipe/scroll-snap entre circuitos y autos.
+- Briefing, resultados, comparación y carrera adaptados a landscape.
+- Carrera 3D a todo el viewport; paneles de escritorio fuera de la vista mobile.
+- Menú de pausa, cambiar de cámara, abandonar carrera.
+- Renderer Three.js adaptado con ResizeObserver al cambiar tamaño/orientación.
+- Motor físico y datos de vehículos/circuitos intactos.
+
+LIMITACIÓN DEL NAVEGADOR
+No es posible forzar horizontal o fullscreen desde una página web sin interacción del usuario en todos los navegadores. iOS Safari suele impedir orientation.lock incluso después de un toque. Se muestra una pantalla para girar el móvil manualmente. Para experiencia más cercana a una app, se recomienda añadir a la pantalla de inicio del dispositivo.
+
+INSTALACIÓN (PowerShell EN VS CODE)
+1. Descargar ZIP y dejarlo en Descargas.
+2. Detener npm run dev con Ctrl+C.
+3. En carpeta del proyecto V9.8, extraer con -Force el ZIP.
+4. npm run build
+5. npm run dev
+6. Verificar en celular en horizontal (misma Wi-Fi), y después publicar en GitHub.
+
+NOTA
+No modificar el código de la física ni borrar assets. Esta actualización contiene solo fuentes, estilos y metadatos. La compilación completa no se pudo realizar en el entorno donde fue generado el parche (sin dependencias instalables). Validación sintáctica TypeScript/JSX realizada.

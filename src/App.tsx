@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Vehicle, VehicleRaceResult } from './types/vehicle';
 import { PRESET_VEHICLES, PRESET_TRACKS } from './data/presetVehicles';
 import { ASUNCION_CIRCUITS, matchesDifficulty, toRaceTrack } from './data/asuncionCircuits';
@@ -9,6 +9,7 @@ import { WEATHER_OPTIONS } from './utils/weatherDynamics';
 import type { WeatherMode } from './utils/weatherDynamics';
 import { CarShowroom3D } from './components/CarShowroom3D';
 import { IntroSplash } from './components/IntroSplash';
+import MobileGameExperience from './components/mobile/MobileGameExperience';
 import { VehicleSpecsPanel } from './components/VehicleSpecsPanel';
 import { DetailedSpecsTable } from './components/DetailedSpecsTable';
 import { DrivingIQResults } from './components/DrivingIQResults';
@@ -57,6 +58,8 @@ function PrettyCar({car}: {car: Vehicle}) {
 }
 
 export default function App() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(pointer: coarse) and (max-width: 1100px)').matches);
+  useEffect(() => { const query = window.matchMedia('(pointer: coarse) and (max-width: 1100px)'); const update = () => setIsMobile(query.matches); query.addEventListener('change', update); return () => query.removeEventListener('change', update); }, []);
   const [screen, setScreen] = useState<Screen>('intro');
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [comparePreviewId, setComparePreviewId] = useState<string>(allCars[0].id);
@@ -105,6 +108,8 @@ export default function App() {
   const goHome = () => setScreen('home');
   const isComparison = screen.startsWith('compare');
   const isRaceSetup = ['circuit-choose', 'garage', 'briefing'].includes(screen);
+
+  if (isMobile) return <MobileGameExperience />;
 
   if (screen === 'intro') {
     return <IntroSplash vehicles={allCars} onStart={() => setScreen('home')} onCompare={() => setScreen('compare-choose')} onRace={id => { setPlayerId(id); setScreen('circuit-choose'); }} />;
