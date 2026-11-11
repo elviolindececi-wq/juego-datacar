@@ -51,9 +51,6 @@ class EngineSoundSynthesizer {
   private lastSuspensionHitAt = -Infinity;
   private voices = new Map<string, Voice>();
   private sampleCache = new Map<string, Promise<AudioBuffer[] | null>>();
-  private finishCheerPromise: Promise<AudioBuffer | null> | null = null;
-  private finishCheerVoice: { source: AudioBufferSourceNode; gain: GainNode } | null = null;
-  private finishToken = 0;
   private startingTones = new Set<{ oscillator: OscillatorNode; harmonic: OscillatorNode; gain: GainNode }>();
 
   private noise(): AudioBuffer {
@@ -83,45 +80,7 @@ class EngineSoundSynthesizer {
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     this.setWeather(this.weather);
-    // Precargar tras una interacción permitida por el navegador, evitando
-    // un silencio mientras descarga/decodifica justo al llegar a meta.
-    void this.preloadFinishCheer();
-  }
-
-  private preloadFinishCheer(): Promise<AudioBuffer | null> {
-    if (!this.ctx) return Promise.resolve(null);
-    if (!this.finishCheerPromise) {
-      const audioCtx = this.ctx;
-      this.finishCheerPromise = fetch('/audio/sfx/ovacion_meta.mp3')
-        .then(res => { if (!res.ok) throw new Error(`Ovación: HTTP ${res.status}`); return res.arrayBuffer(); })
-        .then(bytes => audioCtx.decodeAudioData(bytes))
-        .catch(() => null);
-    }
-    return this.finishCheerPromise;
-  }
-
-  /** Ovación original y corta: una sola reproducción al cruzar la meta. */
-  playFinishCheer() {
-    if (this.muted || !this.ctx || !this.master) return;
-    const token = ++this.finishToken;
-    void this.preloadFinishCheer().then(buffer => {
-      if (!buffer || !this.ctx || !this.master || this.muted || token !== this.finishToken) return;
-      const now = this.ctx.currentTime;
-      const source = this.ctx.createBufferSource();
-      source.buffer = buffer;
-      const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.55, now + 0.16);
-      gain.gain.setValueAtTime(0.55, now + Math.max(0.2, buffer.duration - 0.9));
-      gain.gain.linearRampToValueAtTime(0.0001, now + buffer.duration);
-      source.connect(gain); gain.connect(this.master);
-      this.finishCheerVoice = { source, gain };
-      source.onended = () => {
-        if (this.finishCheerVoice?.source === source) this.finishCheerVoice = null;
-        source.disconnect(); gain.disconnect();
-      };
-      source.start(now);
-    });
+    // Sin ovación al cruzar meta: no descargar el audio de aplausos.
   }
 
   /** 3 pitidos cortos + un tono largo. El navegador exige iniciar el audio desde un clic. */
@@ -341,17 +300,8 @@ class EngineSoundSynthesizer {
 
   stopAll(fadeSeconds = 0.15) {
     this.stopCountdownTones();
-    ++this.finishToken;
     const now = this.ctx?.currentTime ?? 0;
     const endAt = now + Math.max(0.04, fadeSeconds);
-    if (this.finishCheerVoice) {
-      const { source, gain } = this.finishCheerVoice;
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
-      gain.gain.linearRampToValueAtTime(0.0001, endAt);
-      try { source.stop(endAt + 0.02); } catch { /* ya finalizado */ }
-      this.finishCheerVoice = null;
-    }
     const fadeGain = (gain: GainNode) => {
       gain.gain.cancelScheduledValues(now);
       gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);

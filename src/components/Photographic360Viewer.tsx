@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Vehicle } from '../types/vehicle';
-import { RotateCw, Play, Pause, ZoomIn } from 'lucide-react';
+import { RotateCw, ZoomIn } from 'lucide-react';
 
 // Memoria caché global de fotogramas por URL base para que el cambio entre vehículos sea instantáneo
 const globalVehicleFramesCache = new Map<string, HTMLImageElement[]>();
@@ -13,22 +13,25 @@ export function getOrLoadFrames(
 ): HTMLImageElement[] {
   const cached = globalVehicleFramesCache.get(baseUrl);
   if (cached && cached.length === count) {
+    // Mantener el vehículo usado recientemente al final de la caché LRU.
+    globalVehicleFramesCache.delete(baseUrl);
+    globalVehicleFramesCache.set(baseUrl, cached);
     return cached;
   }
 
-  const images: HTMLImageElement[] = [];
-  for (let i = 1; i <= count; i++) {
-    const img = new Image();
-    const paddedIndex = String(i).padStart(3, '0');
-    img.src = `${baseUrl}${paddedIndex}${ext}`;
-    if (i === 1 && onFirstFrameLoaded) {
-      if (img.complete && img.naturalWidth > 0) {
-        onFirstFrameLoaded();
-      } else {
-        img.onload = () => onFirstFrameLoaded();
-      }
-    }
-    images.push(img);
+  // Crear objetos Image sin pedir 120 archivos simultáneamente. La posición
+  // actual y su vecindad se descargan bajo demanda al girar.
+  const images: HTMLImageElement[] = Array.from({ length: count }, () => new Image());
+  const first = images[0];
+  if (first) {
+    if (onFirstFrameLoaded) first.onload = onFirstFrameLoaded;
+    first.src = `${baseUrl}${String(1).padStart(3, '0')}${ext}`;
+    if (first.complete && first.naturalWidth > 0) onFirstFrameLoaded?.();
+  }
+  // LRU sencilla: retener como máximo tres vehículos explorados.
+  if (globalVehicleFramesCache.size >= 3) {
+    const oldestKey = globalVehicleFramesCache.keys().next().value;
+    if (oldestKey) globalVehicleFramesCache.delete(oldestKey);
   }
   globalVehicleFramesCache.set(baseUrl, images);
   return images;
@@ -41,23 +44,29 @@ export function getOrLoadFrames(
 interface Photographic360ViewerProps {
   vehicle: Vehicle;
   compact?: boolean;
+  initialMode?: 'video' | 'frames';
   onOpenSpecs?: () => void;
 }
 
 export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
   vehicle,
   compact = false,
+  initialMode = 'frames',
   onOpenSpecs: _onOpenSpecs,
 }) => {
+  // V12.2: todos los vehículos abren el visor manual, sin selector de video.
+  const usingVideo = !Boolean(vehicle.turntable360?.framesCount && vehicle.turntable360.framesBaseUrl) && Boolean(vehicle.video360Url);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
+  useEffect(() => { videoRef.current?.pause(); }, [usingVideo]);
   const turntable = vehicle.turntable360;
   const hasFrames = Boolean(turntable?.framesCount && turntable.framesCount > 0 && turntable.framesBaseUrl);
   const totalFrames = turntable?.framesCount || 120;
 
   // Estado del ángulo (0 a totalFrames - 1)
   const [frameIndex, setFrameIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+
   const [isDragging, setIsDragging] = useState(false);
-  const [rotationSpeed, setRotationSpeed] = useState<0.5 | 1 | 2>(1);
+
   const [zoomLevel, setZoomLevel] = useState<1 | 1.25 | 1.5>(1);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -67,20 +76,30 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
   // Dragging refs para respuesta ultra-fluida y continua al mouse
   const lastXRef = useRef(0);
   const frameFloatRef = useRef(0);
-  const animationFrameRef = useRef<number | null>(null);
+  const visibleFrameRef = useRef(0);
 
-  // Obtener los 120 fotogramas específicos del vehículo actual
+
+  // Crear los índices del vehículo; los archivos se descargan progresivamente
   const currentFrames = useMemo(() => {
-    if (!hasFrames || !turntable?.framesBaseUrl) return [];
+    if (usingVideo || !hasFrames || !turntable?.framesBaseUrl) return [];
     return getOrLoadFrames(
       turntable.framesBaseUrl,
       turntable.framesCount || 120,
-      turntable.framesExtension || '.jpg',
-      () => {
-        renderFrameToCanvas(1);
-      }
+      turntable.framesExtension || '.jpg'
     );
-  }, [hasFrames, turntable?.framesBaseUrl, turntable?.framesCount, turntable?.framesExtension]);
+  }, [usingVideo,hasFrames, turntable?.framesBaseUrl, turntable?.framesCount, turntable?.framesExtension]);
+
+  // Cargar ángulo actual y sus vecinos (no toda la película de 120 imágenes).
+  useEffect(() => {
+    if (!hasFrames || usingVideo || !turntable?.framesBaseUrl || !currentFrames.length) return;
+    const base = turntable.framesBaseUrl;
+    const ext = turntable.framesExtension || '.jpg';
+    for (const offset of [0, 1, -1, 2, -2]) {
+      const index = (frameIndex + offset + totalFrames) % totalFrames;
+      const img = currentFrames[index];
+      if (img && !img.src) img.src = `${base}${String(index + 1).padStart(3, '0')}${ext}`;
+    }
+  }, [frameIndex, hasFrames, usingVideo, turntable?.framesBaseUrl, turntable?.framesExtension, currentFrames, totalFrames]);
 
   // Renderizar el fotograma exacto en canvas para eliminar todo parpadeo
   const renderFrameToCanvas = useCallback(
@@ -91,6 +110,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
       if (!ctx) return;
 
       const frameIdx = Math.max(0, Math.min(currentFrames.length - 1, frameNum - 1));
+      visibleFrameRef.current = frameIdx;
       const img = currentFrames[frameIdx];
 
       if (img && img.complete && img.naturalWidth > 0) {
@@ -102,7 +122,8 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       } else if (img) {
         img.onload = () => {
-          if (canvasRef.current) {
+          // Las descargas terminan fuera de orden. No dibujar un ángulo obsoleto.
+          if (canvasRef.current && visibleFrameRef.current === frameIdx) {
             const c = canvasRef.current;
             const context = c.getContext('2d');
             if (context && img.naturalWidth > 0) {
@@ -122,7 +143,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
   useEffect(() => {
     setFrameIndex(0);
     frameFloatRef.current = 0;
-    setIsPlaying(false);
+
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -138,30 +159,14 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     }
   }, [frameIndex, hasFrames, totalFrames, currentFrames, renderFrameToCanvas]);
 
-  // Loop de reproducción suave cuando se activa Play voluntariamente
+  // El video se utiliza como secuencia de fotogramas, no como reproducción automática.
+  // El usuario controla su posición con swipe, mouse o slider.
   useEffect(() => {
-    if (!isPlaying) return;
-
-    let lastTime = performance.now();
-    const fps = 24 * rotationSpeed; // Velocidad configurable
-    const interval = 1000 / fps;
-
-    const tick = (now: number) => {
-      if (now - lastTime >= interval) {
-        lastTime = now;
-        frameFloatRef.current = (frameFloatRef.current + 1) % totalFrames;
-        setFrameIndex(Math.floor(frameFloatRef.current));
-      }
-      animationFrameRef.current = requestAnimationFrame(tick);
-    };
-
-    animationFrameRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isPlaying, totalFrames, rotationSpeed]);
+    const video = videoRef.current;
+    if (!usingVideo || !video || !Number.isFinite(videoDuration) || videoDuration <= 0) return;
+    video.pause();
+    if (video.readyState >= 1) video.currentTime = (frameIndex / totalFrames) * Math.max(0, videoDuration - 0.025);
+  }, [usingVideo, frameIndex, totalFrames, videoDuration]);
 
   // Cálculo del ángulo en grados (0° a 360°)
   const currentAngleDeg = Math.round((frameIndex / totalFrames) * 360);
@@ -171,7 +176,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     setIsDragging(true);
     lastXRef.current = e.clientX;
     frameFloatRef.current = frameIndex;
-    setIsPlaying(false); // Detener auto-spin inmediatamente
+ // Detener auto-spin inmediatamente
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -204,7 +209,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     setIsDragging(true);
     lastXRef.current = e.touches[0].clientX;
     frameFloatRef.current = frameIndex;
-    setIsPlaying(false);
+
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -233,7 +238,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
 
   // Rueda del mouse (Scroll horizontal o vertical sobre el auto para girar fluido)
   const handleWheel = (e: React.WheelEvent) => {
-    setIsPlaying(false);
+
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     const step = (delta > 0 ? 1 : -1) * 1.5;
 
@@ -281,12 +286,14 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
           className="w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
           style={{ transform: `scale(${zoomLevel})` }}
         >
-          {hasFrames ? (
+          {usingVideo && !videoUnavailable ? (
+            <video ref={videoRef} key={vehicle.video360Url} src={vehicle.video360Url} playsInline muted preload="metadata" onLoadedMetadata={(e) => { setVideoDuration(e.currentTarget.duration || 10); e.currentTarget.pause(); }} poster={vehicle.imageUrl} onError={()=>setVideoUnavailable(true)} className="w-full h-full object-contain pointer-events-none" />
+          ) : hasFrames ? (
             <canvas
               ref={canvasRef}
               className="w-full h-full object-contain pointer-events-none"
             />
-          ) : vehicle.video360Url ? (
+          ) : vehicle.video360Url && !videoUnavailable ? (
             <video
               ref={videoRef}
               src={vehicle.video360Url}
@@ -310,7 +317,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
         {/* Top-Right HUD: Angle & Circular Continuity */}
         <div className="absolute top-3 right-3 pointer-events-none flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800/90 text-xs font-mono font-bold text-sky-400 shadow-lg">
-            <RotateCw className="w-3.5 h-3.5 text-sky-400 animate-spin-slow" />
+            <RotateCw className="w-3.5 h-3.5 text-sky-400" />
             <span>{currentAngleDeg}°</span>
             <span className="text-slate-500 text-[10px]">
               {currentAngleDeg < 45 || currentAngleDeg > 315
@@ -364,38 +371,6 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
 
         {/* Bottom-Left Controls Bar: Play/Pause, Speed, Zoom */}
         <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-800/90 shadow-xl">
-          {/* Play / Pause Auto-spin */}
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            title={isPlaying ? 'Pausar rotación continua' : 'Iniciar rotación continua'}
-            className={`p-2 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1 ${
-              isPlaying
-                ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-md shadow-sky-500/20'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{isPlaying ? 'Pausa' : 'Auto 360°'}</span>
-          </button>
-
-          {/* Speed Selector (0.5x, 1x, 2x) */}
-          <div className="flex items-center border-l border-slate-800 pl-1.5 ml-0.5 gap-1">
-            {([0.5, 1, 2] as const).map((spd) => (
-              <button
-                key={spd}
-                onClick={() => setRotationSpeed(spd)}
-                title={`Velocidad ${spd}x`}
-                className={`px-1.5 py-1 rounded text-[10px] font-mono font-bold transition-colors ${
-                  rotationSpeed === spd
-                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {spd}x
-              </button>
-            ))}
-          </div>
-
           {/* Zoom Selector (1x, 1.25x, 1.5x) */}
           <div className="flex items-center border-l border-slate-800 pl-1.5 ml-0.5 gap-1">
             <button
@@ -431,7 +406,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
               const val = parseInt(e.target.value, 10);
               setFrameIndex(val);
               frameFloatRef.current = val;
-              setIsPlaying(false);
+          
               if (videoRef.current && videoDuration > 0) {
                 videoRef.current.currentTime = (val / totalFrames) * videoDuration;
               }

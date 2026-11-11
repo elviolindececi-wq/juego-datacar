@@ -71,6 +71,8 @@ export default function App() {
   const [raceHazards, setRaceHazards] = useState<TrackHazard[]>([]);
   const [replayWeather, setReplayWeather] = useState<WeatherMode>('sunny');
   const [raceWeather, setRaceWeather] = useState<WeatherMode>('sunny');
+  // Cada reinicio crea una escena y un motor físico NUEVOS desde la grilla.
+  const [raceSession, setRaceSession] = useState(0);
   const touchX = useRef<number | null>(null);
 
   const circuit = ASUNCION_CIRCUITS.find(item => item.id === circuitId) || ASUNCION_CIRCUITS[0];
@@ -88,7 +90,7 @@ export default function App() {
     ? rankDrivingIQ(raceResults, raceBaseResults, raceTrack.distanceMeters)
     : [], [raceResults, raceBaseResults, raceTrack.distanceMeters]);
 
-  const startRace = () => { soundEngine.unlock(); setRaceResults(null); setRaceHazards([]); setReplayWeather(raceWeather); setScreen('race-run'); };
+  const startRace = () => { setRaceSession(n => n + 1); soundEngine.unlock(); setRaceResults(null); setRaceHazards([]); setReplayWeather(raceWeather); setScreen('race-run'); };
   const chooseDifficulty = (filter: DifficultyFilter) => {
     setDifficulty(filter);
     if (!matchesDifficulty(circuit, filter)) {
@@ -232,7 +234,7 @@ export default function App() {
 
       {screen === 'garage' && <div className="space-y-6">
         <Stepper steps={['Circuito', 'Tu auto 360°', 'Preparar', 'Correr', 'Resultados']} current={1}/>
-        <div><p className="text-xs font-black uppercase tracking-[.25em] text-emerald-400">SHOWROOM 360°</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">ELEGÍ TU MÁQUINA.</h1><p className="mt-2 text-sm text-slate-400">Deslizá entre los modelos para elegir. Giralo manualmente con el mousepad antes de elegirlo. El video 360° queda como opción secundaria.</p></div>
+        <div><p className="text-xs font-black uppercase tracking-[.25em] text-emerald-400">SHOWROOM 360°</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">ELEGÍ TU MÁQUINA.</h1><p className="mt-2 text-sm text-slate-400">Deslizá entre los modelos para elegir. Giralo manualmente con el mousepad antes de elegirlo. Sin reproducción automática.</p></div>
         <div className={`${panel} p-4`}>
           <div className="flex items-center gap-3"><button className={buttonSecondary} onClick={() => rotateSelection(-1)} aria-label="Modelo anterior"><ChevronLeft size={22}/></button>
             <div className="flex min-w-0 flex-1 select-none gap-3 overflow-x-auto py-2" onTouchStart={event => { touchX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={event => { if (touchX.current === null) return; const delta = event.changedTouches[0]?.clientX - touchX.current; if (delta !== undefined && Math.abs(delta) > 55) rotateSelection(delta < 0 ? 1 : -1); touchX.current = null; }}>
@@ -270,7 +272,7 @@ export default function App() {
       {screen === 'race-run' && <div className="dc-game-running space-y-5">
         <Stepper steps={['Circuito', 'Tu auto 360°', 'Preparar', 'Correr', 'Resultados']} current={3}/>
         <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">MODO CARRERA · CONDUCCIÓN EN VIVO</p><h1 className="mt-1 text-3xl font-black">{circuit.name}</h1><p className="mt-1 text-sm text-slate-400">Vos: {playerCar.brand} {playerCar.name} · IA: otros dos vehículos</p></div><button onClick={() => setScreen('briefing')} className={buttonSecondary}><ArrowLeft size={16}/> Abandonar partida</button></div>
-        <Race3DPerspectiveView key={`race-${circuitId}-${playerId}`} experience="race" playerVehicleId={playerId} initialWeather={raceWeather} vehicles={raceCars} track={raceTrack} simulationResults={raceBaseResults} onFinishRace={(results, hazards, weather) => { setRaceResults(results || null); setRaceHazards(hazards || []); setReplayWeather(weather || 'sunny'); setScreen('race-results'); }}/>
+        <Race3DPerspectiveView key={`race-${circuitId}-${playerId}-${raceSession}`} experience="race" playerVehicleId={playerId} initialWeather={raceWeather} vehicles={raceCars} track={raceTrack} simulationResults={raceBaseResults} onRestartRace={() => setRaceSession(n => n + 1)} onFinishRace={(results, hazards, weather) => { setRaceResults(results || null); setRaceHazards(hazards || []); setReplayWeather(weather || 'sunny'); setScreen('race-results'); }}/>
         <p className="text-xs text-slate-500">Física jugable aproximada: agarre, aceleración, frenada y colisiones cambian el resultado. Los trazados urbanos son recreaciones ficticias.</p>
       </div>}
 
@@ -317,6 +319,6 @@ export default function App() {
         <div className="flex gap-3"><button onClick={() => setScreen('race-results')} className={buttonPrimary}><Trophy size={16}/> Volver al podio</button><button onClick={startRace} className={buttonSecondary}><RotateCcw size={16}/> Nueva carrera</button></div>
       </div>}
     </main>
-    <footer className="relative z-10 border-t border-slate-800 bg-slate-950/80 px-5 py-6 text-center text-xs leading-relaxed text-slate-500">DATACAR ARENA V9.8 · Prototipo interactivo · Las condiciones de los circuitos son ficticias e inspiradas en Asunción, no información actual sobre el estado de sus calles. Los resultados técnicos son referenciales; algunos parámetros del Corolla Cross son estimados para la simulación. · <a className="font-bold text-cyan-400 underline" href="https://datacarpy.com" target="_blank" rel="noreferrer">datacarpy.com</a></footer>
+    <footer className="relative z-10 border-t border-slate-800 bg-slate-950/80 px-5 py-6 text-center text-xs leading-relaxed text-slate-500">DATACAR ARENA V13 · Prototipo interactivo · Las condiciones de los circuitos son ficticias e inspiradas en Asunción, no información actual sobre el estado de sus calles. Los resultados técnicos son referenciales; algunos parámetros del Corolla Cross son estimados para la simulación. · <a className="font-bold text-cyan-400 underline" href="https://datacarpy.com" target="_blank" rel="noreferrer">datacarpy.com</a></footer>
   </div>;
 }

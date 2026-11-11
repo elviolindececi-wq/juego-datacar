@@ -385,3 +385,29 @@
 .dc11-start-gate {background:linear-gradient(90deg,#020b15b8,#05101c44 50%,#020b15b8);}
 .dc11-start-card {background:#061524e8;backdrop-filter:blur(7px);}
 .dc11-start-card button:disabled {cursor:progress;opacity:.8;}
+
+/* DATACAR V12 · identidad y controles mobile mejorados */
+@media (pointer:coarse) {
+.dc12-featured {touch-action:pan-y;gap:4px;}
+.dc12-featured .dc12-featured-nav {position:relative;z-index:5;flex:0 0 34px;width:34px;height:48px;border:1px solid #57dfff88;border-radius:11px;background:#061728bb;color:#dffaff;display:grid;place-items:center;}
+.dc12-featured img {width:calc(100% - 92px)!important;max-width:100%;height:76%!important;}
+.dc12-featured-label {position:absolute;z-index:6;bottom:1%;left:15%;right:15%;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;text-align:center;background:#061322b9;padding:4px 8px;border-radius:10px;}
+.dc12-featured-label strong {font-size:clamp(10px,1.9vw,16px);color:white;}
+.dc12-featured-label small {font-size:10px;color:#b6cfe1;}
+.dc12-featured-label button {background:#08a8c8;color:#061522;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;}
+.dc12-compare-results {overflow-y:auto!important;}
+.dc12-compare-render {max-height:65dvh;overflow:auto;margin:4px 12px;}
+}
+.dc12-video-error {color:#fbbf24!important;font-size:12px;}
+.dc12-stuck-modal {position:absolute;inset:0;z-index:150;background:#030914e8;display:grid;place-items:center;padding:18px;text-align:center;}
+.dc12-stuck-modal>div {background:#0b1c2e;border:1px solid #5ee1f5;border-radius:16px;padding:20px;max-width:420px;}
+.dc12-stuck-modal h2 {font-size:23px;font-weight:950;color:#ffca61;}
+.dc12-stuck-modal p {font-size:14px;color:#e2edf5;margin:12px 0;}
+.dc12-stuck-modal button {padding:12px 15px;margin:5px;border-radius:11px;background:#10bdd8;color:#05121d;font-weight:900;}
+.dc12-stuck-modal button+button {background:#1b3244;color:white;}
+
+.dc12-select-compare{padding:6px 10px!important;border:1px solid #00d2ee!important;border-radius:9px!important;position:relative;z-index:8;cursor:pointer;}
+
+.dc12-media-toggle {display:flex;gap:6px;padding:6px 0;justify-content:center;}
+.dc12-media-toggle button {border:1px solid #3c6078;border-radius:8px;background:#0e1e30;color:#bcdbea;padding:7px 10px;font-size:11px;font-weight:800;}
+.dc12-media-toggle button.active {border-color:#4cdef6;background:#16415a;color:#fff;}

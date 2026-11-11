@@ -28,6 +28,7 @@ import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CircleStop, Maximize2, Smartphone, X,
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
+import { canStartCountdown, raceStartupMessage } from '../utils/raceStartupGate';
 import { initialRaceInsight, nextRaceInsight, type RaceInsight } from '../utils/vehicleRaceInsights';
 import { hasDocumentedABS } from '../utils/brakingDynamics';
 import { hasVerifiedSystem } from '../utils/vehicleSafetySystems';
@@ -48,6 +49,7 @@ import { makeRoadPath, type CurvedRoadPath } from '../utils/curvedRoadPath';
 import { makeCurvedAsphalt, bendRoadsideGroup } from '../utils/curvedRoadVisuals3D';
 import { hasVehicle3DModel } from '../utils/vehicle3DModelLoader';
 import { chooseDirectorShot, DirectorShot } from '../utils/cinematicDirector';
+import { simulatedGear } from '../utils/powertrainDynamics';
 import { InteractiveRacePhysics, PHYSICS_STEP } from '../utils/interactiveRacePhysics';
 import type { TrackHazard, HazardKind } from '../utils/interactiveRacePhysics';
 import { 
@@ -73,6 +75,7 @@ interface Race3DPerspectiveViewProps {
   replayWeather?: WeatherMode;
   initialWeather?: WeatherMode;
   onExitRace?: () => void;
+  onRestartRace?: () => void;
   /** La carrera mobile espera el toque START después de preparar render y modelos. */
   manualStart?: boolean;
 }
@@ -307,6 +310,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   replayWeather,
   initialWeather,
   onExitRace,
+  onRestartRace,
   manualStart = false,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -392,6 +396,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   // Velocidad de reproducción visual: 0.75x por defecto según especificación
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(experience === 'legacy' ? 0.75 : 1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [stuckInPothole,setStuckInPothole] = useState(false);
+  const stuckRef = useRef<{seconds:number;lastDistance:number}>({seconds:0,lastDistance:0});
   const [mobileCameraOpen, setMobileCameraOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState<CameraViewMode>(experience === 'replay' || experience === 'legacy' ? 'automatica' : 'arcade');
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(() => experience === 'replay' ? (replayWeather || 'sunny') : (initialWeather || (track.routeHazardProfile === 'flood' && experience === 'race' ? 'rain' : 'sunny')));
@@ -402,7 +408,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const insightSequenceRef = useRef(0);
   const lastUrgentInsightAtRef = useRef(0);
   const [restartSequence, setRestartSequence] = useState(0);
-  const [startRequested, setStartRequested] = useState(!manualStart);
+  const [startRequested, setStartRequested] = useState(experience !== 'race');
   const [visualReady, setVisualReady] = useState(false);
   const [showDetailedHud,setShowDetailedHud] = useState(false);
   const [showRaceInformation,setShowRaceInformation] = useState(false);
@@ -431,7 +437,10 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const [liveVehicleStates, setLiveVehicleStates] = useState<Record<string, { lateralX?: number, distance: number, speedKmh: number, accelG: number, gear: number, rpm: number, impacts: number, slip: number, pothole: boolean, absActive: boolean, tcsActive?: boolean, escActive?: boolean, aebActive?: boolean, fcwWarning?: boolean, laneDepartureWarning?: boolean }>>({});
   const [raceEvent, setRaceEvent] = useState('');
   const [isGlbLoading, setIsGlbLoading] = useState<boolean>(() => vehicles.some((v) => hasVehicle3DModel(v.id)));
+  const [loadedVehicleModels, setLoadedVehicleModels] = useState(0);
+  const requiredVehicleModels = vehicles.filter(v => hasVehicle3DModel(v.id)).length;
   const [glbLoadError, setGlbLoadError] = useState<string | null>(null);
+  const raceGateReady = canStartCountdown({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: Boolean(glbLoadError)});
 
   // Métricas de diagnóstico en tiempo real (GPU / Engine)
   const [diagStats, setDiagStats] = useState({
@@ -619,6 +628,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     setCurrentTimeSec(0);
     stateRef.current.currentTimeSec = 0;
     setHasFinished(false);
+    setStuckInPothole(false);stuckRef.current={seconds:0,lastDistance:0};
     finalResultsRef.current = null;
     setLiveVehicleStates({});
     setRaceEvent('');
@@ -640,7 +650,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       return () => { soundEngine.stopAll(); };
     }
     // En mobile la grilla debe permanecer quieta hasta pulsar START.
-    if (experience === 'race' && manualStart && !startRequested) {
+    if (experience === 'race' && !startRequested) {
       setCountdown(null);
       stateRef.current.countdown = null;
       stateRef.current.isPlaying = false;
@@ -695,6 +705,18 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       }
     };
   }, [track.id, vehicles, interactiveMode, hazardsEnabled, experience, restartSequence, manualStart, startRequested]);
+
+  // Flujo mobile único: INICIAR CARRERA -> precarga -> pista renderizada -> 3, 2, 1.
+  // No se exige un segundo toque START y ningún pitido ocurre antes del primer render.
+  useEffect(() => {
+    if (experience !== 'race' || !raceGateReady || startRequested) return;
+    const timer = window.setTimeout(() => {
+      soundEngine.unlock();
+      stateRef.current.isPlaying = false;
+      setStartRequested(true);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [experience, raceGateReady, startRequested]);
 
   // DATACAR V9.6: cápsulas educativas durante la carrera. Máximo una cada
   // 5,2 segundos, calculadas desde el auto real de esta partida, no desde
@@ -1207,17 +1229,26 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
     // 4. Instanciar los tres competidores en 3D GLB (Reutilizando la geometría única en caché)
     const vehicleEntities: VehicleEntityRunner[] = [];
+    let sceneDisposed = false;
+    let completedModels = 0;
+    setLoadedVehicleModels(0);
+    setGlbLoadError(null);
+    setIsGlbLoading(requiredVehicleModels > 0);
     vehicles.forEach((vehicle, idx) => {
       const entity = createVehicleEntity(
         vehicle,
         idx,
         vehicles.length,
         () => {
-          setIsGlbLoading(false);
+          if (sceneDisposed) return;
+          completedModels += 1;
+          setLoadedVehicleModels(completedModels);
+          if (completedModels >= requiredVehicleModels) setIsGlbLoading(false);
         },
         (err) => {
+          if (sceneDisposed) return;
           console.error(err);
-          setGlbLoadError('No se pudo cargar el modelo GLB');
+          setGlbLoadError(`No se pudo cargar el modelo 3D de ${vehicle.name}`);
           setIsGlbLoading(false);
         }
       );
@@ -1403,8 +1434,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           }
           // Antes se cortaban motores y muestras instantáneamente,
           // generando clics/zumbidos al cruzar la meta.
-          soundEngine.stopAll(0.22);
-          if (experience === 'race') soundEngine.playFinishCheer();
+          // Silenciar todos los motores al cruzar meta. El travelling posterior es visual.
+          soundEngine.stopAll(0.08);
+          // Llegada sin ovación: conservar únicamente el fundido del motor.
           if (finishTimerRef.current !== null) clearTimeout(finishTimerRef.current);
           finishTimerRef.current = setTimeout(() => {
             finishTimerRef.current = null;
@@ -1416,9 +1448,19 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         }
         if (timeDisplayRef.current) timeDisplayRef.current.textContent = `${stateRef.current.currentTimeSec.toFixed(2)}s`;
         if (now - lastUiSyncTime >= 180) {
+          const uiDeltaSeconds = Math.min(0.4, Math.max(0, (now - lastUiSyncTime) / 1000));
           setCurrentTimeSec(stateRef.current.currentTimeSec);
           if (livePhysics) {
             const player = experience === 'race' ? livePhysics.getCar(selectedVehicleId) : null;
+            if (player && !stuckInPothole && !livePhysics.playerFinished) {
+              const state=stuckRef.current;
+              const motion=Math.abs(player.z-state.lastDistance);
+              const nearPothole=livePhysics.hazards.some(h=>h.kind==='pothole' && Math.hypot(h.x-player.x,h.z-player.z)<h.radius+1.15);
+              const isTrapped=(player.pothole||nearPothole) && Math.abs(player.speed)*3.6<4 && motion<.4 && (steeringKeysRef.current.throttle||steeringKeysRef.current.reverse);
+              state.seconds=isTrapped?state.seconds+uiDeltaSeconds:0;
+              state.lastDistance=player.z;
+              if(state.seconds>=6){setStuckInPothole(true);setIsPlaying(false);stateRef.current.isPlaying=false;}
+            }
             setPotholeWarning(player && !livePhysics.playerFinished
               ? findUpcomingPothole(livePhysics.hazards, player, player.vehicle.dimensions.widthMm / 1000)
               : null);
@@ -1427,7 +1469,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               const kmh = Math.abs(car.speed) * 3.6;
               snapshot[car.id] = {
                 distance: car.z, lateralX: car.x, speedKmh: kmh, accelG: car.acceleration / 9.80665,
-                gear: car.speed < -.08 ? 0 : kmh < 15 ? 1 : kmh < 40 ? 2 : kmh < 75 ? 3 : kmh < 115 ? 4 : 5,
+                gear: simulatedGear(car.vehicle,car.speed),
                 rpm: Math.round(car.engineRpm),
                 impacts: car.impacts, slip: car.slip, pothole: car.pothole, absActive: car.absActive, tcsActive: car.tcsActive, escActive: car.escActive, aebActive: car.aebActive, fcwWarning: car.fcwWarning, laneDepartureWarning: car.laneDepartureWarning,
               };
@@ -1548,10 +1590,16 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       if (experience === 'race' && stateRef.current.hasFinished && finishCarPose) {
         const entity = vehicleEntities.find(e => e.vehicle.id === stateRef.current.selectedVehicleId);
         if (entity) {
-          const t = THREE.MathUtils.clamp((now - finishCinematicStartedAt) / 4000, 0, 1);
-          const advance = 7 * (1 - Math.pow(1 - t, 2));
+          // Travelling uniforme durante los cuatro segundos del cierre.
+          // La velocidad visual es ~18 km/h; nunca se frena hasta detenerse
+          // en la imagen de meta. No modifica el resultado ni reanuda el motor.
+          const elapsed = Math.max(0, (now - finishCinematicStartedAt) / 1000);
+          const advance = Math.min(elapsed, 4) * 5;
           entity.group.position.x = finishCarPose.x + Math.sin(finishCarPose.yaw) * advance;
           entity.group.position.z = finishCarPose.z + Math.cos(finishCarPose.yaw) * advance;
+          // El desplazamiento posterior a meta es solo visual: animar también las
+          // ruedas con esos metros extra sin modificar la distancia de carrera.
+          entity.advanceFinishWheelRotation?.(advance);
         }
       }
       const count = vehicleEntities.length || 1;
@@ -1679,26 +1727,49 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           break;
         }
         case 'lateral':
-        case 'lateral_izquierda': {
-          targetSmoothRate = 7.5;
-          wantedFov = compact ? 62 : 51;
-          _desiredCamPos.set(-broadcastSide, 2.25, leaderDist + 2);
-          _camTarget.set(avgX, 1.06, centerZ + 1.8);
-          break;
-        }
+        case 'lateral_izquierda':
         case 'lateral_derecha': {
-          targetSmoothRate = 7.5;
-          wantedFov = compact ? 62 : 51;
-          _desiredCamPos.set(broadcastSide, 2.4, leaderDist - 3);
-          _camTarget.set(avgX, 1.10, centerZ + 1.6);
+          // Cámara lateral vinculada al auto seleccionado, NO a la media de
+          // los rivales. Trabaja en coordenadas mundiales y acompaña curvas.
+          const yaw = selectedEntity?.group.rotation.y ?? 0;
+          const side = effectiveShot === 'lateral_derecha' ? 1 : -1;
+          const rightX = Math.cos(yaw);
+          const rightZ = -Math.sin(yaw);
+          const forwardX = Math.sin(yaw);
+          const forwardZ = Math.cos(yaw);
+          const sideDistance = compact ? 8.2 : 9.4;
+          targetSmoothRate = 9.2;
+          wantedFov = compact ? 51 : 46;
+          _desiredCamPos.set(
+            selectedX + side * rightX * sideDistance - forwardX * 2.2,
+            compact ? 2.55 : 2.75,
+            selectedZ + side * rightZ * sideDistance - forwardZ * 2.2,
+          );
+          _camTarget.set(selectedX + forwardX * 0.7, 1.35, selectedZ + forwardZ * 0.7);
           break;
         }
         case 'cenital':
         case 'cenital_dinamica': {
-          targetSmoothRate = 6.5;
-          wantedFov = compact ? 60 : 50;
-          _desiredCamPos.set(avgX + 4.5, compact ? 19 : 23, centerZ - 5);
-          _camTarget.set(avgX, 0.9, centerZ + 3);
+          // Pose en coordenadas de mundo: seguir al vehículo elegido sin
+          // referencias indefinidas ni transformar dos veces las curvas.
+          const carYaw = selectedEntity?.group.rotation.y ?? roadPath.at(0).yaw;
+          const forwardX = Math.sin(carYaw);
+          const forwardZ = Math.cos(carYaw);
+          targetSmoothRate = 7.2;
+          wantedFov = compact ? 50 : 44;
+          const topHeight = compact ? 19 : 23;
+          const behind = 3.2;
+          const ahead = compact ? 3.8 : 5.0;
+          _desiredCamPos.set(
+            selectedX - forwardX * behind,
+            topHeight,
+            selectedZ - forwardZ * behind,
+          );
+          _camTarget.set(
+            selectedX + forwardX * ahead,
+            0.9,
+            selectedZ + forwardZ * ahead,
+          );
           break;
         }
         case 'libre': {
@@ -1750,7 +1821,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       // Director TV opera en posiciones globales. Sus planos procedentes del
       // antiguo eje Z se reorientan sobre la tangente del circuito curvo.
       // Arcade, tercera persona y libre ya utilizan la posición mundial del GLB.
-      if (roadPath.isCurved && !(isFinishCinematic && effectiveShot === 'frontal_meta') && !['arcade', 'trasera', 'libre'].includes(effectiveShot)) {
+      if (roadPath.isCurved && !(isFinishCinematic && effectiveShot === 'frontal_meta') && !['arcade', 'trasera', 'libre', 'lateral', 'lateral_izquierda', 'lateral_derecha', 'cenital', 'cenital_dinamica'].includes(effectiveShot)) {
         const frameX = roadPath.at(centerZ).x;
         const cameraAt = roadPath.world(_desiredCamPos.z, _desiredCamPos.x - frameX);
         const targetAt = roadPath.world(_camTarget.z, _camTarget.x - frameX);
@@ -1758,6 +1829,17 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         _desiredCamPos.z = cameraAt.z;
         _camTarget.x = targetAt.x;
         _camTarget.z = targetAt.z;
+      }
+
+      // Resguardo: una coordenada inválida nunca debe bloquear el render 3D.
+      // Se regresa a una vista detrás del coche si una pose falla.
+      if (![ _desiredCamPos.x, _desiredCamPos.y, _desiredCamPos.z,
+              _camTarget.x, _camTarget.y, _camTarget.z ].every(Number.isFinite)) {
+        const yaw = selectedEntity?.group.rotation.y ?? 0;
+        const fx = Math.sin(yaw);
+        const fz = Math.cos(yaw);
+        _desiredCamPos.set(selectedX - fx * 7, 3, selectedZ - fz * 7);
+        _camTarget.set(selectedX + fx * 5, 1.2, selectedZ + fz * 5);
       }
 
       // Cortes de televisión auténticos. El damping entre cámaras opuestas
@@ -1816,6 +1898,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     requestAnimationFrame(handleResize);
 
     return () => {
+      sceneDisposed = true;
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
       viewportResizeObserver?.disconnect();
@@ -2046,9 +2129,34 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         </div>}
 
         {showRaceInformation && <div className="dc11-race-info-dialog" role="dialog" aria-label="Datos y telemetría educativa"><div><header><h2>DATACAR · DATOS EN CARRERA</h2><button onClick={()=>{setShowRaceInformation(false);setMobileMenuOpen(true);}}>CERRAR</button></header>{raceInsight?<><h3>{raceInsight.title}</h3><p>{raceInsight.message}</p></>:<p>La información educativa aparece conforme a los eventos de conducción y a las fichas de los vehículos.</p>}<p>Ficha técnica + telemetría virtual. No constituye una prueba oficial.</p><h3>MI AUTO</h3><p>{selectedVehicle?.brand} {selectedVehicle?.name}</p>{selectedVehicleState&&<p>{selectedVehicleState.speedKmh.toFixed(1)} km/h · {selectedVehicleState.rpm} RPM · {selectedVehicleState.accelG.toFixed(2)} G · {selectedVehicleState.distance.toFixed(1)} metros</p>}</div></div>}
-        {experience === 'race' && manualStart && !startRequested && <div className="dc11-start-gate" role="dialog" aria-label="Largada lista">
-          <div className="dc11-start-card"><span>DATACAR ARENA · GRILLA DE SALIDA</span><h2>¿LISTO PARA CORRER?</h2><p>La pista debe verse completa antes de largar. Tocá START para el conteo 3 · 2 · 1 · ¡YA!</p>
-            <button type="button" disabled={!visualReady} onClick={() => { if (!visualReady) return; soundEngine.unlock(); stateRef.current.isPlaying = false; stateRef.current.countdown = 3; setStartRequested(true); }}><Play size={24} fill="currentColor"/> {visualReady?'START':'CARGANDO PISTA 3D…'}</button>
+        {experience === 'race' && stuckInPothole && <div className="dc12-stuck-modal" role="dialog" aria-modal="true" aria-label="Auto atrapado en bache"><div><h2>VEHÍCULO ATASCADO</h2><p>Caíste en un bache y el vehículo no logra salir. Podés reiniciar la carrera o volver a elegir auto y circuito.</p><button onClick={()=>{
+          // El reinicio tiene que crear una sesión NUEVA. Cambiar solo el
+          // temporizador deja el motor y la posición dentro del bache.
+          soundEngine.stopAll();
+          stateRef.current.isPlaying = false;
+          if (onRestartRace) {
+            onRestartRace(); // Mobile y desktop desmontan la escena anterior.
+          } else {
+            // Respaldo para integraciones que todavía no pasan el callback.
+            const rebuilt = new InteractiveRacePhysics(vehicles, track, stateRef.current.selectedVehicleId, hazardsEnabled);
+            physicsRef.current = rebuilt;
+            rebuilt.setWeather(weatherModeRef.current);
+            raceHazardsSnapshotRef.current = rebuilt.hazards.map(h => ({...h}));
+            resetVisualRaceRef.current?.();
+            stuckRef.current = {seconds:0,lastDistance:0};
+            setStuckInPothole(false);
+            setCurrentTimeSec(0);
+            stateRef.current.currentTimeSec = 0;
+            setLiveVehicleStates({});
+            setStartRequested(experience !== 'race');
+            setRestartSequence(n=>n+1);
+          }
+        }}>REINICIAR CARRERA</button><button onClick={()=>{setStuckInPothole(false);onExitRace?.();}}>SALIR DE LA CARRERA</button></div></div>}
+        {experience === 'race' && !startRequested && <div className="dc11-start-gate" role="status" aria-live="polite">
+          <div className="dc11-start-card"><span>DATACAR ARENA · GRILLA DE SALIDA</span>
+            <h2>{glbLoadError ? 'ERROR DE CARGA' : raceGateReady ? 'PREPARATE PARA LA LARGADA' : 'PREPARANDO PISTA Y AUTOS…'}</h2>
+            <p>{raceStartupMessage({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: Boolean(glbLoadError)})}</p>
+            {glbLoadError && <button type="button" onClick={() => onRestartRace?.()} className="mt-3 rounded-lg bg-sky-400 px-4 py-2 font-bold text-slate-950">REINTENTAR CARGA</button>}
           </div>
         </div>}
         {experience === 'race' && !hasFinished && <div className="dc-mobile-controls" aria-label="Controles táctiles de conducción">

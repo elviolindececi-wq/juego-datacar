@@ -1,0 +1,4 @@
+DATACAR ARENA V12.5
+- Corrige la cámara Cenital 3D.
+- La vista ahora sigue el vehículo del jugador y muestra la ruta por delante.
+- Evita encuadres vacíos o desviados hacia edificios/terreno.

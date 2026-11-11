@@ -1,0 +1,10 @@
+DATACAR ARENA V12.2 — VISOR MANUAL 360°
+
+Requiere V12.1 instalado previamente.
+- Elimina los botones VIDEO 360° y GIRAR 360° del visor (ahora solo hay visor manual).
+- Elimina selector adicional VIDEO 360° del showroom mobile.
+- Conserva arrastrar con el dedo o mouse y slider inferior para elegir ángulo.
+- Conserva ficha técnica y otras funciones.
+- No altera física, carrera ni vehículos.
+
+Instalación: extraer sobre la raíz del proyecto con reemplazo de archivos, ejecutar npm run build.

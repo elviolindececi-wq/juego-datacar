@@ -30,15 +30,28 @@ export function powertrainProfile(v: Vehicle): PowertrainProfile {
     cvt,
   };
 }
+/** Relaciones aproximadas para sonido y simulación, NO equivalen a relaciones homologadas.
+ * Las cajas CVT se mantienen continuas; las escalonadas suben de marcha sin
+ * dejar que el motor siga aumentando linealmente hasta el limitador. */
+export function simulatedGear(v: Vehicle, speedMps: number): number {
+  const kmh = Math.abs(speedMps)*3.6;
+  if (speedMps < -0.08) return 0;
+  if (powertrainProfile(v).cvt) return 1;
+  const thresholds = [18,39,65,94,130];
+  return 1 + thresholds.filter(threshold=>kmh>=threshold).length;
+}
 export function estimatedRpm(v: Vehicle, speedMps: number, throttle: number): number {
-  const p = powertrainProfile(v);
-  const kmh = Math.abs(speedMps) * 3.6;
-  // CVT mantiene un rango continuo de revoluciones bajo carga;
-  // caja escalonada tiene oscilación leve por relaciones, nunca saltos instantáneos.
-  const target = p.cvt
-    ? 850 + Math.min(3000, kmh * 24) + 1650 * clamp(throttle, 0, 1)
-    : 800 + Math.min(p.rpmLimit - 1200, kmh * (p.turbo ? 37 : 40)) + 800 * clamp(throttle, 0, 1);
-  return clamp(target, p.turbo && v.fuelType === 'diesel' ? 780 : 800, p.rpmLimit);
+  const p=powertrainProfile(v);
+  const kmh=Math.abs(speedMps)*3.6;
+  const demand=clamp(throttle,0,1);
+  if (p.cvt) return clamp(850 + Math.min(2150,kmh*14) + 650*demand,800,p.rpmLimit);
+  const starts=[0,18,39,65,94,130];
+  const rates=[90,78,60,47,36,30];
+  const gear=simulatedGear(v,speedMps);
+  if (gear===0) return clamp(900+kmh*90+500*demand,800,p.rpmLimit);
+  const index=gear-1;
+  const rpm=850 + (kmh-starts[index])*rates[index] + 430*demand;
+  return clamp(rpm,800,p.rpmLimit);
 }
 export function turboTarget(v: Vehicle, rpm: number, throttle: number): number {
   const p = powertrainProfile(v);

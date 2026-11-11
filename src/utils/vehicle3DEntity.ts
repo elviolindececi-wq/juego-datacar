@@ -39,6 +39,8 @@ export interface VehicleEntityRunner {
   ) => void;
   setHeadlights: (enabled: boolean, illuminateTrack: boolean) => void;
   setNameplateVisible: (visible: boolean) => void;
+  // Metros recorridos solo en la toma de llegada; no altera la física.
+  advanceFinishWheelRotation?: (additionalMeters: number) => void;
   dispose: () => void;
 }
 
@@ -412,6 +414,14 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
       this.brakeLight.intensity, isBraking ? 3.2 : 0,
       12, Math.max(0, frameDeltaSeconds),
     );
+  }
+
+  /** Mantiene el rodamiento visible durante la toma final de 18 km/h. */
+  public advanceFinishWheelRotation(additionalMeters: number) {
+    if (!Number.isFinite(additionalMeters) || additionalMeters < 0) return;
+    // updateState() restablece la distancia física cada frame. Aplicamos el
+    // avance cinematográfico después, sin acumularlo dos veces.
+    this.wheelRig?.setDistanceMeters(this.lastDistanceMeters + additionalMeters);
   }
 
   public setNameplateVisible(visible: boolean) {

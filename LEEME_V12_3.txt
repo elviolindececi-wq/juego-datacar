@@ -1,0 +1,1 @@
+DATACAR V12.3: showroom desktop y mobile con un solo visor manual (sin opción de reproducción de video); cámara lateral anclada al auto activo y orientada a su rumbo; después de cruzar la meta, desplazamiento visual uniforme hasta resultados con motor silenciado. Aplicar sobre V12.2. Ejecutar npm run build.

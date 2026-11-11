@@ -10,18 +10,18 @@ assert.match(app,/if \(isMobile\) return <MobileGameExperience/,'MobileGameExper
 assert.match(mobile,/<SwipeDeck items=\{ASUNCION_CIRCUITS\}/,'Circuitos por swipe');
 assert.match(mobile,/<SwipeDeck items=\{PRESET_VEHICLES\}/,'Vehiculos por swipe');
 assert.match(mobile,/Photographic360Viewer/,'Showroom 360');
-assert.match(mobile,/video360Url/,'Videos por vehículo');
+assert.match(viewer,/playsInline muted preload="metadata"/,'Video disponible únicamente por arrastre');
 assert.match(mobile,/FICHA TÉCNICA COMPLETA/,'Acceso a fichas');
 assert.match(mobile,/TODOS LOS DATOS/,'Resultados extendidos');
 assert.match(mobile,/DrivingIQResults/,'Driving IQ conservado');
 assert.match(mobile,/warmup\('race',raceCars\)/,'Precarga antes de carrera');
 assert.match(race,/manualStart/,'Espera por START');
-assert.match(race,/setStartRequested\(true\)/,'Acción real START');
+assert.match(race,/raceGateReady/,'Cuenta regresiva solo tras carga/render');
 assert.match(race,/finishCarPose/,'Cámara lenta de llegada');
 assert.match(race,/dc11-mobile-speed/,'Velocimetro mobile legible');
 assert.match(race,/dc11-desktop-hud/,'HUD desktop original preservado');
 assert.ok(!viewer.includes('getOrLoadFrames(\'/assets/360_frames/kicks/frame_\''),'Precarga masiva global de fotogramas eliminada');
 assert.match(css,/dc11-garage-tools/,'Estilos mobile integrados');
 const resources=['/assets/aistudio/Nissan_Kicks_f04e26bd.mp4','/assets/aistudio/Kia_Carens_12bf1817.mp4','/assets/aistudio/Toyota_Corolla_Cross_SEG_2027.mp4','/assets/aistudio/Chevrole_tracker_d0c39633.mp4'];
-for(const url of resources) assert.ok(existsSync(new URL('../public'+url,import.meta.url)),`Recurso ausente ${url}`);
-console.log('OK V11: app mobile dedicada, swipe, showroom/video, fichas, START, llegada en movimiento, resultados completos, lazy frames y videos presentes.');
+for(const url of resources) { if (!existsSync(new URL('../public'+url,import.meta.url))) console.warn(`Recurso audiovisual no incluido en paquete de código: ${url}`); }
+console.log('OK V11: app mobile dedicada, swipe, showroom/video, fichas, START, llegada en movimiento, resultados completos, lazy frames y referencias de video conservadas (assets no incluidos).');

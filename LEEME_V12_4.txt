@@ -1,0 +1,5 @@
+DATACAR ARENA V12.4 - Reinicio desde grilla de salida
+
+Instalar SOBRE V12.3. Al pulsar Reiniciar carrera en el aviso de bache, se desmonta la carrera actual y se recrea desde cero. Mobile y desktop utilizan un identificador de sesion distinto; vuelve el conteo de largada y no conserva la posicion atascada.
+
+Pruebas: colocar el auto en un bache, acelerar sin desplazamiento hasta el aviso, pulsar reiniciar, comprobar que aparecen tres autos en grilla a 0 m y que comienza el 3-2-1.
