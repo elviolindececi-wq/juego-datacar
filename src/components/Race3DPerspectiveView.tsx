@@ -372,6 +372,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const [currentTimeSec, setCurrentTimeSec] = useState(0);
   // Velocidad de reproducción visual: 0.75x por defecto según especificación
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(experience === 'legacy' ? 0.75 : 1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileCameraOpen, setMobileCameraOpen] = useState(false);
   const [cameraMode, setCameraMode] = useState<CameraViewMode>(experience === 'replay' || experience === 'legacy' ? 'automatica' : 'arcade');
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(() => experience === 'replay' ? (replayWeather || 'sunny') : (initialWeather || (track.routeHazardProfile === 'flood' && experience === 'race' ? 'rain' : 'sunny')));
   const weatherModeRef = useRef<WeatherMode>(weatherMode);
@@ -1961,6 +1963,23 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           <button type="button" onClick={enableLandscape}><Maximize2 size={16}/> Intentar pantalla completa</button>
         </div>}
         <div ref={mountRef} className={`w-full h-full block touch-none ${placementKind ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
+        {experience === 'race' && <div className="dc-mobile-game-top" aria-label="Barra de juego">
+          <span className="dc-mobile-track-name">{track.name}</span>
+          <span className="dc-mobile-clock">{currentTimeSec.toFixed(1)} s</span>
+          <button onClick={() => setMobileCameraOpen(v => !v)} aria-label="Elegir cámara"><Video size={19}/></button>
+          <button onClick={() => { setIsPlaying(false); stateRef.current.isPlaying = false; setMobileMenuOpen(true); }} aria-label="Pausar y abrir menú"><Pause size={19}/></button>
+        </div>}
+        {experience === 'race' && mobileCameraOpen && <div className="dc-mobile-camera-menu">
+          {([['arcade','Arcade'],['trasera','Mi auto'],['lateral','Lateral'],['cenital','Cenital'],['libre','Libre']] as const).map(([mode,label]) => <button key={mode} onClick={() => { setCameraMode(mode); setMobileCameraOpen(false); }}>{label}</button>)}
+        </div>}
+        {experience === 'race' && mobileMenuOpen && <div className="dc-mobile-pause-screen">
+          <h2>PAUSA</h2><p>DATACAR ARENA</p>
+          <button className="dc-mobile-resume" onClick={() => { soundEngine.unlock(); setIsPlaying(true); stateRef.current.isPlaying = true; setMobileMenuOpen(false); }}><Play size={18}/> CONTINUAR</button>
+          <button onClick={toggleMute}>{isMuted ? 'Activar sonido' : 'Silenciar sonido'}</button>
+          <button onClick={() => setHeadlightsOn(v => !v)}>{headlightsOn ? 'Apagar faros' : 'Encender faros'}</button>
+          <label>CLIMA <select value={weatherMode} onChange={e => setWeatherMode(e.target.value as WeatherMode)}>{WEATHER_OPTIONS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
+        </div>}
+
         {experience === 'race' && !hasFinished && <div className="dc-mobile-controls" aria-label="Controles táctiles de conducción">
           <div className="dc-touch-steering">
             {touchButton('left', 'Izquierda', <ArrowLeft size={26} strokeWidth={3}/>)}

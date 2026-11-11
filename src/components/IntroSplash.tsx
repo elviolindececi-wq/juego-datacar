@@ -33,7 +33,24 @@ export function IntroSplash({ vehicles, onStart, onCompare, onRace }: IntroSplas
   if (!chosen) return null;
 
   return (
-    <main className="relative isolate flex min-h-screen flex-col overflow-hidden bg-[#04070c] text-white selection:bg-cyan-300 selection:text-slate-950">
+    <>
+    <main className="dc-mobile-start" aria-label="DATACAR ARENA: inicio del juego">
+      <div className="dc-mobile-start-glow" aria-hidden="true" />
+      <div className="dc-mobile-game-brand"><span>DATA<b>CAR</b></span><strong>ARENA</strong><small>ASUNCIÓN · EDICIÓN MOBILE</small></div>
+      <div className="dc-mobile-hero-copy"><span className="dc-mobile-eyebrow">EL ASFALTO TE ESPERA</span><h1>LOS MÁS <em>BUSCADOS</em></h1></div>
+      <div className="dc-mobile-car-picker">
+        <button onClick={() => selectRelative(-1)} aria-label="Auto anterior" className="dc-mobile-pick-arrow"><ChevronLeft/></button>
+        <img src={preview(chosen)} alt={`${chosen.brand} ${chosen.name}`} />
+        <button onClick={() => selectRelative(1)} aria-label="Auto siguiente" className="dc-mobile-pick-arrow"><ChevronRight/></button>
+      </div>
+      <div className="dc-mobile-car-title"><span>{String(selectedIndex + 1).padStart(2,'0')} / {String(vehicles.length).padStart(2,'0')} · SELECCIONÁ TU AUTO</span><strong>{chosen.brand} {chosen.name}</strong><small>{chosen.powerHp} HP · {chosen.torqueNm} Nm</small></div>
+      <nav className="dc-mobile-start-actions" aria-label="Menú principal">
+        <button className="dc-mobile-play" onClick={() => onRace(chosen.id)}><Play fill="currentColor" size={19}/> CORRER AHORA <ArrowRight size={19}/></button>
+        <div><button onClick={onStart}><Gauge size={17}/> MODOS DE JUEGO</button><button onClick={onCompare}><GitCompareArrows size={17}/> COMPARAR</button></div>
+      </nav>
+      <p className="dc-mobile-disclaimer">Simulación recreativa basada en fichas técnicas. No equivale a un ensayo oficial.</p>
+    </main>
+    <main className="dc-desktop-start relative isolate flex min-h-screen flex-col overflow-hidden bg-[#04070c] text-white selection:bg-cyan-300 selection:text-slate-950">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_74%_33%,rgba(7,151,182,.25),transparent_46%),radial-gradient(ellipse_at_15%_80%,rgba(234,179,8,.14),transparent_36%),linear-gradient(145deg,#04070d_10%,#0a1825_56%,#050910_100%)]" />
       <div className="dc-city-skyline pointer-events-none absolute inset-x-0 top-0 h-[72%] overflow-hidden opacity-65" aria-hidden="true">
         {Array.from({ length: 19 }, (_, i) => (
@@ -97,5 +114,6 @@ export function IntroSplash({ vehicles, onStart, onCompare, onRace }: IntroSplas
         <a className="font-bold text-cyan-300 hover:text-white" href="https://datacarpy.com" target="_blank" rel="noopener noreferrer">Conocé autos reales en datacarpy.com <ArrowRight size={12} className="inline"/></a>
       </footer>
     </main>
+    </>
   );
 }

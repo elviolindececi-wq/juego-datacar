@@ -105,3 +105,90 @@
  .dc-mobile-race .dc-race-viewport > div.absolute.left-4.bottom-5 { display:none; }
  .dc-touch-button span { display:none; }
 }
+
+/* V9.8 — experiencia de videojuego desde el primer contacto en smartphone */
+.dc-mobile-start,.dc-mobile-game-top,.dc-mobile-camera-menu,.dc-mobile-pause-screen { display:none; }
+@media (max-width: 950px) and (pointer:coarse) {
+  .dc-desktop-start { display:none !important; }
+  .dc-mobile-start { display:flex; position:relative; isolation:isolate; min-height:100dvh; width:100%; flex-direction:column; justify-content:space-between; overflow:hidden; background:radial-gradient(ellipse at 50% 43%,#143b50 0%,#071625 50%,#02050d 94%); color:white; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+  .dc-mobile-start-glow { position:absolute; z-index:-1; inset:15% -20% 0; background:repeating-linear-gradient(167deg,transparent 0 28px,rgba(42,180,210,.06) 29px 31px,transparent 32px 65px); transform:perspective(360px) rotateX(55deg); pointer-events:none; }
+  .dc-mobile-game-brand { display:flex; flex-direction:column; align-items:center; font-weight:900; font-style:italic; letter-spacing:-.03em; line-height:.96; font-size:clamp(24px,7vw,36px); text-shadow:0 3px 18px #000; }
+  .dc-mobile-game-brand b { color:#4de1ff; font-weight:400; } .dc-mobile-game-brand strong {font-size:clamp(36px,10vw,54px);letter-spacing:.12em;}
+  .dc-mobile-game-brand small {font-style:normal;font-size:9px;letter-spacing:.32em;color:#a9bdc8;margin-top:8px;}
+  .dc-mobile-hero-copy {text-align:center; margin-top:clamp(12px,4dvh,35px);}
+  .dc-mobile-eyebrow {color:#fbbf24;letter-spacing:.24em;font-size:10px;font-weight:900;}
+  .dc-mobile-hero-copy h1 {font-family:var(--font-display);font-weight:900;font-style:italic;font-size:clamp(35px,10vw,58px);line-height:.95;margin-top:5px;}
+  .dc-mobile-hero-copy em {color:#67e8f9;font-style:inherit;}
+  .dc-mobile-car-picker {position:relative;display:flex;align-items:center;justify-content:space-between;min-height:clamp(128px,24dvh,300px);gap:4px;}
+  .dc-mobile-car-picker img {min-width:0;max-width:78%;max-height:clamp(125px,25dvh,290px);object-fit:contain;filter:drop-shadow(0 24px 17px rgba(0,0,0,.65));}
+  .dc-mobile-pick-arrow {display:grid;place-items:center;flex:0 0 42px;height:48px;border:1px solid rgba(125,211,252,.45);border-radius:13px;background:rgba(3,9,19,.72);}
+  .dc-mobile-car-title {text-align:center;display:flex;flex-direction:column;gap:4px;}
+  .dc-mobile-car-title span {font-size:10px;color:#67e8f9;letter-spacing:.18em;font-weight:800;}
+  .dc-mobile-car-title strong {font-family:var(--font-display);font-size:clamp(25px,7vw,40px);line-height:1.05;text-transform:uppercase;}
+  .dc-mobile-car-title small {color:#c4ced8;font-size:11px;}
+  .dc-mobile-start-actions {display:flex;flex-direction:column;gap:9px;max-width:480px;width:100%;margin:14px auto 0;}
+  .dc-mobile-start-actions button {display:flex;align-items:center;justify-content:center;gap:9px;font-weight:900;letter-spacing:.07em;border-radius:13px;min-height:48px;border:1px solid #526575;background:rgba(7,16,31,.95);font-size:12px;}
+  .dc-mobile-start-actions .dc-mobile-play {min-height:58px;background:linear-gradient(90deg,#0ea5c9,#67e8f9);color:#041321;border:1px solid #a5f3fc;font-size:16px;box-shadow:0 0 26px rgba(34,211,238,.22);}
+  .dc-mobile-start-actions>div {display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .dc-mobile-disclaimer {text-align:center;color:#71879a;font-size:9px;margin-top:10px;}
+  .dc-app-shell>header {padding:0 4px;}
+  .dc-app-shell>header>div {padding:10px 12px;gap:6px;}
+  .dc-app-shell>header>div>div {gap:3px;font-size:10px;}
+  .dc-app-shell>header>div>div>span {display:none;}
+  .dc-app-main {padding:16px 12px 40px;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"] {gap:3px;margin-bottom:14px;justify-content:center;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"]>svg {display:none;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"]>div {padding:5px 7px;font-size:9px;letter-spacing:0;}
+  .dc-game-home>div.mx-auto {padding:6px 0;}
+  .dc-game-home h1 {font-size:clamp(33px,10vw,54px);}
+  .dc-app-main button {touch-action:manipulation;}
+  .dc-app-main button:not(.dc-touch-button) {min-height:38px;}
+  .dc-app-main .grid {min-width:0;}
+  .dc-game-running>div:not(:has(.dc-mobile-race)) {display:none;}
+  .dc-game-running>p {display:none;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:650px) {
+  .dc-mobile-start {flex-direction:row;flex-wrap:wrap;align-content:center;align-items:center;gap:8px 3%;padding:12px max(22px,env(safe-area-inset-right)) 12px max(22px,env(safe-area-inset-left));}
+  .dc-mobile-game-brand {width:100%;flex-direction:row;gap:9px;justify-content:center;font-size:17px;}
+  .dc-mobile-game-brand strong {font-size:25px;}.dc-mobile-game-brand small{margin:0;font-size:7px;}
+  .dc-mobile-hero-copy {width:38%;margin:0;text-align:left;}.dc-mobile-hero-copy h1{font-size:clamp(34px,5vw,50px);}
+  .dc-mobile-car-picker {width:58%;min-height:clamp(105px,35dvh,230px);}
+  .dc-mobile-car-picker img {max-height:38dvh;}
+  .dc-mobile-car-title {width:38%;text-align:left;}.dc-mobile-car-title strong{font-size:23px;}
+  .dc-mobile-start-actions {width:58%;margin:0;max-width:none;}
+  .dc-mobile-start-actions .dc-mobile-play{min-height:43px;font-size:13px;}
+  .dc-mobile-start-actions button {min-height:34px;font-size:10px;}
+  .dc-mobile-disclaimer {width:100%;margin:0;}
+  .dc-mobile-race .dc-race-viewport {height:100dvh !important;min-height:0 !important;flex:1;}
+  .dc-mobile-race>div:first-of-type {display:none !important;}
+  .dc-mobile-race>.border-t {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-3.right-3 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-3.left-3 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-\[96px\] {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 {right:calc(50% - 80px);bottom:3px;transform:scale(.43);transform-origin:bottom center;opacity:.85;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.left-4.bottom-5 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-4.right-4 {right:12px;top:50px;}
+  .dc-mobile-race .dc-landscape-toggle {display:none;}
+  .dc-mobile-controls {bottom:max(8px,env(safe-area-inset-bottom));padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right));}
+  .dc-mobile-game-top {position:absolute;z-index:42;display:flex;align-items:center;gap:7px;top:max(4px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));pointer-events:auto;}
+  .dc-mobile-track-name {font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36%;text-transform:uppercase;font-weight:900;color:#8be8ff;text-shadow:0 2px 5px #000;}
+  .dc-mobile-clock {font-weight:900;font-variant-numeric:tabular-nums;font-size:13px;margin-left:auto;text-shadow:0 2px 5px #000;}
+  .dc-mobile-game-top button {display:grid;place-items:center;min-width:35px;height:35px;background:rgba(2,8,20,.8);border:1px solid rgba(103,232,249,.38);border-radius:10px;}
+  .dc-mobile-camera-menu {display:flex;position:absolute;z-index:49;right:max(45px,env(safe-area-inset-right));top:42px;background:#071322;border:1px solid #276174;border-radius:12px;padding:6px;gap:4px;flex-direction:column;box-shadow:0 12px 35px #0009;}
+  .dc-mobile-camera-menu button {padding:8px 13px;text-align:left;font-size:12px;border-radius:7px;}
+  .dc-mobile-camera-menu button:active {background:#16445b;}
+  .dc-mobile-pause-screen {display:flex;position:absolute;z-index:80;inset:0;background:rgba(1,7,17,.96);align-items:center;justify-content:center;flex-direction:column;gap:9px;overflow-y:auto;}
+  .dc-mobile-pause-screen h2 {font-family:var(--font-display);font-size:40px;font-weight:900;font-style:italic;line-height:1;}
+  .dc-mobile-pause-screen p{font-size:10px;color:#67e8f9;letter-spacing:.2em;margin-bottom:5px;}
+  .dc-mobile-pause-screen button,.dc-mobile-pause-screen label {width:min(260px,70vw);min-height:35px;display:flex;align-items:center;justify-content:center;gap:8px;padding:5px;border:1px solid #334e62;border-radius:9px;background:#101d30;font-size:12px;font-weight:700;}
+  .dc-mobile-pause-screen .dc-mobile-resume {background:#22d3ee;color:#06131c;border-color:#a5f3fc;}
+  .dc-mobile-pause-screen select {background:transparent;font-size:12px;}
+  .dc-mobile-race .dc-touch-steering{gap:10px;}
+  .dc-mobile-race .dc-touch-pedals{gap:9px;}
+  .dc-mobile-race .dc-touch-button{width:clamp(48px,8.5vw,72px);height:clamp(48px,8.5vw,72px);border-radius:18px;}
+  .dc-mobile-race .dc-touch-throttle{height:clamp(64px,12vw,86px);}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:390px) {
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 {transform:scale(.36);}
+  .dc-mobile-game-top button {height:29px;min-width:31px;}
+}

@@ -110,13 +110,13 @@ export default function App() {
     return <IntroSplash vehicles={allCars} onStart={() => setScreen('home')} onCompare={() => setScreen('compare-choose')} onRace={id => { setPlayerId(id); setScreen('circuit-choose'); }} />;
   }
 
-  return <div className="min-h-screen bg-[#060b14] text-slate-50 selection:bg-cyan-400 selection:text-slate-950">
+  return <div className="dc-app-shell min-h-screen bg-[#060b14] text-slate-50 selection:bg-cyan-400 selection:text-slate-950">
     <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_15%_-10%,rgba(8,145,178,.20),transparent_52%),radial-gradient(ellipse_at_85%_55%,rgba(16,185,129,.06),transparent_55%)]" />
     <header className="relative z-10 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4">
         <button onClick={goHome} className="flex items-center gap-3 text-left" aria-label="Volver al inicio">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-400/10"><Gauge className="h-6 w-6 text-cyan-400" /></span>
-          <span><span className="block text-xl font-black tracking-tight">DATA<span className="font-light text-cyan-400">CAR</span> <span className="text-white">ARENA</span></span><span className="block text-[10px] font-semibold uppercase tracking-[.22em] text-slate-500">Edición 9.7 · Asunción</span></span>
+          <span><span className="block text-xl font-black tracking-tight">DATA<span className="font-light text-cyan-400">CAR</span> <span className="text-white">ARENA</span></span><span className="block text-[10px] font-semibold uppercase tracking-[.22em] text-slate-500">Edición 9.8 · Asunción</span></span>
         </button>
         <div className="flex items-center gap-2 text-xs font-semibold">
           <span className={`rounded-full px-3 py-1.5 ${isComparison ? 'border border-cyan-400/30 bg-cyan-400/10 text-cyan-300' : 'text-slate-500'}`}>COMPARAR</span>
@@ -126,8 +126,8 @@ export default function App() {
       </div>
     </header>
 
-    <main className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6">
-      {screen === 'home' && <div className="space-y-8">
+    <main className="dc-app-main relative z-10 mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6">
+      {screen === 'home' && <div className="dc-game-home space-y-8">
         <button type="button" onClick={() => setScreen('intro')} className="text-xs font-bold uppercase tracking-widest text-cyan-400 hover:text-white">← Volver a Los más buscados</button>
         <div className="mx-auto max-w-3xl py-6 text-center">
           <p className="mb-3 text-xs font-black uppercase tracking-[.32em] text-cyan-400">Dos maneras de vivir DATACAR</p>
@@ -262,7 +262,7 @@ export default function App() {
         <button onClick={startRace} className={`${buttonPrimary} w-full py-4 text-lg`}><FlagTriangleRight size={21}/> ¡EMPEZAR CARRERA!</button>
       </div>}
 
-      {screen === 'race-run' && <div className="space-y-5">
+      {screen === 'race-run' && <div className="dc-game-running space-y-5">
         <Stepper steps={['Circuito', 'Tu auto 360°', 'Preparar', 'Correr', 'Resultados']} current={3}/>
         <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">MODO CARRERA · CONDUCCIÓN EN VIVO</p><h1 className="mt-1 text-3xl font-black">{circuit.name}</h1><p className="mt-1 text-sm text-slate-400">Vos: {playerCar.brand} {playerCar.name} · IA: otros dos vehículos</p></div><button onClick={() => setScreen('briefing')} className={buttonSecondary}><ArrowLeft size={16}/> Abandonar partida</button></div>
         <Race3DPerspectiveView key={`race-${circuitId}-${playerId}`} experience="race" playerVehicleId={playerId} initialWeather={raceWeather} vehicles={raceCars} track={raceTrack} simulationResults={raceBaseResults} onFinishRace={(results, hazards, weather) => { setRaceResults(results || null); setRaceHazards(hazards || []); setReplayWeather(weather || 'sunny'); setScreen('race-results'); }}/>
@@ -312,6 +312,6 @@ export default function App() {
         <div className="flex gap-3"><button onClick={() => setScreen('race-results')} className={buttonPrimary}><Trophy size={16}/> Volver al podio</button><button onClick={startRace} className={buttonSecondary}><RotateCcw size={16}/> Nueva carrera</button></div>
       </div>}
     </main>
-    <footer className="relative z-10 border-t border-slate-800 bg-slate-950/80 px-5 py-6 text-center text-xs leading-relaxed text-slate-500">DATACAR ARENA V9.5 · Prototipo interactivo · Las condiciones de los circuitos son ficticias e inspiradas en Asunción, no información actual sobre el estado de sus calles. Los resultados técnicos son referenciales; algunos parámetros del Corolla Cross son estimados para la simulación. · <a className="font-bold text-cyan-400 underline" href="https://datacarpy.com" target="_blank" rel="noreferrer">datacarpy.com</a></footer>
+    <footer className="relative z-10 border-t border-slate-800 bg-slate-950/80 px-5 py-6 text-center text-xs leading-relaxed text-slate-500">DATACAR ARENA V9.8 · Prototipo interactivo · Las condiciones de los circuitos son ficticias e inspiradas en Asunción, no información actual sobre el estado de sus calles. Los resultados técnicos son referenciales; algunos parámetros del Corolla Cross son estimados para la simulación. · <a className="font-bold text-cyan-400 underline" href="https://datacarpy.com" target="_blank" rel="noreferrer">datacarpy.com</a></footer>
   </div>;
 }
