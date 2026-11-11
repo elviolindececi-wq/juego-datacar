@@ -116,7 +116,7 @@ export default function App() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4">
         <button onClick={goHome} className="flex items-center gap-3 text-left" aria-label="Volver al inicio">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-400/10"><Gauge className="h-6 w-6 text-cyan-400" /></span>
-          <span><span className="block text-xl font-black tracking-tight">DATA<span className="font-light text-cyan-400">CAR</span> <span className="text-white">ARENA</span></span><span className="block text-[10px] font-semibold uppercase tracking-[.22em] text-slate-500">Edición 9.5 · Asunción</span></span>
+          <span><span className="block text-xl font-black tracking-tight">DATA<span className="font-light text-cyan-400">CAR</span> <span className="text-white">ARENA</span></span><span className="block text-[10px] font-semibold uppercase tracking-[.22em] text-slate-500">Edición 9.7 · Asunción</span></span>
         </button>
         <div className="flex items-center gap-2 text-xs font-semibold">
           <span className={`rounded-full px-3 py-1.5 ${isComparison ? 'border border-cyan-400/30 bg-cyan-400/10 text-cyan-300' : 'text-slate-500'}`}>COMPARAR</span>

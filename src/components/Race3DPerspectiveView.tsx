@@ -25,6 +25,7 @@ import {
   Zap,
   ShieldAlert,
   CloudRain,
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CircleStop, Maximize2, Smartphone,
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import { initialRaceInsight, nextRaceInsight, type RaceInsight } from '../utils/vehicleRaceInsights';
@@ -305,6 +306,56 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const steeringKeysRef = useRef({ left: false, right: false, throttle: false, reverse: false, brake: false });
+  // Los botones touch escriben en el MISMO estado de dirección/aceleración que el teclado.
+  // Usamos pointer capture para soportar varios dedos a la vez (acelerar + doblar).
+  type TouchControl = 'left' | 'right' | 'throttle' | 'reverse' | 'brake';
+  const [touchPressed, setTouchPressed] = useState<Partial<Record<TouchControl, boolean>>>({});
+  const touchPointersRef = useRef<Record<TouchControl, number | null>>({left:null,right:null,throttle:null,reverse:null,brake:null});
+  const setTouchControl = (control: TouchControl, pressed: boolean) => {
+    steeringKeysRef.current[control] = pressed;
+    setTouchPressed(previous => previous[control] === pressed ? previous : {...previous, [control]: pressed});
+    if (pressed) soundEngine.unlock();
+  };
+  useEffect(() => {
+    const reset = () => {
+      (Object.keys(touchPointersRef.current) as TouchControl[]).forEach(control => {
+        touchPointersRef.current[control] = null;
+        steeringKeysRef.current[control] = false;
+      });
+      setTouchPressed({});
+    };
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', reset);
+    return () => { window.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', reset); reset(); };
+  }, []);
+  const touchButton = (control: TouchControl, label: string, icon: React.ReactNode, extra = '') => (
+    <button type="button" key={control} aria-label={label} aria-pressed={!!touchPressed[control]}
+      className={`dc-touch-button ${extra} ${touchPressed[control] ? 'dc-touch-active' : ''}`}
+      onContextMenu={event => event.preventDefault()}
+      onPointerDown={event => {
+        event.preventDefault();
+        if (touchPointersRef.current[control] !== null) return;
+        touchPointersRef.current[control] = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setTouchControl(control, true);
+      }}
+      onPointerUp={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}
+      onPointerCancel={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}
+      onLostPointerCapture={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}>
+      {icon}<span>{label}</span>
+    </button>
+  );
+  const enableLandscape = async () => {
+    try {
+      const element = document.querySelector('.dc-mobile-race') as HTMLElement | null;
+      if (element && !document.fullscreenElement && element.requestFullscreen) await element.requestFullscreen();
+    } catch { /* En iOS Safari / navegadores sin fullscreen se mantiene el modo normal. */ }
+    try {
+      const orientation = screen.orientation as ScreenOrientation & {lock?: (mode: string) => Promise<void>};
+      if (orientation?.lock) await orientation.lock('landscape');
+    } catch { /* El navegador puede prohibir el bloqueo: mostrar indicación de giro manual. */ }
+  };
+
   const physicsRef = useRef<InteractiveRacePhysics | null>(null);
   const raceHazardsSnapshotRef = useRef<TrackHazard[]>([]);
   const addVisualHazardRef = useRef<((kind: HazardKind) => void) | null>(null);
@@ -1769,7 +1820,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     : null;
 
   return (
-    <div className="relative bg-[#0a0f1d] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col select-none">
+    <div className={`relative bg-[#0a0f1d] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col select-none ${experience === 'race' ? 'dc-mobile-race' : ''}`}>
+      {experience === 'race' && <button type="button" onClick={enableLandscape} className="dc-landscape-toggle" title="Pantalla completa horizontal"><Maximize2 size={16}/> <span>Modo horizontal</span></button>}
       {/* Top Header Bar: Track Specs + Camera Mode Switcher + Audio */}
       <div className="px-4 py-2.5 border-b border-slate-800/90 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3 z-10">
         <div>
@@ -1901,8 +1953,25 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       </div>
 
       {/* Main 3D Viewport with 100% Unobstructed Center */}
-      <div className="relative w-full overflow-hidden bg-[#0a0f1d]" style={{ height: compact ? '350px' : experience === 'race' ? 'min(72vh, 720px)' : '520px', minHeight: compact ? undefined : experience === 'race' ? '520px' : undefined }}>
+      <div className="dc-race-viewport relative w-full overflow-hidden bg-[#0a0f1d]" style={{ height: compact ? '350px' : experience === 'race' ? 'min(72vh, 720px)' : '520px', minHeight: compact ? undefined : experience === 'race' ? '520px' : undefined }}>
+        {experience === 'race' && <div className="dc-portrait-prompt">
+          <Smartphone size={42} aria-hidden="true" />
+          <strong>Girá tu celular para correr</strong>
+          <span>DATACAR ARENA se juega en horizontal con controles táctiles.</span>
+          <button type="button" onClick={enableLandscape}><Maximize2 size={16}/> Intentar pantalla completa</button>
+        </div>}
         <div ref={mountRef} className={`w-full h-full block touch-none ${placementKind ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
+        {experience === 'race' && !hasFinished && <div className="dc-mobile-controls" aria-label="Controles táctiles de conducción">
+          <div className="dc-touch-steering">
+            {touchButton('left', 'Izquierda', <ArrowLeft size={26} strokeWidth={3}/>)}
+            {touchButton('right', 'Derecha', <ArrowRight size={26} strokeWidth={3}/>)}
+          </div>
+          <div className="dc-touch-pedals">
+            {touchButton('reverse', 'Frenar / reversa', <ArrowDown size={24} strokeWidth={3}/>, 'dc-touch-reverse')}
+            {touchButton('brake', 'Freno', <CircleStop size={23} strokeWidth={2.5}/>, 'dc-touch-brake')}
+            {touchButton('throttle', 'Acelerar', <ArrowUp size={28} strokeWidth={3}/>, 'dc-touch-throttle')}
+          </div>
+        </div>}
         {experience === 'race' && !hasFinished && selectedVehicle && liveVehicleStates[selectedVehicle.id] && (
           <RaceMiniMap path={roadPath} player={liveVehicleStates[selectedVehicle.id]}
             opponents={Object.entries(liveVehicleStates).map(([id, st]) => ({ id, distance: st.distance, lateralX: st.lateralX }))}
