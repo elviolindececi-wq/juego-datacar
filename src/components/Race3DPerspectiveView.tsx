@@ -25,7 +25,7 @@ import {
   Zap,
   ShieldAlert,
   CloudRain,
-  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CircleStop, Maximize2, Smartphone,
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CircleStop, Maximize2, Smartphone, X,
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import { initialRaceInsight, nextRaceInsight, type RaceInsight } from '../utils/vehicleRaceInsights';
@@ -73,6 +73,8 @@ interface Race3DPerspectiveViewProps {
   replayWeather?: WeatherMode;
   initialWeather?: WeatherMode;
   onExitRace?: () => void;
+  /** La carrera mobile espera el toque START después de preparar render y modelos. */
+  manualStart?: boolean;
 }
 
 const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
@@ -305,30 +307,45 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   replayWeather,
   initialWeather,
   onExitRace,
+  manualStart = false,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const steeringKeysRef = useRef({ left: false, right: false, throttle: false, reverse: false, brake: false });
-  // Los botones touch escriben en el MISMO estado de dirección/aceleración que el teclado.
-  // Usamos pointer capture para soportar varios dedos a la vez (acelerar + doblar).
   type TouchControl = 'left' | 'right' | 'throttle' | 'reverse' | 'brake';
-  const [touchPressed, setTouchPressed] = useState<Partial<Record<TouchControl, boolean>>>({});
+  type ControlState = Record<TouchControl, boolean>;
+  const neutralControls = (): ControlState => ({left:false,right:false,throttle:false,reverse:false,brake:false});
+  // Teclado y touch tienen fuentes INDEPENDIENTES. La física usa el OR de ambas.
+  // Esto permite acelerar + girar con dos dedos sin que pointerup o keyup de
+  // un control borre la entrada del otro.
+  const steeringKeysRef = useRef<ControlState>(neutralControls());
+  const keyboardControlsRef = useRef<ControlState>(neutralControls());
+  const touchControlsRef = useRef<ControlState>(neutralControls());
+  const [touchPressed, setTouchPressed] = useState<Partial<ControlState>>({});
   const touchPointersRef = useRef<Record<TouchControl, number | null>>({left:null,right:null,throttle:null,reverse:null,brake:null});
+  const syncCombinedControls = () => {
+    for (const control of Object.keys(steeringKeysRef.current) as TouchControl[]) {
+      steeringKeysRef.current[control] = keyboardControlsRef.current[control] || touchControlsRef.current[control];
+    }
+  };
   const setTouchControl = (control: TouchControl, pressed: boolean) => {
-    steeringKeysRef.current[control] = pressed;
+    touchControlsRef.current[control] = pressed;
+    if (control === 'left' || control === 'right') keyboardSteeringRef.current = true;
+    syncCombinedControls();
     setTouchPressed(previous => previous[control] === pressed ? previous : {...previous, [control]: pressed});
     if (pressed) soundEngine.unlock();
   };
   useEffect(() => {
     const reset = () => {
-      (Object.keys(touchPointersRef.current) as TouchControl[]).forEach(control => {
+      for (const control of Object.keys(touchPointersRef.current) as TouchControl[]) {
         touchPointersRef.current[control] = null;
-        steeringKeysRef.current[control] = false;
-      });
+        touchControlsRef.current[control] = false;
+      }
+      syncCombinedControls();
       setTouchPressed({});
     };
+    const onVisibility = () => { if (document.hidden) reset(); };
     window.addEventListener('blur', reset);
-    document.addEventListener('visibilitychange', reset);
-    return () => { window.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', reset); reset(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { window.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', onVisibility); };
   }, []);
   const touchButton = (control: TouchControl, label: string, icon: React.ReactNode, extra = '') => (
     <button type="button" key={control} aria-label={label} aria-pressed={!!touchPressed[control]}
@@ -338,7 +355,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         event.preventDefault();
         if (touchPointersRef.current[control] !== null) return;
         touchPointersRef.current[control] = event.pointerId;
-        event.currentTarget.setPointerCapture(event.pointerId);
+        try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Pointer may already have been released. */ }
         setTouchControl(control, true);
       }}
       onPointerUp={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}
@@ -385,6 +402,10 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const insightSequenceRef = useRef(0);
   const lastUrgentInsightAtRef = useRef(0);
   const [restartSequence, setRestartSequence] = useState(0);
+  const [startRequested, setStartRequested] = useState(!manualStart);
+  const [visualReady, setVisualReady] = useState(false);
+  const [showDetailedHud,setShowDetailedHud] = useState(false);
+  const [showRaceInformation,setShowRaceInformation] = useState(false);
   const lastInsightIdRef = useRef<string | null>(null);
   const [hasFinished, setHasFinished] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>(playerVehicleId || vehicles[0]?.id || '');
@@ -618,19 +639,32 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       stateRef.current.isPlaying = true;
       return () => { soundEngine.stopAll(); };
     }
-    setCountdown(3);
-    if (experience === 'race') soundEngine.playCountdownTone(3);
-
-    const t1 = setTimeout(() => {
-      setCountdown(2);
-      if (experience === 'race') soundEngine.playCountdownTone(2);
-    }, 700);
-    const t2 = setTimeout(() => {
-      setCountdown(1);
-      if (experience === 'race') soundEngine.playCountdownTone(1);
-    }, 1400);
-    const t3 = setTimeout(() => {
-      // El tono largo coincide con la salida FÍSICA, no 700 ms después.
+    // En mobile la grilla debe permanecer quieta hasta pulsar START.
+    if (experience === 'race' && manualStart && !startRequested) {
+      setCountdown(null);
+      stateRef.current.countdown = null;
+      stateRef.current.isPlaying = false;
+      return () => { soundEngine.stopAll(); };
+    }
+    // V11.2: cuenta regresiva de tres pasos COMPLETOS de 1 segundo.
+    // En lugar de tres temporizadores absolutos (que se ejecutaban uno tras otro
+    // al bloquearse el hilo principal en móviles lentos), cada paso programa el
+    // siguiente solo DESPUÉS de que el anterior se haya mostrado.
+    // Los pitidos y los cambios visuales nacen del mismo paso.
+    let stopped = false;
+    let stageTimer: ReturnType<typeof setTimeout> | null = null;
+    let flashTimer: ReturnType<typeof setTimeout> | null = null;
+    const startStep = (step: 3 | 2 | 1 | 0) => {
+      if (stopped) return;
+      if (step > 0) {
+        setCountdown(step);
+        stateRef.current.countdown = step;
+        stateRef.current.isPlaying = false;
+        if (experience === 'race') soundEngine.playCountdownTone(step);
+        stageTimer = setTimeout(() => startStep((step - 1) as 3 | 2 | 1 | 0), 1000);
+        return;
+      }
+      // GO: desbloquear física y sonido en el mismo instante.
       setCountdown(null);
       setGoFlash(true);
       setIsPlaying(true);
@@ -645,21 +679,22 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           lastInsightIdRef.current = insight.id;
         }
       }
-    }, 2100);
-    const t4 = setTimeout(() => setGoFlash(false), 2800);
-
+      flashTimer = setTimeout(() => { if (!stopped) setGoFlash(false); }, 700);
+    };
+    // Una animación de React debe presentar la grilla antes del primer pitido.
+    const firstFrame = requestAnimationFrame(() => startStep(3));
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      soundEngine.stopAll();
+      stopped = true;
+      cancelAnimationFrame(firstFrame);
+      if (stageTimer !== null) clearTimeout(stageTimer);
+      if (flashTimer !== null) clearTimeout(flashTimer);
+      soundEngine.stopCountdownTones();
       if (finishTimerRef.current !== null) {
         clearTimeout(finishTimerRef.current);
         finishTimerRef.current = null;
       }
     };
-  }, [track.id, vehicles, interactiveMode, hazardsEnabled, experience, restartSequence]);
+  }, [track.id, vehicles, interactiveMode, hazardsEnabled, experience, restartSequence, manualStart, startRequested]);
 
   // DATACAR V9.6: cápsulas educativas durante la carrera. Máximo una cada
   // 5,2 segundos, calculadas desde el auto real de esta partida, no desde
@@ -862,28 +897,31 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       if (bounds.bottom < 0 || bounds.top > window.innerHeight) return;
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space'].includes(event.code)) {
         event.preventDefault();
-        if (event.code === 'ArrowLeft') steeringKeysRef.current.left = true;
-        if (event.code === 'ArrowRight') steeringKeysRef.current.right = true;
-        if (event.code === 'ArrowUp' || event.code === 'KeyW') steeringKeysRef.current.throttle = true;
-        if (event.code === 'ArrowDown' || event.code === 'KeyS') steeringKeysRef.current.reverse = true;
-        if (event.code === 'Space') steeringKeysRef.current.brake = true;
+        if (event.code === 'ArrowLeft') keyboardControlsRef.current.left = true;
+        if (event.code === 'ArrowRight') keyboardControlsRef.current.right = true;
+        if (event.code === 'ArrowUp' || event.code === 'KeyW') keyboardControlsRef.current.throttle = true;
+        if (event.code === 'ArrowDown' || event.code === 'KeyS') keyboardControlsRef.current.reverse = true;
+        if (event.code === 'Space') keyboardControlsRef.current.brake = true;
         keyboardSteeringRef.current = true;
+        syncCombinedControls();
         soundEngine.unlock();
       }
     };
     const keyUp = (event: KeyboardEvent) => {
-      if (event.code === 'ArrowLeft') steeringKeysRef.current.left = false;
-      if (event.code === 'ArrowRight') steeringKeysRef.current.right = false;
-      if (event.code === 'ArrowUp' || event.code === 'KeyW') steeringKeysRef.current.throttle = false;
-      if (event.code === 'ArrowDown' || event.code === 'KeyS') steeringKeysRef.current.reverse = false;
-      if (event.code === 'Space') steeringKeysRef.current.brake = false;
+      if (event.code === 'ArrowLeft') keyboardControlsRef.current.left = false;
+      if (event.code === 'ArrowRight') keyboardControlsRef.current.right = false;
+      if (event.code === 'ArrowUp' || event.code === 'KeyW') keyboardControlsRef.current.throttle = false;
+      if (event.code === 'ArrowDown' || event.code === 'KeyS') keyboardControlsRef.current.reverse = false;
+      if (event.code === 'Space') keyboardControlsRef.current.brake = false;
+      syncCombinedControls();
     };
     const releaseKeys = () => {
-      steeringKeysRef.current.left = false;
-      steeringKeysRef.current.right = false;
-      steeringKeysRef.current.throttle = false;
-      steeringKeysRef.current.reverse = false;
-      steeringKeysRef.current.brake = false;
+      keyboardControlsRef.current.left = false;
+      keyboardControlsRef.current.right = false;
+      keyboardControlsRef.current.throttle = false;
+      keyboardControlsRef.current.reverse = false;
+      keyboardControlsRef.current.brake = false;
+      syncCombinedControls();
     };
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
@@ -1195,6 +1233,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
     // Loop de animación y sincronización física-visual ultrafluida
     let animationFrameId: number;
+    let sceneReadyReported = false;
     let lastTime = performance.now();
     let lastUiSyncTime = performance.now();
     let frameCount = 0;
@@ -1214,6 +1253,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     let lastRoadImpactAudioAt = -Infinity;
     // Cámara de llegada: se activa cuando el JUGADOR cruza la línea, no al llegar el último rival.
     let finishCinematicStartedAt = -Infinity;
+    let finishCarPose: { x:number; z:number; yaw:number } | null = null;
     const lastImpacts = new Map<string, number>();
     const lastBumps = new Map<string, boolean>();
     resetVisualRaceRef.current = () => {
@@ -1224,6 +1264,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       lastPhysicsPose.clear();
       lastRoadImpactAudioAt = -Infinity;
       finishCinematicStartedAt = -Infinity;
+      finishCarPose = null;
       lastImpacts.clear();
       lastBumps.clear();
       skidMarks.instanceMatrix.needsUpdate = true;
@@ -1265,7 +1306,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
       // Dirección con teclado: mantener pulsada una flecha lleva el volante
       // progresivamente a +/-30°, al soltar vuelve con amortiguación suave.
-      if (keyboardSteeringRef.current) {
+      if (keyboardSteeringRef.current || steeringKeysRef.current.left || steeringKeysRef.current.right) {
         const { left, right } = steeringKeysRef.current;
         const targetDeg = left === right ? 0 : left ? -30 : 30;
         const nextDeg = THREE.MathUtils.damp(
@@ -1355,6 +1396,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           if (livePhysics) finalResultsRef.current = livePhysics.makeResults(simulationResults);
           if (experience === 'race') {
             finishCinematicStartedAt = now;
+            const finishedEntity = vehicleEntities.find(e => e.vehicle.id === stateRef.current.selectedVehicleId);
+            finishCarPose = finishedEntity ? {x:finishedEntity.group.position.x,z:finishedEntity.group.position.z,yaw:finishedEntity.group.rotation.y}:null;
             setRaceEvent(''); // No cubrir la toma de tu auto con mensajes de llegada.
             setRaceInsight(null);
           }
@@ -1500,6 +1543,17 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         sumX += entity.group.position.x;
       });
 
+      // Travelling de llegada: el vehículo avanza despacio después de cruzar meta,
+      // sin reescribir física ni telemetría. La cámara frontal lo sigue.
+      if (experience === 'race' && stateRef.current.hasFinished && finishCarPose) {
+        const entity = vehicleEntities.find(e => e.vehicle.id === stateRef.current.selectedVehicleId);
+        if (entity) {
+          const t = THREE.MathUtils.clamp((now - finishCinematicStartedAt) / 4000, 0, 1);
+          const advance = 7 * (1 - Math.pow(1 - t, 2));
+          entity.group.position.x = finishCarPose.x + Math.sin(finishCarPose.yaw) * advance;
+          entity.group.position.z = finishCarPose.z + Math.cos(finishCarPose.yaw) * advance;
+        }
+      }
       const count = vehicleEntities.length || 1;
       const centerZ = (minZ + maxZ) / 2;
       const avgZ = sumZ / count;
@@ -1739,6 +1793,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       camera.lookAt(_smoothedCamTarget);
 
       renderer.render(scene, camera);
+      if (!sceneReadyReported) { sceneReadyReported = true; setVisualReady(true); }
       animationFrameId = requestAnimationFrame(tick);
     };
 
@@ -1982,13 +2037,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         </div>}
         {experience === 'race' && mobileMenuOpen && <div className="dc-mobile-pause-screen">
           <h2>PAUSA</h2><p>DATACAR ARENA</p>
-          <button className="dc-mobile-resume" onClick={() => { soundEngine.unlock(); setIsPlaying(true); stateRef.current.isPlaying = true; setMobileMenuOpen(false); }}><Play size={18}/> CONTINUAR</button>
+          <button className="dc-mobile-resume" onClick={() => { soundEngine.unlock(); if(startRequested){setIsPlaying(true);stateRef.current.isPlaying=true;} setMobileMenuOpen(false); }}><Play size={18}/> CONTINUAR</button>
           <button onClick={toggleMute}>{isMuted ? 'Activar sonido' : 'Silenciar sonido'}</button>
           <button onClick={() => setHeadlightsOn(v => !v)}>{headlightsOn ? 'Apagar faros' : 'Encender faros'}</button>
+          <button onClick={()=>{setMobileMenuOpen(false);setShowRaceInformation(true);}}>DATOS EN CARRERA / INFORMACIÓN</button>
           {onExitRace && <button onClick={onExitRace}>ABANDONAR CARRERA</button>}
           <label>CLIMA <select value={weatherMode} onChange={e => setWeatherMode(e.target.value as WeatherMode)}>{WEATHER_OPTIONS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         </div>}
 
+        {showRaceInformation && <div className="dc11-race-info-dialog" role="dialog" aria-label="Datos y telemetría educativa"><div><header><h2>DATACAR · DATOS EN CARRERA</h2><button onClick={()=>{setShowRaceInformation(false);setMobileMenuOpen(true);}}>CERRAR</button></header>{raceInsight?<><h3>{raceInsight.title}</h3><p>{raceInsight.message}</p></>:<p>La información educativa aparece conforme a los eventos de conducción y a las fichas de los vehículos.</p>}<p>Ficha técnica + telemetría virtual. No constituye una prueba oficial.</p><h3>MI AUTO</h3><p>{selectedVehicle?.brand} {selectedVehicle?.name}</p>{selectedVehicleState&&<p>{selectedVehicleState.speedKmh.toFixed(1)} km/h · {selectedVehicleState.rpm} RPM · {selectedVehicleState.accelG.toFixed(2)} G · {selectedVehicleState.distance.toFixed(1)} metros</p>}</div></div>}
+        {experience === 'race' && manualStart && !startRequested && <div className="dc11-start-gate" role="dialog" aria-label="Largada lista">
+          <div className="dc11-start-card"><span>DATACAR ARENA · GRILLA DE SALIDA</span><h2>¿LISTO PARA CORRER?</h2><p>La pista debe verse completa antes de largar. Tocá START para el conteo 3 · 2 · 1 · ¡YA!</p>
+            <button type="button" disabled={!visualReady} onClick={() => { if (!visualReady) return; soundEngine.unlock(); stateRef.current.isPlaying = false; stateRef.current.countdown = 3; setStartRequested(true); }}><Play size={24} fill="currentColor"/> {visualReady?'START':'CARGANDO PISTA 3D…'}</button>
+          </div>
+        </div>}
         {experience === 'race' && !hasFinished && <div className="dc-mobile-controls" aria-label="Controles táctiles de conducción">
           <div className="dc-touch-steering">
             {touchButton('left', 'Izquierda', <ArrowLeft size={26} strokeWidth={3}/>)}
@@ -2013,7 +2075,18 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </div>
         )}
         {experience === 'race' && !hasFinished && selectedVehicle && selectedVehicleState && (
-          <ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState} />
+          <>
+            <div className="dc11-mobile-speed" aria-label="Velocidad y revoluciones actuales">
+              <span>VELOCIDAD</span><div><strong>{Math.round(selectedVehicleState.speedKmh)}</strong><small>KM/H</small></div>
+              <footer><b>{selectedVehicleState.gear===0?'R':`${selectedVehicleState.gear}ª`}</b><b>{selectedVehicleState.rpm} RPM</b><button onClick={()=>setShowDetailedHud(true)} aria-label="Ver telemetría completa">DATOS +</button></footer>
+            </div>
+            <div className="dc11-desktop-hud"><ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState}/></div>
+            {showDetailedHud && <div className="dc11-hud-backdrop" role="dialog" aria-label="Telemetría extendida">
+              <button className="dc11-hud-close" onClick={()=>setShowDetailedHud(false)}><X size={17}/> VOLVER A CARRERA</button>
+              <div className="dc11-hud-gauge"><ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState}/></div>
+              <p>VELOCIDAD · RPM · MARCHA · ACELERACIÓN · ASISTENCIAS DOCUMENTADAS</p>
+            </div>}
+          </>
         )}
         {experience === 'race' && !hasFinished && countdown === null && raceInsight && (
           <div key={raceInsight.id} className={`dc100-race-insight absolute top-[96px] left-3 z-20 pointer-events-none w-[min(320px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg ${

@@ -1,0 +1,25 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const src = readFileSync('src/components/Race3DPerspectiveView.tsx','utf8');
+const css = readFileSync('src/index.css','utf8');
+assert.match(src,/keyboardControlsRef = useRef<ControlState>/);
+assert.match(src,/touchControlsRef = useRef<ControlState>/);
+assert.match(src,/keyboardControlsRef\.current\[control\] \|\| touchControlsRef\.current\[control\]/);
+assert.match(src,/setPointerCapture\(event\.pointerId\)/);
+assert.match(src,/keyboardSteeringRef\.current = true;\s*syncCombinedControls\(\);/);
+assert.match(src,/if \(control === 'left' \|\| control === 'right'\) keyboardSteeringRef\.current = true;/);
+assert.match(src,/steer: steeringKeysRef\.current\.right === steeringKeysRef\.current\.left/);
+assert.match(src,/throttle: steeringKeysRef\.current\.throttle \? 1 : 0/);
+assert.match(css,/@media \(pointer: fine\), \(min-width: 1101px\)/);
+assert.match(css,/\.dc-mobile-controls[^\{]*\{\s*display:none!important;/);
+// Prueba de la regla de combinación utilizada por el input real.
+const keyboard = {left:false,right:false,throttle:false,reverse:false,brake:false};
+const touch = {...keyboard};
+const combine = () => Object.fromEntries(Object.keys(keyboard).map(key => [key,keyboard[key] || touch[key]]));
+touch.throttle = true; touch.left = true;
+assert.equal(combine().throttle,true); assert.equal(combine().left,true);
+touch.left = false;
+assert.equal(combine().throttle,true); assert.equal(combine().left,false);
+keyboard.right = true;
+assert.equal(combine().right,true); assert.equal(combine().throttle,true);
+console.log('OK V11.1: controles solo mobile, multitouch y teclado+acelerador independientes.');

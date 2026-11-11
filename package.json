@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "9.7.0",
+  "version": "11.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -32,7 +32,8 @@
     "test:v921": "node scripts/test-v921-startup-imports.mjs && npm run test:v92",
     "test:v95": "node --experimental-strip-types scripts/test-v95-driving-iq.mjs && npm run test:v93",
     "test:v93": "node --experimental-strip-types scripts/test-v93-finish-and-viaduct.mjs && npm run test:v92",
-    "test:v96": "node --experimental-strip-types scripts/test-v96-start-and-insights.mjs && npm run test:v95"
+    "test:v96": "node --experimental-strip-types scripts/test-v96-start-and-insights.mjs && npm run test:v95",
+    "test:v11": "node scripts/test-v11-mobile-consolidated.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

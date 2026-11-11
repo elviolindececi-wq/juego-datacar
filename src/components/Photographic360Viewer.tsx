@@ -34,12 +34,9 @@ export function getOrLoadFrames(
   return images;
 }
 
-// Pre-cargar inmediatamente los 3 modelos oficiales en memoria al iniciar la app
-if (typeof window !== 'undefined') {
-  getOrLoadFrames('/assets/360_frames/kicks/frame_', 120, '.jpg');
-  getOrLoadFrames('/assets/360_frames/carens/frame_', 120, '.jpg');
-  getOrLoadFrames('/assets/360_frames/tracker/frame_', 120, '.jpg');
-}
+// Los fotogramas 360 se solicitan únicamente cuando el usuario abre el showroom.
+// El preload global anterior descargaba 360 imágenes al cargar cualquier pantalla,
+// ralentizando el teléfono e interfiriendo con la descarga de los GLB de carrera.
 
 interface Photographic360ViewerProps {
   vehicle: Vehicle;

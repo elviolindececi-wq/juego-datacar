@@ -281,3 +281,107 @@
  .dc99-race-stage .dc-race-viewport > .dc100-race-map.absolute.left-4.bottom-5 {transform:scale(.40)!important;}
  .dc99-race-stage .dc-race-viewport > .dc100-race-gauges.absolute.bottom-4.right-4 {transform:scale(.33)!important;}
 }
+
+/* DATACAR V11: mobile-first consolidado. Desktop queda intacto.
+   El HUD primario prioriza legibilidad; la información original vive en DATOS +.
+   Un showroom y resultados completos son overlays desplazables. */
+@media (pointer:coarse) and (max-width:1100px) {
+ .dc99-race-stage .dc11-desktop-hud {display:none!important;}
+ .dc99-race-stage .dc11-mobile-speed {position:absolute;right:max(12px,env(safe-area-inset-right));top:55px;z-index:32;min-width:clamp(132px,18vw,206px);border:1px solid #38d7fa80;border-radius:14px;padding:9px 13px;background:linear-gradient(145deg,#071626eb,#122940d9);box-shadow:0 10px 32px #0008;pointer-events:auto;text-align:right;backdrop-filter:blur(8px);}
+ .dc11-mobile-speed>span {font-size:9px;letter-spacing:.18em;color:#7ae9fb;font-weight:900;}
+ .dc11-mobile-speed>div {display:flex;align-items:baseline;gap:7px;justify-content:flex-end;}
+ .dc11-mobile-speed>div strong {font-size:clamp(34px,5.8vw,61px);font-weight:950;line-height:1;color:white;font-variant-numeric:tabular-nums;}
+ .dc11-mobile-speed>div small {font-size:11px;color:#acc2d1;font-weight:900;}
+ .dc11-mobile-speed footer {display:flex;align-items:center;gap:9px;justify-content:flex-end;font-size:11px;color:#c4ddec;margin-top:5px;}
+ .dc11-mobile-speed footer b:first-child{color:#facc15;}
+ .dc11-mobile-speed footer button {color:#a5f3fc;border:1px solid #55c4de85;border-radius:6px;background:#0c3447;padding:5px 7px;font-size:10px;font-weight:900;}
+ .dc11-hud-backdrop {position:absolute;z-index:75;inset:0;background:#020917ea;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;pointer-events:auto;}
+ .dc11-hud-close {position:absolute;top:10px;left:18px;display:flex;align-items:center;gap:7px;padding:7px 12px;background:#0b2a3d;color:white;border:1px solid #2a879f;border-radius:9px;z-index:80;font-size:11px;}
+ .dc11-hud-gauge {position:relative;width:365px;height:205px;max-height:60vh;transform:scale(.7);transform-origin:center;}
+ .dc11-hud-gauge .dc100-race-gauges {position:absolute!important;inset:0 auto auto 0!important;transform:none!important;display:block!important;}
+ .dc11-hud-backdrop>p {font-size:9px;color:#8bacc1;letter-spacing:.08em;text-align:center;}
+ .dc11-start-gate {position:absolute;z-index:65;inset:0;display:grid;place-items:center;background:linear-gradient(#05101ca5,#020913ed);pointer-events:auto;}
+ .dc11-start-card {width:min(400px,62vw);border:1px solid #4bbbd486;border-radius:18px;background:#071a2df2;padding:21px;text-align:center;box-shadow:0 20px 60px #000a;}
+ .dc11-start-card>span {font-size:9px;color:#54ddf7;letter-spacing:.17em;font-weight:800;}
+ .dc11-start-card h2 {font-size:clamp(22px,4vw,40px);font-weight:950;line-height:1.2;margin:7px 0;}
+ .dc11-start-card p {font-size:12px;color:#b8cddd;margin-bottom:12px;}
+ .dc11-start-card button{min-width:185px;min-height:51px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#41d4f4;color:#061724;border-radius:11px;font-size:23px;font-weight:950;}
+ .dc11-start-card button:disabled{opacity:.5;}
+ .dc11-garage-tools {display:flex;gap:9px;justify-content:center;align-items:center;flex:0 0 auto;margin:3px auto 2px;}
+ .dc11-garage-tools button {display:flex;align-items:center;gap:7px;border-radius:8px;border:1px solid #3fa4c1;background:#0d3143;padding:6px 13px;font-size:11px;font-weight:900;color:#d6f8ff;}
+ .dc11-modal-backdrop {position:absolute;inset:0;z-index:250;background:#010714eb;display:grid;place-items:center;padding:8px;touch-action:pan-y;}
+ .dc11-modal {width:min(950px,96vw);height:min(650px,93dvh);border:1px solid #3b8099;border-radius:16px;background:#071726;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 65px #000d;}
+ .dc11-modal header {min-height:40px;padding:6px 12px;border-bottom:1px solid #214c61;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+ .dc11-modal header h2{font-size:clamp(12px,2vw,18px);font-weight:900;}
+ .dc11-modal header button{border:1px solid #47738b;background:#113045;border-radius:8px;display:grid;place-items:center;width:32px;height:30px;flex-shrink:0;}
+ .dc11-modal-scroll {flex:1;min-height:0;overflow-y:auto;padding:12px;overscroll-behavior:contain;touch-action:pan-y;}
+ .dc11-modal-scroll>p {font-size:11px;color:#b5d0df;margin:7px 0;}
+ .dc11-showroom .dc11-modal-scroll>.relative {max-width:740px;margin:0 auto;}
+ .dc11-showroom .dc11-modal-scroll .h-52 {height:clamp(135px,38dvh,280px)!important;touch-action:pan-x;}
+ .dc11-showroom .dc11-modal-scroll>button{margin:8px auto;display:flex;}
+ .dc11-spec-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0;}
+ .dc11-spec-grid>div {background:#10293b;border:1px solid #244c65;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:3px;min-width:0;}
+ .dc11-spec-grid span{font-size:10px;color:#8cb5ce;}
+ .dc11-spec-grid strong{font-size:12px;color:#ecf7fd;overflow-wrap:anywhere;}
+ .dc11-modal-scroll h3{font-size:15px;font-weight:900;color:#60ddf8;margin-top:12px;}
+ .dc11-result-entry{border-bottom:1px solid #345269;padding-bottom:12px;}
+ .dc11-full-results .dc11-modal-scroll>.space-y-5 {margin-top:15px;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-width:1100px) and (max-height:400px) {
+ .dc99-race-stage .dc11-mobile-speed {top:41px;padding:5px 10px;min-width:115px;}
+ .dc11-mobile-speed>span {font-size:8px;}
+ .dc11-mobile-speed>div strong {font-size:clamp(31px,5vw,44px);}
+ .dc11-mobile-speed footer {margin-top:1px;font-size:9px;gap:5px;}
+ .dc11-mobile-speed footer button {font-size:8px;padding:3px 5px;}
+ .dc11-garage-tools button{padding:3px 8px;font-size:9px;}
+ .dc11-modal-scroll{padding:6px 10px;}
+ .dc11-spec-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+ .dc11-modal-scroll .dc11-spec-grid strong{font-size:10px;}
+ .dc11-hud-gauge {transform:scale(.55);height:155px;}
+}
+
+.dc11-mobile-speed,.dc11-hud-backdrop,.dc11-race-info-dialog{display:none;}
+@media (pointer:coarse) and (max-width:1100px){
+ .dc99-race-stage .dc11-mobile-speed{display:block;}
+ .dc99-race-stage .dc11-hud-backdrop{display:flex;}
+ .dc11-view-switch{display:flex;gap:6px;justify-content:center;margin-bottom:9px;}
+ .dc11-view-switch button{border:1px solid #38687b;background:#0c2839;color:#b9dae8;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:900;}
+ .dc11-view-switch button.active{color:#001322;background:#56dbf6;border-color:#83ecfd;}
+ .dc11-vehicle-video{display:block;width:100%;height:min(43dvh,300px);object-fit:contain;background:#000;border-radius:12px;}
+ .dc99-race-stage .dc11-race-info-dialog{position:absolute;inset:0;z-index:95;display:grid;place-items:center;background:#030a14ec;pointer-events:auto;padding:15px;}
+ .dc11-race-info-dialog>div{width:min(600px,84vw);max-height:88dvh;overflow:auto;border:1px solid #448caa;background:#0a2032;padding:12px 17px;border-radius:14px;}
+ .dc11-race-info-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+ .dc11-race-info-dialog h2{font-weight:900;font-size:15px;color:#80e9fa;}
+ .dc11-race-info-dialog h3{font-weight:900;font-size:13px;margin-top:10px;}
+ .dc11-race-info-dialog p{font-size:11px;color:#c2d7e4;margin-top:7px;}
+ .dc11-race-info-dialog button{font-weight:900;font-size:11px;color:#72ebfb;border:1px solid #328ba4;padding:5px 9px;border-radius:7px;}
+}
+
+@media (pointer:coarse) and (max-width:1100px){
+ .dc11-telemetry-chart{margin:10px 0;padding:10px;border:1px solid #2f6580;border-radius:10px;background:#06131f;}
+ .dc11-chart-options{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:7px;}
+ .dc11-chart-options strong{font-size:10px;color:#a5e8f9;margin-right:auto;}
+ .dc11-chart-options button{font-size:9px;padding:4px 7px;border:1px solid #31546c;border-radius:7px;color:#c6dfec;}
+ .dc11-chart-options button.active{background:#15536c;border-color:#48c9ed;color:#fff;}
+ .dc11-telemetry-chart svg{width:100%;height:clamp(54px,17dvh,120px);display:block;}
+ .dc11-chart-labels{display:flex;justify-content:space-between;color:#7cacc4;font-size:9px;}
+ .dc11-no-telemetry{font-size:10px;color:#8db5cb;}
+}
+
+/* V11.1: controles exclusivamente móviles (pantallas táctiles compactas).
+   La fuente de entrada se comparte con la física, pero el HUD no se presenta en desktop. */
+@media (pointer: fine), (min-width: 1101px) {
+  .dc-mobile-controls, .dc-portrait-prompt, .dc-landscape-toggle,
+  .dc-mobile-game-top, .dc-mobile-camera-menu, .dc-mobile-pause-screen {
+    display:none!important;
+  }
+}
+@media (pointer:coarse) and (max-width:1100px) {
+  .dc99-race-stage .dc-mobile-controls {display:flex!important;touch-action:none!important;}
+  .dc99-race-stage .dc-touch-button {touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;}
+}
+
+/* V11.2 · La pista permanece visible detrás del botón START mientras termina de montarse. */
+.dc11-start-gate {background:linear-gradient(90deg,#020b15b8,#05101c44 50%,#020b15b8);}
+.dc11-start-card {background:#061524e8;backdrop-filter:blur(7px);}
+.dc11-start-card button:disabled {cursor:progress;opacity:.8;}
