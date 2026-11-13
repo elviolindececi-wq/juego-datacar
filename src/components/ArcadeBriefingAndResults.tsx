@@ -327,38 +327,60 @@ export function ArcadeBriefingStage({
 
   return (
     <div
-      className="dc-arcade-stage dc-wet-asphalt flex flex-col justify-between rounded-2xl border border-cyan-500/25 px-3 sm:px-6 py-3 md:py-5 relative overflow-hidden select-none shadow-[0_18px_50px_rgba(0,0,0,0.75)]"
+      className="dc-arcade-card dc-wet-asphalt flex flex-col justify-between rounded-2xl border border-cyan-500/25 px-3 sm:px-6 py-2.5 md:py-5 relative overflow-visible select-none shadow-[0_18px_50px_rgba(0,0,0,0.75)]"
       role={isActivelyLoading ? 'status' : undefined}
       aria-live={isActivelyLoading ? 'polite' : undefined}
     >
       {/* Subtle nocturnal stadium floodlights */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_12%_8%,rgba(0,229,255,0.18),transparent_45%),radial-gradient(ellipse_at_88%_10%,rgba(245,158,11,0.16),transparent_45%)]"
+        className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_12%_8%,rgba(0,229,255,0.18),transparent_45%),radial-gradient(ellipse_at_88%_10%,rgba(245,158,11,0.16),transparent_45%)]"
         aria-hidden="true"
       />
 
-      {/* Top Title: Angled Cyan Accents + Golden Crown + INICIAR CARRERA (Mockup 7) */}
-      <div className="relative z-10 flex flex-col items-center justify-center pb-2 shrink-0">
-        <Crown className="w-4 h-4 md:w-5 md:h-5 text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.85)] mb-0.5" />
-        <div className="flex items-center justify-center gap-3">
-          <div className="hidden sm:flex items-center">
-            <div className="w-12 md:w-20 h-[2px] bg-gradient-to-r from-transparent to-cyan-400" />
-            <div className="w-3 h-3 border-t-2 border-r-2 border-cyan-400 rotate-45 -ml-1.5" />
-          </div>
-          <h1 className="font-display text-xl sm:text-2xl md:text-4xl font-black italic tracking-wider text-white uppercase drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)]">
+      {/* Top Title Bar: INICIAR CARRERA + Immediate 1-tap Start Race CTA on mobile */}
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pb-1.5 md:pb-2 max-w-[1080px] w-full mx-auto shrink-0">
+        <div className="flex items-center gap-2">
+          <Crown className="w-4 h-4 md:w-5 md:h-5 text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.85)] shrink-0" />
+          <h1 className="font-display text-lg sm:text-2xl md:text-4xl font-black italic tracking-wider text-white uppercase drop-shadow-[0_3px_12px_rgba(0,0,0,0.95)]">
             INICIAR CARRERA
           </h1>
-          <div className="hidden sm:flex items-center">
-            <div className="w-3 h-3 border-b-2 border-l-2 border-cyan-400 rotate-45 -mr-1.5" />
-            <div className="w-12 md:w-20 h-[2px] bg-gradient-to-l from-transparent to-cyan-400" />
-          </div>
         </div>
+        {!isActivelyLoading && !loadError && (
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {onOpenOnlineLobby && (
+              <button
+                type="button"
+                onClick={onOpenOnlineLobby}
+                className="inline-flex items-center justify-center gap-1 rounded-lg border border-emerald-400/65 bg-emerald-950/85 px-2.5 py-1.5 min-h-[36px] font-display text-[11px] sm:text-xs font-black italic uppercase tracking-wider text-emerald-200 hover:border-emerald-300 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                <Globe size={13} className="text-emerald-400 shrink-0" />
+                <span>EN LÍNEA</span>
+              </button>
+            )}
+            {onStartRace && (
+              <button
+                type="button"
+                className="dc-btn-gold inline-flex items-center justify-center gap-1.5 px-4 sm:px-6 py-1.5 min-h-[38px] text-xs sm:text-sm shadow-lg whitespace-nowrap shrink-0"
+                onClick={onStartRace}
+              >
+                <ChevronsRight size={17} strokeWidth={3} />
+                <span>
+                  {raceMode === 'speed_pro'
+                    ? '¡CORRER VELOCIDAD PURA!'
+                    : raceMode === 'practice_free'
+                      ? '¡PROBAR EN PISTA!'
+                      : '¡EMPEZAR CARRERA!'}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Two Side-by-Side Panels: Vehículo Seleccionado & Circuito Seleccionado */}
-      <div className="relative z-10 w-full max-w-[1080px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 my-1.5">
+      <div className="relative z-10 w-full max-w-[1080px] mx-auto grid grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-2.5 md:gap-4 my-1">
         {/* Panel 1: Vehículo Seleccionado */}
-        <div className="md:col-span-6 dc-panel-cyan flex flex-col justify-between min-h-[168px] md:min-h-[215px]">
+        <div className="landscape:col-span-6 md:col-span-6 dc-panel-cyan flex flex-col justify-between min-h-[152px] md:min-h-[215px]">
           <div className="flex items-center justify-between pr-3">
             <div className="dc-panel-tab-cyan text-[10px] md:text-xs">
               <span className="w-2.5 h-2.5 bg-cyan-400 -skew-x-12 inline-block shadow-[0_0_8px_#00e5ff]" />
@@ -434,7 +456,7 @@ export function ArcadeBriefingStage({
         </div>
 
         {/* Panel 2: Circuito Seleccionado + White Wireframe Map */}
-        <div className="md:col-span-6 dc-panel-cyan flex flex-col justify-between min-h-[168px] md:min-h-[215px]">
+        <div className="landscape:col-span-6 md:col-span-6 dc-panel-cyan flex flex-col justify-between min-h-[152px] md:min-h-[215px]">
           <div className="flex items-center justify-between pr-3 relative z-10">
             <div className="dc-panel-tab-cyan text-[10px] md:text-xs">
               <span className="w-2.5 h-2.5 bg-cyan-400 -skew-x-12 inline-block shadow-[0_0_8px_#00e5ff]" />
@@ -745,54 +767,6 @@ export function ArcadeBriefingStage({
                 </button>
               </div>
             )}
-            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
-              {onChangeCar && (
-                <button
-                  type="button"
-                  className="dc-btn-cyan flex items-center gap-2 px-5 md:px-7 py-2.5 text-xs md:text-sm whitespace-nowrap shrink-0"
-                  onClick={onChangeCar}
-                >
-                  <Warehouse size={16} />
-                  <span>VOLVER AL GARAJE</span>
-                </button>
-              )}
-              {onStartRace && (
-                <button
-                  type="button"
-                  className="dc-btn-gold flex items-center gap-2 px-8 md:px-12 py-2.5 text-sm md:text-lg shadow-lg whitespace-nowrap shrink-0"
-                  onClick={onStartRace}
-                >
-                  <ChevronsRight size={20} strokeWidth={3} />
-                  <span>
-                    {raceMode === 'speed_pro'
-                      ? '¡CORRER VELOCIDAD PURA!'
-                      : raceMode === 'practice_free'
-                        ? '¡PROBAR EN PISTA!'
-                        : '¡EMPEZAR CARRERA!'}
-                  </span>
-                </button>
-              )}
-              {onOpenOnlineLobby && (
-                <button
-                  type="button"
-                  onClick={onOpenOnlineLobby}
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/65 bg-emerald-950/80 px-5 py-2.5 font-display text-xs md:text-sm font-black italic uppercase tracking-wider text-emerald-200 hover:border-emerald-300 hover:bg-emerald-900/80 transition cursor-pointer whitespace-nowrap shrink-0"
-                >
-                  <Globe size={16} className="text-emerald-400" />
-                  <span>JUGAR EN LÍNEA</span>
-                </button>
-              )}
-              {!isDatacarMember && onOpenAccount && (
-                <button
-                  type="button"
-                  onClick={onOpenAccount}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-400/45 bg-slate-950/85 px-3.5 py-2 text-[11px] font-bold text-cyan-200 hover:border-cyan-300 cursor-pointer"
-                >
-                  <UserCheck size={14} className="text-cyan-400" />
-                  <span>Registrar cuenta DATACARPY</span>
-                </button>
-              )}
-            </div>
             <div className="flex items-center justify-center gap-2 text-[10px] md:text-xs text-slate-300 bg-slate-950/70 border-y border-cyan-500/20 px-4 py-1 rounded-full text-center">
               <Info size={13} className="text-cyan-400 shrink-0" />
               <span>
@@ -804,6 +778,58 @@ export function ArcadeBriefingStage({
           </div>
         )}
       </div>
+
+      {/* Bottom Primary Action Bar — clean flow below content with zero overlap over cards */}
+      {!isActivelyLoading && !loadError && (
+        <div className="relative z-20 mt-2 rounded-xl border border-cyan-500/35 bg-[#04101d]/95 px-2.5 py-2 flex flex-wrap items-center justify-center gap-2 md:gap-4">
+          {onChangeCar && (
+            <button
+              type="button"
+              className="dc-btn-cyan flex items-center justify-center gap-1.5 px-3.5 md:px-7 py-2 min-h-[42px] text-xs md:text-sm whitespace-nowrap shrink-0"
+              onClick={onChangeCar}
+            >
+              <Warehouse size={16} />
+              <span>VOLVER AL GARAJE</span>
+            </button>
+          )}
+          {onStartRace && (
+            <button
+              type="button"
+              className="dc-btn-gold flex items-center justify-center gap-2 px-6 md:px-12 py-2.5 min-h-[44px] text-sm md:text-lg shadow-lg whitespace-nowrap shrink-0"
+              onClick={onStartRace}
+            >
+              <ChevronsRight size={20} strokeWidth={3} />
+              <span>
+                {raceMode === 'speed_pro'
+                  ? '¡CORRER VELOCIDAD PURA!'
+                  : raceMode === 'practice_free'
+                    ? '¡PROBAR EN PISTA!'
+                    : '¡EMPEZAR CARRERA!'}
+              </span>
+            </button>
+          )}
+          {onOpenOnlineLobby && (
+            <button
+              type="button"
+              onClick={onOpenOnlineLobby}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-400/65 bg-emerald-950/85 px-3.5 md:px-5 py-2 min-h-[42px] font-display text-xs md:text-sm font-black italic uppercase tracking-wider text-emerald-200 hover:border-emerald-300 hover:bg-emerald-900/80 transition cursor-pointer whitespace-nowrap shrink-0"
+            >
+              <Globe size={15} className="text-emerald-400" />
+              <span>JUGAR EN LÍNEA</span>
+            </button>
+          )}
+          {!isDatacarMember && onOpenAccount && (
+            <button
+              type="button"
+              onClick={onOpenAccount}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-400/45 bg-slate-950/85 px-3 py-2 min-h-[40px] text-[11px] font-bold text-cyan-200 hover:border-cyan-300 cursor-pointer"
+            >
+              <UserCheck size={14} className="text-cyan-400" />
+              <span>Cuenta DATACARPY</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -889,10 +915,10 @@ export function ArcadeResultsStage({
   })();
 
   return (
-    <div className="dc-arcade-stage dc-wet-asphalt flex flex-col justify-between rounded-2xl border border-cyan-500/25 px-3 sm:px-6 py-3 md:py-5 relative overflow-hidden select-none shadow-[0_18px_50px_rgba(0,0,0,0.8)]">
+    <div className="dc-arcade-card dc-wet-asphalt flex flex-col justify-between rounded-2xl border border-cyan-500/25 px-3 sm:px-6 py-3 md:py-5 relative overflow-visible select-none shadow-[0_18px_50px_rgba(0,0,0,0.8)]">
       {/* Floodlights */}
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_18%_14%,rgba(0,229,255,0.16),transparent_48%),radial-gradient(ellipse_at_85%_18%,rgba(245,158,11,0.16),transparent_48%)]"
+        className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_18%_14%,rgba(0,229,255,0.16),transparent_48%),radial-gradient(ellipse_at_85%_18%,rgba(245,158,11,0.16),transparent_48%)]"
         aria-hidden="true"
       />
 
@@ -1321,10 +1347,10 @@ export function ArcadeResultsStage({
       </div>
 
       {/* Bottom Action Buttons: VOLVER AL GARAJE & >> REPETIR CARRERA */}
-      <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 md:gap-6 pt-2.5 pb-0.5 shrink-0">
+      <div className="relative z-20 mt-2 rounded-xl border border-cyan-500/35 bg-[#04101d]/95 px-3 py-2 flex flex-wrap items-center justify-center gap-3 md:gap-6 shrink-0">
         <button
           type="button"
-          className="dc-btn-cyan flex items-center justify-center gap-2.5 px-6 md:px-10 py-2.5 md:py-3 text-xs md:text-base font-black italic whitespace-nowrap shrink-0"
+          className="dc-btn-cyan flex items-center justify-center gap-2.5 px-5 md:px-10 py-2.5 min-h-[42px] text-xs md:text-base font-black italic whitespace-nowrap shrink-0"
           onClick={onBackToGarage}
         >
           <Warehouse size={18} />
@@ -1333,7 +1359,7 @@ export function ArcadeResultsStage({
 
         <button
           type="button"
-          className="dc-btn-gold flex items-center justify-center gap-2.5 px-8 md:px-12 py-2.5 md:py-3 text-xs md:text-lg font-black italic shadow-lg whitespace-nowrap shrink-0"
+          className="dc-btn-gold flex items-center justify-center gap-2.5 px-7 md:px-12 py-2.5 min-h-[44px] text-xs md:text-lg font-black italic shadow-lg whitespace-nowrap shrink-0"
           onClick={onRepeatRace}
         >
           <ChevronsRight size={20} strokeWidth={3} />

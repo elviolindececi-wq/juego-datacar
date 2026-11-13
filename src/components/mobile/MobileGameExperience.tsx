@@ -356,17 +356,17 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
       {stage !== 'race' && stage !== 'replay' && stage !== 'home' && <ArenaSectionBackdrop />}
       <div className="dc99-world-grid opacity-30"/>
     </div>
-    {stage!=='race' && stage!=='replay' && <header className="dc-arena-header flex items-center justify-between px-3 md:px-6 py-1.5 md:py-2 z-30 select-none relative shrink-0">
+    {stage!=='race' && stage!=='replay' && <header className="dc-arena-header flex items-center justify-between gap-2 px-2.5 sm:px-4 md:px-6 py-1.5 md:py-2 z-30 select-none relative shrink-0">
       {/* Pilot Avatar & Level */}
-      <div className="flex items-center gap-2.5 min-w-0">
-        {stage!=='home' && stage!=='loading' && <button className="w-8 h-8 rounded-lg bg-[#102C38]/90 border border-[#00E5F5]/45 text-[#00E5F5] flex items-center justify-center hover:bg-[#00E5F5]/20 active:scale-95 transition-all mr-1 shrink-0" aria-label="Volver" onClick={()=>setStage(stage==='circuits'?'home':stage==='garage'?'home':stage==='briefing'?'circuits':stage==='results'?'home':stage==='compare-results'?'compare':'home')}><ArrowLeft size={16}/></button>}
-        <ArenaPilotHelmetAvatar className="w-8 h-8 md:w-10 md:h-10" />
+      <div className="flex items-center gap-2 min-w-0">
+        {stage!=='home' && stage!=='loading' && <button className="relative z-20 w-8 h-8 rounded-lg bg-[#102C38]/90 border border-[#00E5F5]/45 text-[#00E5F5] flex items-center justify-center hover:bg-[#00E5F5]/20 active:scale-95 transition-all mr-0.5 shrink-0" aria-label="Volver" onClick={()=>setStage(stage==='circuits'?'home':stage==='garage'?'home':stage==='briefing'?'circuits':stage==='results'?'home':stage==='compare-results'?'compare':'home')}><ArrowLeft size={16}/></button>}
+        <ArenaPilotHelmetAvatar className="w-8 h-8 md:w-10 md:h-10 shrink-0" />
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5 leading-none">
-            <span className="font-display text-xs md:text-base font-extrabold text-[#F3F7FC] tracking-wide truncate">{account?.pilotName || 'PilotoDC'}</span>
-            <span className="px-1.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase text-[#04131A] bg-[#00E5F5]" style={{clipPath:'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)'}}>{isMember?'DATACARPY':'NIVEL 12'}</span>
+            <span className="font-display text-xs md:text-base font-extrabold text-[#F3F7FC] tracking-wide truncate max-w-[78px] sm:max-w-none">{account?.pilotName || 'PilotoDC'}</span>
+            <span className="hidden xs:inline-block sm:inline-block px-1.5 py-0.5 text-[9px] md:text-[10px] font-black uppercase text-[#04131A] bg-[#00E5F5] shrink-0" style={{clipPath:'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)'}}>{isMember?'DATACARPY':'NIVEL 12'}</span>
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="hidden sm:flex items-center gap-2 mt-1">
             <div className="w-16 md:w-28 h-1.5 bg-[#091A24] rounded-xs overflow-hidden border border-[#00E5F5]/30 p-[1px]">
               <div className="w-[78.5%] h-full bg-gradient-to-r from-[#00B4D8] to-[#00E5F5] shadow-[0_0_6px_rgba(0,229,245,0.85)]" />
             </div>
@@ -375,13 +375,13 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
         </div>
       </div>
 
-      {/* Official DATACAR ARENA Metallic Emblem */}
-      <div className="flex items-center justify-center">
+      {/* Official DATACAR ARENA Metallic Emblem — hidden on narrow portrait (<640px) so it never covers Volver or utility buttons */}
+      <div className="hidden sm:flex items-center justify-center pointer-events-none shrink-0">
         <ArenaCenterLogo compact />
       </div>
 
       {/* Ranking + DATACARPY Account + Bell + Online + Settings (+ Exit Desktop Arcade) */}
-      <div className="flex items-center gap-1.5 md:gap-2">
+      <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
         {progression.isJailed && jailAcknowledged && (
           <button
             type="button"
@@ -396,28 +396,28 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
           <button
             type="button"
             onClick={onExitArcadeMode}
-            className="px-2.5 py-1 rounded-md bg-[#102C38]/90 border border-[#00E5F5]/45 text-[10px] md:text-xs font-bold text-[#00E5F5] hover:border-[#00E5F5] hover:text-white transition-colors whitespace-nowrap shrink-0"
+            className="px-2 py-1 rounded-md bg-[#102C38]/90 border border-[#00E5F5]/45 text-[10px] md:text-xs font-bold text-[#00E5F5] hover:border-[#00E5F5] hover:text-white transition-colors whitespace-nowrap shrink-0"
           >
             Vista Clásica
           </button>
         )}
-        <button className="dc-arena-util-btn !w-9 !h-8" onClick={()=>setShowRankingModal(true)} aria-label="Ranking por circuito" title="Ranking por circuito">
-          <Trophy size={15}/>
+        <button className="dc-arena-util-btn !w-8 !h-8 sm:!w-9 shrink-0" onClick={()=>setShowRankingModal(true)} aria-label="Ranking por circuito" title="Ranking por circuito">
+          <Trophy size={14}/>
         </button>
-        <button className="dc-arena-util-btn !w-9 !h-8" onClick={()=>setShowAccountModal(true)} aria-label="Cuenta DATACARPY" title="Cuenta DATACARPY">
-          <UserCheck size={15} className={isMember?'text-amber-300':undefined}/>
+        <button className="dc-arena-util-btn !w-8 !h-8 sm:!w-9 shrink-0" onClick={()=>setShowAccountModal(true)} aria-label="Cuenta DATACARPY" title="Cuenta DATACARPY">
+          <UserCheck size={14} className={isMember?'text-amber-300':undefined}/>
         </button>
-        <button className="dc-arena-util-btn !w-9 !h-8" onClick={()=>setShowInfo(true)} aria-label="Notificaciones">
+        <button className="dc-arena-util-btn !w-8 !h-8 sm:!w-9 shrink-0" onClick={()=>setShowInfo(true)} aria-label="Notificaciones">
           <div className="relative flex items-center justify-center">
-            <Bell size={15}/>
+            <Bell size={14}/>
             <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-[#FFAA12] ring-1 ring-[#061219]" />
           </div>
         </button>
-        <button className="dc-arena-util-btn !w-9 !h-8" onClick={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setShowOnlineLobby(true);}} aria-label="Jugar en línea" title="Jugar en línea">
-          <Globe size={15}/>
+        <button className="dc-arena-util-btn !w-8 !h-8 sm:!w-9 shrink-0" onClick={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setShowOnlineLobby(true);}} aria-label="Jugar en línea" title="Jugar en línea">
+          <Globe size={14}/>
         </button>
-        <button className="dc-arena-util-btn !w-9 !h-8" onClick={enterGame} aria-label="Ajustes">
-          <Settings size={15}/>
+        <button className="dc-arena-util-btn !w-8 !h-8 sm:!w-9 shrink-0" onClick={enterGame} aria-label="Ajustes">
+          <Settings size={14}/>
         </button>
       </div>
     </header>}
@@ -659,58 +659,69 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
         </div>
       </main>;
     })()}
-    {stage==='circuits' && <main className="dc99-picker relative z-10">
-      <div className="dc99-heading">
-        <span>MODO CARRERA · ASUNCIÓN</span>
-        <h1>ELEGÍ TU CIRCUITO.</h1>
-        <p>Cada tramo tiene una dificultad, semáforos, doble carril y límites de velocidad.</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#FFAA12]/55 bg-[#081724]/95 px-2.5 py-1 text-xs" role="group" aria-label="Seleccionar vueltas">
-            <span className="font-display text-[11px] font-black italic uppercase tracking-wider text-[#FFAA12]">VUELTAS:</span>
+    {stage==='circuits' && <main className="dc99-picker dc-circuits-picker relative z-10 overflow-y-auto overflow-x-hidden flex flex-col justify-between gap-1.5 md:gap-2.5">
+      <div className="dc99-heading shrink-0">
+        <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-0.5">
+          <span>MODO CARRERA · ASUNCIÓN</span>
+          <h1>ELEGÍ TU CIRCUITO.</h1>
+        </div>
+        <p className="hidden [@media(min-height:540px)]:md:block">Cada tramo tiene una dificultad, semáforos, doble carril y límites de velocidad.</p>
+        <div className="mt-1 flex items-center justify-start sm:justify-center gap-1.5 overflow-x-auto pb-0.5 px-1 max-w-full no-scrollbar">
+          <div className="inline-flex items-center gap-1 rounded-lg border border-[#FFAA12]/55 bg-[#081724]/95 px-2 py-1 text-xs shrink-0 min-h-[34px]" role="group" aria-label="Seleccionar vueltas">
+            <span className="font-display text-[10px] font-black italic uppercase tracking-wider text-[#FFAA12]">VUELTAS:</span>
             {[1,2,3].map(n=>(
               <button key={n} type="button" onClick={()=>setRaceLaps(n)} aria-pressed={raceLaps===n} className={`rounded px-2 py-0.5 font-display text-xs font-black italic cursor-pointer ${raceLaps===n?'bg-[#FFAA12] text-[#04131A]':'text-slate-200'}`}>
-                {n} {n===1?'Lap':'Laps'}
+                {n}V
               </button>
             ))}
           </div>
-          <button type="button" onClick={()=>setRaceMode('city_trial')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-black italic uppercase cursor-pointer ${raceMode==='city_trial'?'border-cyan-400 bg-cyan-500/20 text-white':'border-slate-700 bg-slate-950/80 text-slate-300'}`}>
-            <ShieldCheck size={13} className="text-cyan-300"/> Fase 1: Ciudad
+          <button type="button" onClick={()=>setRaceMode('city_trial')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 min-h-[34px] text-[11px] font-black italic uppercase cursor-pointer shrink-0 whitespace-nowrap ${raceMode==='city_trial'?'border-cyan-400 bg-cyan-500/20 text-white':'border-slate-700 bg-slate-950/80 text-slate-300'}`}>
+            <ShieldCheck size={13} className="text-cyan-300 shrink-0"/> Fase 1: Ciudad
           </button>
-          <button type="button" disabled={!progression.speedModeUnlocked} onClick={()=>progression.speedModeUnlocked&&setRaceMode('speed_pro')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-black italic uppercase ${!progression.speedModeUnlocked?'cursor-not-allowed border-slate-800 bg-slate-950/60 text-slate-500':raceMode==='speed_pro'?'cursor-pointer border-amber-400 bg-amber-500/20 text-amber-200':'cursor-pointer border-amber-500/40 bg-slate-950/80 text-amber-200'}`}>
-            {progression.speedModeUnlocked?<Zap size={13} className="text-amber-400"/>:<Lock size={13}/>} {progression.speedModeUnlocked?'Fase 2: Sin Obstáculos':'Fase 2 (Superá Fase 1)'}
+          <button type="button" disabled={!progression.speedModeUnlocked} onClick={()=>progression.speedModeUnlocked&&setRaceMode('speed_pro')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 min-h-[34px] text-[11px] font-black italic uppercase shrink-0 whitespace-nowrap ${!progression.speedModeUnlocked?'cursor-not-allowed border-slate-800 bg-slate-950/60 text-slate-500':raceMode==='speed_pro'?'cursor-pointer border-amber-400 bg-amber-500/20 text-amber-200':'cursor-pointer border-amber-500/40 bg-slate-950/80 text-amber-200'}`}>
+            {progression.speedModeUnlocked?<Zap size={13} className="text-amber-400 shrink-0"/>:<Lock size={13} className="shrink-0"/>} {progression.speedModeUnlocked?'Fase 2: Velocidad':'Fase 2 (Bloq.)'}
           </button>
-          <button type="button" onClick={()=>setRaceMode('practice_free')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-black italic uppercase cursor-pointer ${raceMode==='practice_free'?'border-sky-400 bg-sky-500/20 text-sky-100':'border-slate-700 bg-slate-950/80 text-slate-300'}`}>
-            <Compass size={13} className="text-sky-300"/> Pista de Pruebas (Sin puntos)
+          <button type="button" onClick={()=>setRaceMode('practice_free')} className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 min-h-[34px] text-[11px] font-black italic uppercase cursor-pointer shrink-0 whitespace-nowrap ${raceMode==='practice_free'?'border-sky-400 bg-sky-500/20 text-sky-100':'border-slate-700 bg-slate-950/80 text-slate-300'}`}>
+            <Compass size={13} className="text-sky-300 shrink-0"/> Pruebas
           </button>
-          <button type="button" onClick={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setShowOnlineLobby(true);}} className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/60 bg-emerald-950/80 px-2.5 py-1 text-[11px] font-black italic uppercase text-emerald-200 cursor-pointer">
-            <Globe size={13} className="text-emerald-400"/> En Línea
+          <button type="button" onClick={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setShowOnlineLobby(true);}} className="inline-flex items-center gap-1 rounded-lg border border-emerald-400/60 bg-emerald-950/80 px-2.5 py-1 min-h-[34px] text-[11px] font-black italic uppercase text-emerald-200 cursor-pointer shrink-0 whitespace-nowrap">
+            <Globe size={13} className="text-emerald-400 shrink-0"/> En Línea
           </button>
-          <button type="button" onClick={()=>setShowRankingModal(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-400/50 bg-slate-950/85 px-2.5 py-1 text-[11px] font-black italic uppercase text-amber-200 cursor-pointer">
-            <Trophy size={13} className="text-amber-300"/> Ranking
+          <button type="button" onClick={()=>setShowRankingModal(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-400/50 bg-slate-950/85 px-2.5 py-1 min-h-[34px] text-[11px] font-black italic uppercase text-amber-200 cursor-pointer shrink-0 whitespace-nowrap">
+            <Trophy size={13} className="text-amber-300 shrink-0"/> Ranking
           </button>
         </div>
       </div>
+
       <SwipeDeck items={ASUNCION_CIRCUITS} selectedId={circuitId} onSelect={setCircuitId} label="Circuitos" renderItem={(item,active)=>{
         const cTarget=getCircuitTargetTime(item.id,raceMode==='speed_pro'?'speed_pro':'city_trial',raceLaps,item.distanceMeters*raceLaps);
-        return <div className={`dc99-track-card ${active ? '!border-[#00E5F5] shadow-[0_0_24px_rgba(0,229,245,0.45)]' : ''}`} style={{'--dc99-track-accent':item.sky} as React.CSSProperties}>
-        <div className="dc99-track-art flex items-center justify-center relative overflow-hidden">
-          <img src={item.imageUrl} alt={item.name} referrerPolicy="no-referrer" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="dc-circuit-photo-scrim absolute inset-0" />
-          {active && <span className="dc-circuit-selected-pill absolute left-2.5 top-2.5 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black italic uppercase text-[#031519]"><Check size={12}/> SELECCIONADO</span>}
-          <span className="dc-circuit-score-pill absolute right-2.5 top-2.5 z-20 px-2 py-0.5 border border-[#00E5F5]/75 bg-[#041824]/90 font-display text-xs md:text-sm font-black italic text-[#00E5F5]">{item.difficulty.toFixed(1)}/10</span>
-          <div className="w-36 md:w-44 z-10 drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]"><CircuitWireframeSVG circuitId={item.id}/></div>
-        </div>
-        <div className="flex items-center justify-between gap-2 text-[10px] font-black italic uppercase tracking-wider text-[#00E5F5]">
-          <span>{item.zone}</span>
-          <span className="text-amber-300 font-mono tabular-nums">Meta {formatTargetMinutesSec(cTarget.targetSec)}</span>
-        </div>
-        <h2 className="font-display italic font-black">{item.name}</h2>
-        <p className="italic text-slate-300">{item.hazardLabel}</p>
-        <div className="dc99-stats"><span>{item.distanceMeters * raceLaps} m ({raceLaps}v) · Límite {formatTargetMinutesSec(cTarget.maxLimitSec)}</span><span>{active ? '✓ Elegido' : 'Elegir →'}</span></div>
-      </div>;}}/>
-      <div className="dc99-actions">
-        <button className="dc-btn-cyan flex items-center gap-2 px-5 py-2 text-xs" onClick={()=>setStage('garage')}><Warehouse size={15}/> GARAJE</button>
-        <button className="dc-btn-gold flex items-center gap-2 px-7 py-2 text-xs md:text-sm" onClick={()=>setStage('briefing')}><ChevronsRight size={17} strokeWidth={3}/> ELEGIR MI VEHÍCULO / PREPARAR</button>
+        return <div className={`dc99-track-card dc-mobile-track-card ${active ? '!border-[#00E5F5] shadow-[0_0_24px_rgba(0,229,245,0.45)]' : ''}`} style={{'--dc99-track-accent':item.sky} as React.CSSProperties}>
+          <div className="dc99-track-art dc-mobile-track-art flex items-center justify-center relative overflow-hidden shrink-0">
+            <img src={item.imageUrl} alt={item.name} referrerPolicy="no-referrer" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="dc-circuit-photo-scrim absolute inset-0" />
+            {active && <span className="dc-circuit-selected-pill absolute left-2 top-2 z-20 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black italic uppercase text-[#031519]"><Check size={12}/> SELECCIONADO</span>}
+            <span className="dc-circuit-score-pill absolute right-2 top-2 z-20 px-2 py-0.5 border border-[#00E5F5]/75 bg-[#041824]/90 font-display text-xs md:text-sm font-black italic text-[#00E5F5]">{item.difficulty.toFixed(1)}/10</span>
+            <div className="w-40 sm:w-48 z-10 p-2 drop-shadow-[0_4px_14px_rgba(0,0,0,0.95)]"><CircuitWireframeSVG circuitId={item.id}/></div>
+          </div>
+          <div className="dc-mobile-track-info flex flex-1 flex-col justify-between min-w-0 gap-1">
+            <div>
+              <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] font-black italic uppercase tracking-wider text-[#00E5F5]">
+                <span className="truncate">{item.zone}</span>
+                <span className="text-amber-300 font-mono tabular-nums shrink-0">Meta {formatTargetMinutesSec(cTarget.targetSec)}</span>
+              </div>
+              <h2 className="dc-mobile-track-title font-display italic font-black text-white uppercase mt-0.5">{item.name}</h2>
+              <p className="dc-mobile-track-hazard italic text-slate-300 mt-0.5">{item.hazardLabel}</p>
+            </div>
+            <div className="dc99-stats pt-1 border-t border-cyan-500/20 flex items-center justify-between gap-2">
+              <span className="truncate">{item.distanceMeters * raceLaps} m ({raceLaps}V) · Límite {formatTargetMinutesSec(cTarget.maxLimitSec)}</span>
+              <span className={`px-2 py-0.5 rounded font-black uppercase text-[10px] shrink-0 ${active ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-cyan-300 border border-cyan-500/40'}`}>{active ? '✓ Elegido' : 'Elegir →'}</span>
+            </div>
+          </div>
+        </div>;}}/>
+
+      <div className="dc99-actions mt-0.5 rounded-xl border border-cyan-500/30 bg-[#04101d]/95 px-3 py-1 shrink-0">
+        <button type="button" className="dc-btn-cyan flex items-center justify-center gap-2 px-4 md:px-5 py-1.5 min-h-[38px] text-xs shrink-0" onClick={()=>setStage('garage')}><Warehouse size={15}/> GARAJE</button>
+        <button type="button" className="dc-btn-gold flex items-center justify-center gap-2 px-5 md:px-7 py-1.5 min-h-[40px] text-xs md:text-sm shrink-0" onClick={()=>setStage('briefing')}><ChevronsRight size={17} strokeWidth={3}/> PREPARAR / INICIAR CARRERA</button>
       </div>
     </main>}
     {stage==='garage' && <main className="dc99-picker dc-wet-asphalt flex flex-col justify-between gap-2.5 p-2 md:p-4 relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden select-none">
@@ -737,6 +748,14 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
           <div className="text-[11px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-full">
             VEHÍCULO {Math.max(0,allCars.findIndex(v=>v.id===playerId))+1} / {allCars.length}
           </div>
+          <button
+            type="button"
+            onClick={()=>setStage('circuits')}
+            className="dc-btn-gold inline-flex items-center gap-1.5 px-3.5 py-1 min-h-[34px] text-[11px] font-black italic"
+          >
+            <ChevronsRight size={14} strokeWidth={3} />
+            <span>ELEGIR AUTO</span>
+          </button>
         </div>
       </div>
 
@@ -876,9 +895,10 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
       </div>
 
       {/* Action Buttons: [=] VER FICHA (Cyan) and >> ELEGIR ESTE AUTO (Gold) */}
-      <div className="flex flex-wrap items-center justify-center gap-3 pt-1 pb-1.5 z-20 shrink-0">
+      <div className="w-full max-w-[940px] mx-auto mt-1 mb-1 rounded-xl border border-cyan-500/35 bg-[#04101d]/95 px-3 py-2 flex flex-wrap items-center justify-center gap-3 shrink-0">
         <button
-          className="dc-btn-cyan flex items-center justify-center gap-2 px-5 md:px-8 py-2.5 text-xs md:text-sm font-black italic"
+          type="button"
+          className="dc-btn-cyan flex items-center justify-center gap-2 px-5 md:px-8 py-2 min-h-[42px] text-xs md:text-sm font-black italic"
           onClick={()=>{setShowroomCarId(playerId);setShowSpecs(true);}}
         >
           <FileText size={16} />
@@ -887,7 +907,8 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
         </button>
 
         <button
-          className="dc-btn-gold flex items-center justify-center gap-2 px-6 md:px-10 py-2.5 text-xs md:text-sm font-black italic shadow-lg"
+          type="button"
+          className="dc-btn-gold flex items-center justify-center gap-2 px-6 md:px-10 py-2 min-h-[44px] text-xs md:text-sm font-black italic shadow-lg"
           onClick={()=>setStage('circuits')}
         >
           <ChevronsRight size={18} strokeWidth={3} />
@@ -925,34 +946,50 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
       </main>
     )}
     {stage==='replay'&&results&&<main className="dc99-race-stage dc99-replay"><button className="dc99-replay-back" onClick={()=>setStage('results')}><ArrowLeft size={15}/> RESULTADOS</button><Race3DPerspectiveView key={`mobile-replay-${circuitId}-${playerId}`} experience="replay" playerVehicleId={playerId} vehicles={raceCars} track={track} simulationResults={results} replayHazards={hazards} replayWeather={completedWeather} onFinishRace={()=>{}}/></main>}
-    {stage==='compare'&&<main className="dc99-picker overflow-y-auto gap-2.5">
-      <div className="dc99-heading">
-        <span>DUELO COMPARATIVO DIRECTO</span>
-        <h1>ELEGÍ 2 AUTOS</h1>
-        <p>Asigná Auto A y Auto B abajo o cambiá de tarjeta para compararlos en pista y cifras reales.</p>
+    {stage==='compare'&&<main className="dc99-picker dc-compare-picker overflow-y-auto overflow-x-hidden gap-1.5 relative z-10">
+      <div className="dc99-heading shrink-0 flex flex-wrap items-center justify-between gap-2 max-w-[920px] w-full mx-auto px-1">
+        <div className="text-left">
+          <span>DUELO COMPARATIVO DIRECTO</span>
+          <h1 className="!text-lg sm:!text-2xl md:!text-3xl">ELEGÍ 2 AUTOS</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <label htmlFor="arcade-compare-track" className="font-bold uppercase text-cyan-300 text-[10px] tracking-wider whitespace-nowrap">Pista:</label>
+          <select id="arcade-compare-track" value={compareTrackIndex} onChange={e=>setCompareTrackIndex(Number(e.target.value))} className="rounded-lg border border-cyan-500/45 bg-slate-950/90 px-2 py-1 min-h-[36px] text-xs font-bold text-white max-w-[175px] sm:max-w-[230px]">
+            {compareTracks.map((t,idx)=><option key={t.id} value={idx}>{t.name} ({t.distanceMeters} m)</option>)}
+          </select>
+          <button
+            type="button"
+            disabled={compareCars.length!==2}
+            onClick={()=>{setCompareSimulation(true);setStage('compare-results');}}
+            className="dc-btn-gold px-3.5 py-1.5 min-h-[36px] text-[11px] font-black italic whitespace-nowrap"
+          >
+            {compareCars.length===2?'COMPARAR AHORA →':`ELEGÍ ${2-compareCars.length} MÁS`}
+          </button>
+        </div>
       </div>
-      {/* Pinned Auto A vs Auto B Duel Bar + Pista selector */}
-      <div className="dc-compare-duel-bar z-10">
+
+      {/* Compact Auto A vs Auto B Duel Bar */}
+      <div className="dc-compare-duel-bar z-10 shrink-0">
         {[0,1].map(slotIdx=>{
           const assigned=compareCars[slotIdx];
           return <React.Fragment key={slotIdx}>
             <div className={`dc-compare-slot ${assigned?'filled':''}`}>
               {assigned?(
                 <>
-                  <img src={preview(assigned)} alt={`${assigned.brand} ${assigned.name}`} className="h-10 w-16 object-contain shrink-0"/>
+                  <img src={preview(assigned)} alt={`${assigned.brand} ${assigned.name}`} className="h-9 w-14 sm:h-10 sm:w-16 object-contain shrink-0"/>
                   <div className="min-w-0 flex-1">
                     <div className="text-[9px] font-black uppercase tracking-wider text-cyan-300">Auto {slotIdx===0?'A':'B'}</div>
                     <div className="truncate text-xs font-black text-white">{assigned.brand} {assigned.name}</div>
                     <div className="truncate text-[10px] font-mono text-slate-300">{formatOfficialPower(assigned)}</div>
                   </div>
-                  <button type="button" onClick={()=>toggleCompare(assigned.id)} aria-label={`Quitar ${assigned.brand} ${assigned.name} de comparación`} className="rounded-md border border-rose-500/50 bg-rose-950/70 p-1 text-rose-200 hover:bg-rose-900 cursor-pointer shrink-0">
-                    <X size={13}/>
+                  <button type="button" onClick={()=>toggleCompare(assigned.id)} aria-label={`Quitar ${assigned.brand} ${assigned.name} de comparación`} className="rounded-lg border border-rose-500/50 bg-rose-950/80 p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-rose-200 hover:bg-rose-900 cursor-pointer shrink-0">
+                    <X size={14}/>
                   </button>
                 </>
               ):(
                 <div className="min-w-0 flex-1 py-1">
                   <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Auto {slotIdx===0?'A':'B'}</div>
-                  <div className="text-xs font-bold text-slate-400">Tocá “Asignar a comparación” en una tarjeta</div>
+                  <div className="text-[11px] font-bold text-slate-400 truncate">Elegí un modelo abajo</div>
                 </div>
               )}
             </div>
@@ -960,56 +997,141 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
           </React.Fragment>;
         })}
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-2 text-xs z-10">
-        <label htmlFor="arcade-compare-track" className="font-bold uppercase text-cyan-300 text-[10px] tracking-wider">Pista:</label>
-        <select id="arcade-compare-track" value={compareTrackIndex} onChange={e=>setCompareTrackIndex(Number(e.target.value))} className="rounded-lg border border-cyan-500/45 bg-slate-950/90 px-2.5 py-1 text-xs font-bold text-white">
-          {compareTracks.map((t,idx)=><option key={t.id} value={idx}>{t.name} ({t.distanceMeters} m)</option>)}
-        </select>
-      </div>
+
       <SwipeDeck items={allCars} selectedId={compareFocusId} onSelect={setCompareFocusId} label="Comparador" renderItem={(item)=>{
         const slotIndex=compareIds.indexOf(item.id);
         const isAssigned=slotIndex>=0;
-        return <div className={`dc99-car-card ${isAssigned?'!border-[#00E5F5] shadow-[0_0_20px_rgba(0,229,245,0.3)]':''}`}>
-          <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase">
-            <span className="text-cyan-300">{item.brand}</span>
-            {isAssigned && <span className="rounded bg-[#00E5F5] px-1.5 py-0.5 text-[#04131A]">AUTO {slotIndex===0?'A':'B'}</span>}
+        return <div className={`dc99-car-card dc-mobile-compare-card ${isAssigned?'!border-[#00E5F5] shadow-[0_0_20px_rgba(0,229,245,0.3)]':''}`}>
+          <div className="dc99-car-frame dc-mobile-compare-art">
+            <img src={preview(item)} alt={`${item.brand} ${item.name}`}/>
           </div>
-          <div className="dc99-car-frame"><img src={preview(item)} alt={`${item.brand} ${item.name}`}/></div>
-          <h2>{item.brand} {item.name}</h2>
-          <p>{formatOfficialPower(item)} · {formatOfficialTorque(item)}</p>
-          <div className="mt-2 flex items-center gap-1.5">
-            <button type="button" className="dc99-selected dc12-select-compare flex-1 min-h-[36px]" onClick={event=>{event.stopPropagation();setCompareFocusId(item.id);toggleCompare(item.id);}}>
-              {isAssigned?'✓ EN COMPARACIÓN (QUITAR)':'ASIGNAR A COMPARACIÓN'}
-            </button>
+          <div className="dc-mobile-compare-info flex flex-1 flex-col justify-between min-w-0 gap-1.5">
+            <div>
+              <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase">
+                <span className="text-cyan-300 truncate">{item.brand}</span>
+                {isAssigned && <span className="rounded bg-[#00E5F5] px-2 py-0.5 text-[#04131A] shrink-0">AUTO {slotIndex===0?'A':'B'}</span>}
+              </div>
+              <h2 className="font-display italic font-black text-white uppercase leading-tight mt-0.5">{item.brand} {item.name}</h2>
+              <p className="text-xs text-slate-300 mt-0.5">{formatOfficialPower(item)} · {formatOfficialTorque(item)} · {getVehiclePrice(item)}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <button
+                type="button"
+                className={`dc12-select-compare flex-1 min-h-[40px] rounded-lg px-3 py-1.5 text-[11px] font-black uppercase tracking-wider transition cursor-pointer ${isAssigned?'!bg-[#00E5F5] !text-[#04131A] !border-[#00E5F5]':'bg-[#082536] text-cyan-100 border border-[#00E5F5]/65'}`}
+                onClick={event=>{event.stopPropagation();setCompareFocusId(item.id);toggleCompare(item.id);}}
+              >
+                {isAssigned?`✓ AUTO ${slotIndex===0?'A':'B'} (QUITAR)`:'+ ELEGIR PARA COMPARAR'}
+              </button>
+              <button
+                type="button"
+                onClick={event=>{event.stopPropagation();setCompareFocusId(item.id);openCompareShowroom(item.id,'glb3d');}}
+                className="min-h-[40px] rounded-lg border border-cyan-400/50 bg-slate-900/90 px-2.5 py-1.5 text-[10px] font-black uppercase text-cyan-200 hover:border-cyan-300 cursor-pointer shrink-0"
+              >
+                3D / PNG
+              </button>
+              <button
+                type="button"
+                onClick={event=>{event.stopPropagation();setCompareFocusId(item.id);setShowroomCarId(item.id);setShowSpecs(true);}}
+                className="min-h-[40px] rounded-lg border border-slate-600 bg-slate-900/90 px-2.5 py-1.5 text-[10px] font-black uppercase text-slate-200 hover:border-cyan-300 cursor-pointer shrink-0"
+              >
+                FICHA
+              </button>
+            </div>
           </div>
         </div>;
       }}/>
-      <div className="dc11-garage-tools">
-        <button type="button" onClick={()=>openCompareShowroom(compareFocusId,'glb3d')}>VER EN 3D (GLB) / PNG</button>
-        <button type="button" onClick={()=>openCompareShowroom(compareFocusId,'frames')}>GIRAR 360°</button>
-        <button type="button" onClick={()=>{setShowroomCarId(compareFocusId);setShowSpecs(true);}}>FICHA</button>
-      </div>
-      <div className="dc99-actions">
-        <button type="button" className="dc99-secondary" onClick={()=>setStage('home')}>MENÚ</button>
-        <button type="button" className="dc99-primary" disabled={compareCars.length!==2} onClick={()=>{setCompareSimulation(true);setStage('compare-results');}}>
-          {compareCars.length===2?'COMPARAR AHORA →':`ELEGÍ ${2-compareCars.length} AUTO MÁS (${compareCars.length}/2)`}
+
+      <div className="dc99-actions mt-1 mb-1 rounded-xl border border-cyan-500/35 bg-[#04101d]/95 px-3 py-1.5 shrink-0">
+        <button type="button" className="dc99-secondary min-h-[40px]" onClick={()=>setStage('home')}>MENÚ</button>
+        <button type="button" className="dc99-secondary min-h-[40px]" onClick={()=>openCompareShowroom(compareFocusId,'frames')}>GIRO 360°</button>
+        <button type="button" className="dc99-primary min-h-[42px]" disabled={compareCars.length!==2} onClick={()=>{setCompareSimulation(true);setStage('compare-results');}}>
+          {compareCars.length===2?'VER TABLA Y PISTA →':`ELEGÍ ${2-compareCars.length} AUTO MÁS (${compareCars.length}/2)`}
         </button>
       </div>
     </main>}
-    {stage==='compare-results'&&<main className="dc99-results dc12-compare-results">
-      <div className="dc99-heading"><span>DUELO · {compareTrack.name} ({compareTrack.distanceMeters} m)</span><h1>RESULTADOS COMPARATIVOS</h1></div>
-      <div className="dc99-ranking">{compareResults.map((r,i)=>{
+    {stage==='compare-results'&&<main className="dc99-results dc12-compare-results overflow-y-auto overflow-x-hidden gap-2.5 relative z-10">
+      <div className="dc99-heading shrink-0 flex flex-wrap items-center justify-between gap-2 max-w-[920px] w-full mx-auto px-1">
+        <div className="text-left">
+          <span>DUELO · {compareTrack.name} ({compareTrack.distanceMeters} m)</span>
+          <h1 className="!text-lg sm:!text-2xl md:!text-3xl">RESULTADOS COMPARATIVOS</h1>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button type="button" className="dc99-secondary !min-h-[36px] !px-3 !py-1 !text-[11px]" onClick={()=>setStage('compare')}>← CAMBIAR AUTOS</button>
+          <button type="button" className="dc99-primary !min-h-[36px] !px-3 !py-1 !text-[11px]" onClick={()=>setStage('home')}>MENÚ</button>
+        </div>
+      </div>
+
+      {/* Podium Time Summary */}
+      <div className="dc99-ranking shrink-0">{compareResults.map((r,i)=>{
         const winnerSec=compareResults[0]?.finishTimeSec??r.finishTimeSec;
         const gap=r.finishTimeSec-winnerSec;
         return <div key={r.vehicle.id}>
           <b>{i+1}º</b>
           <span>{r.vehicle.brand} {r.vehicle.name}</span>
-          <strong className="tabular-nums">{r.finishTimeSec.toFixed(2)}s {i>0?`(+${gap.toFixed(2)}s)`:'(Líder)'}</strong>
+          <strong className="tabular-nums">{r.finishTimeSec.toFixed(2)}s {i>0?`(+${gap.toFixed(2)}s)`:'(Ganador)'}</strong>
         </div>;
       })}</div>
-      <div className="dc11-garage-tools"><button type="button" onClick={()=>setCompareSimulation(v=>!v)}>{compareSimulation?'OCULTAR SIMULACIÓN 3D':'VER SIMULACIÓN 3D'}</button>{compareCars.map(c=><button type="button" key={c.id} onClick={()=>openCompareShowroom(c.id,'glb3d')}>3D / PNG {c.name}</button>)}</div>
-      {compareSimulation&&<div className="dc12-compare-render"><Race3DPerspectiveView experience="comparison" vehicles={compareCars} track={compareTrack} simulationResults={compareResults} onFinishRace={()=>{}} /></div>}
-      <div className="dc99-actions"><button type="button" className="dc99-secondary" onClick={()=>setStage('compare')}>CAMBIAR AUTOS</button><button type="button" className="dc99-primary" onClick={()=>setStage('home')}>MENÚ PRINCIPAL</button></div>
+
+      {/* Side-by-Side Auto A vs Auto B Technical Comparison Card */}
+      {compareCars.length===2 && (
+        <div className="w-full max-w-[920px] mx-auto rounded-2xl border border-cyan-500/35 bg-[#061423]/95 p-3 sm:p-4 shrink-0">
+          <div className="grid grid-cols-2 gap-3 pb-3 border-b border-cyan-500/25">
+            {compareCars.map((c, idx) => (
+              <div key={c.id} className="flex flex-col items-center text-center gap-1.5 min-w-0">
+                <span className="rounded bg-cyan-400/20 border border-cyan-400/50 px-2 py-0.5 text-[10px] font-black uppercase text-cyan-200">
+                  Auto {idx === 0 ? 'A' : 'B'}
+                </span>
+                <img src={preview(c)} alt={`${c.brand} ${c.name}`} className="h-16 sm:h-24 w-full object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.85)]" />
+                <div className="font-display text-sm sm:text-lg font-black italic uppercase text-white truncate max-w-full">
+                  {c.brand} {c.name}
+                </div>
+                <button
+                  type="button"
+                  onClick={()=>openCompareShowroom(c.id,'glb3d')}
+                  className="min-h-[36px] rounded-lg border border-cyan-400/60 bg-cyan-950/75 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-200 hover:bg-cyan-900 cursor-pointer"
+                >
+                  Ver en 3D (GLB) / PNG
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="divide-y divide-slate-800/90 text-xs mt-1">
+            {[
+              ['Potencia', formatOfficialPower(compareCars[0]), formatOfficialPower(compareCars[1])],
+              ['Torque', formatOfficialTorque(compareCars[0]), formatOfficialTorque(compareCars[1])],
+              ['0–100 km/h', formatOfficialOrSimAccel(compareCars[0]), formatOfficialOrSimAccel(compareCars[1])],
+              ['Vel. máxima', formatOfficialTopSpeed(compareCars[0]), formatOfficialTopSpeed(compareCars[1])],
+              ['Consumo mixto', formatOfficialConsumption(compareCars[0]), formatOfficialConsumption(compareCars[1])],
+              ['Peso', formatOfficialWeight(compareCars[0]), formatOfficialWeight(compareCars[1])],
+              ['Despeje', formatOfficialClearance(compareCars[0]), formatOfficialClearance(compareCars[1])],
+              ['Precio ref.', getVehiclePrice(compareCars[0]), getVehiclePrice(compareCars[1])],
+            ].map(([label, valA, valB]) => (
+              <div key={String(label)} className="grid grid-cols-3 items-center gap-2 py-1.5 text-center">
+                <strong className="text-white font-bold truncate">{valA}</strong>
+                <span className="text-[10px] uppercase tracking-wider text-cyan-300 font-bold">{label}</span>
+                <strong className="text-white font-bold truncate">{valB}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="dc11-garage-tools shrink-0">
+        <button type="button" className="min-h-[38px]" onClick={()=>setCompareSimulation(v=>!v)}>
+          {compareSimulation?'OCULTAR SIMULACIÓN 3D EN PISTA':'VER SIMULACIÓN 3D EN PISTA'}
+        </button>
+      </div>
+
+      {compareSimulation && (
+        <div className="dc12-compare-render w-full max-w-[920px] mx-auto h-[230px] sm:h-[320px] rounded-xl overflow-hidden border border-cyan-500/35 shrink-0">
+          <Race3DPerspectiveView compact experience="comparison" vehicles={compareCars} track={compareTrack} simulationResults={compareResults} onFinishRace={()=>{}} />
+        </div>
+      )}
+
+      <div className="dc99-actions mt-1 mb-1 rounded-xl border border-cyan-500/35 bg-[#04101d]/95 px-3 py-1.5 shrink-0">
+        <button type="button" className="dc99-secondary min-h-[42px]" onClick={()=>setStage('compare')}>CAMBIAR AUTOS</button>
+        <button type="button" className="dc99-primary min-h-[44px]" onClick={()=>setStage('home')}>MENÚ PRINCIPAL</button>
+      </div>
     </main>}
     {showShowroom&&<div className="dc11-modal-backdrop" role="dialog" aria-modal="true" aria-label="Showroom 360"><section className="dc11-modal dc11-showroom"><header><h2>{showroomCar.brand} {showroomCar.name} · {showroomAllow3D?'VISTA COMPARAR (3D GLB / PNG)':'SHOWROOM 360°'}</h2><button onClick={()=>setShowShowroom(false)} aria-label="Cerrar visor 360"><X/></button></header><div className="dc11-modal-scroll">
       {showroomAllow3D && (

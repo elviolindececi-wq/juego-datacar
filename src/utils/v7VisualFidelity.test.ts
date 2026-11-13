@@ -126,3 +126,35 @@ test('soundEngine.playThunder y stopAll operan de forma segura sin persistir aud
     soundEngine.stopAll(0.05);
   });
 });
+
+test('el sol ilumina desde atrás (-Z) y en altura en todos los climas para evitar autos en contraluz oscuro', async () => {
+  const { getHyperrealAtmosphere } = await import('./hyperrealEnvironment3D');
+  for (const mode of ['sunny', 'cloudy', 'rain', 'storm', 'flood'] as const) {
+    const atm = getHyperrealAtmosphere(mode);
+    assert.ok(
+      atm.sunDir[2] < -0.5,
+      `El sol en modo ${mode} debe provenir de atrás (sunDir.z < -0.5, actual=${atm.sunDir[2]})`,
+    );
+    assert.ok(
+      atm.sunDir[1] > 0.5,
+      `El sol en modo ${mode} debe tener buena elevación (sunDir.y > 0.5, actual=${atm.sunDir[1]})`,
+    );
+  }
+});
+
+test('experiencia mobile habilita touch-action:pan-y y evita recortar Iniciar Carrera, Circuitos y Comparador', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const root = process.cwd();
+  const indexCss = fs.readFileSync(path.join(root, 'src/index.css'), 'utf8');
+  const arcadeCss = fs.readFileSync(path.join(root, 'src/styles/datacar-arcade.css'), 'utf8');
+  const briefingTsx = fs.readFileSync(path.join(root, 'src/components/ArcadeBriefingAndResults.tsx'), 'utf8');
+  const mobileTsx = fs.readFileSync(path.join(root, 'src/components/mobile/MobileGameExperience.tsx'), 'utf8');
+
+  assert.ok(!indexCss.includes('.dc99-game { display:flex; flex-direction:column; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; z-index:1000; isolation:isolate; overflow:hidden; color:#f8fbff; background:radial-gradient(circle at 65% 50%, #14374a 0%,#091525 44%,#02050e 100%); font-family:var(--font-sans);touch-action:pan-x; }'), 'No debe bloquearse el scroll vertical con touch-action:pan-x en .dc99-game');
+  assert.ok(indexCss.includes('touch-action:pan-y;'), 'El contenedor mobile .dc99-game debe habilitar touch-action:pan-y');
+  assert.ok(arcadeCss.includes('.dc99-game main .dc-arcade-card'), 'Las tarjetas internas de briefing y resultados deben expandirse sin recortarse');
+  assert.ok(!briefingTsx.includes('sticky bottom-0') && briefingTsx.includes('¡EMPEZAR CARRERA!'), 'El botón ¡EMPEZAR CARRERA! debe estar visible sin barras sticky que tapen las tarjetas');
+  assert.ok(mobileTsx.includes('hidden sm:flex items-center justify-center pointer-events-none shrink-0'), 'El logo central del header no debe tapar el botón Volver en portrait estrecho');
+  assert.ok(mobileTsx.includes('dc-mobile-track-card') && mobileTsx.includes('dc-mobile-compare-card'), 'Las tarjetas mobile de circuitos y comparador deben usar el layout responsivo sin aplastamiento');
+});

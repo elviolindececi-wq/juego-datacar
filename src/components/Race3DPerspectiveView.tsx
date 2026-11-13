@@ -1420,9 +1420,10 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     scene.add(keyLight);
     scene.add(keyLight.target);
 
-    const fillLight = new THREE.DirectionalLight('#7dd3fc', 0.62);
-    fillLight.position.set(-28, 22, 24);
+    const fillLight = new THREE.DirectionalLight('#fff5e4', 0.82);
+    fillLight.position.set(-18, 26, -34);
     scene.add(fillLight);
+    scene.add(fillLight.target);
 
     // 3. Trazado de asfalto tridimensional con carriles amplios en ambos sentidos (21m en modo carrera urbana)
     const trackLength = Math.max(track.distanceMeters + 120, 550);
@@ -2425,7 +2426,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         hemiLight.groundColor.set(atm.hemiGroundHex);
         hemiLight.intensity = atm.hemiIntensity;
         ambientLight.intensity = atm.ambientIntensity;
-        fillLight.intensity = currentWeather === 'storm' || currentWeather === 'flood' ? 0.34 : 0.52;
+        fillLight.intensity = currentWeather === 'storm' ? 0.48 : currentWeather === 'flood' ? 0.60 : 0.82;
         renderer.toneMappingExposure = atm.exposure;
 
         const wet = WEATHER_CONFIG[currentWeather].roadWetness;
@@ -2785,6 +2786,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         _smoothedCamTarget.z = THREE.MathUtils.damp(_smoothedCamTarget.z, _camTarget.z, 9, dt);
       }
       camera.lookAt(_smoothedCamTarget);
+
+      // Luz de apoyo solar alineada detrás de la cámara activa para que la parte trasera
+      // de los autos permanezca bien iluminada incluso al girar 180° en circuitos cerrados.
+      const camBackDx = camera.position.x - selectedX;
+      const camBackDz = camera.position.z - selectedZ;
+      const camBackLen = Math.hypot(camBackDx, camBackDz) || 1;
+      const rearUx = camBackDx / camBackLen;
+      const rearUz = camBackDz / camBackLen;
+      fillLight.target.position.set(selectedX, 1.0, selectedZ);
+      fillLight.position.set(
+        selectedX + (rearUx * 0.88 - rearUz * 0.24) * 34,
+        26,
+        selectedZ + (rearUz * 0.88 + rearUx * 0.24) * 34,
+      );
 
       if (
         digitalRearviewMirror &&

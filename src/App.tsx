@@ -94,8 +94,9 @@ export default function App() {
     if (typeof window === 'undefined') return new URLSearchParams();
     return new URLSearchParams(window.location.search);
   }, []);
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(pointer: coarse) and (max-width: 1100px)').matches);
-  useEffect(() => { const query = window.matchMedia('(pointer: coarse) and (max-width: 1100px)'); const update = () => setIsMobile(query.matches); query.addEventListener('change', update); return () => query.removeEventListener('change', update); }, []);
+  const mobileMediaQuery = '(pointer: coarse) and (max-width: 1100px), (pointer: coarse) and (max-height: 560px)';
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia(mobileMediaQuery).matches);
+  useEffect(() => { const query = window.matchMedia(mobileMediaQuery); const update = () => setIsMobile(query.matches); query.addEventListener('change', update); return () => query.removeEventListener('change', update); }, []);
   const [screen, setScreen] = useState<Screen>(() =>
     initialQuery.get('autostart') === '1' && !isPlayerCurrentlyJailed() ? 'race-run' : 'intro',
   );

@@ -184,11 +184,11 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     }
     scene.add(keyLight);
 
-    const cyanStadiumFill = new THREE.DirectionalLight(0x38bdf8, 0.34);
-    cyanStadiumFill.position.set(-6.4, 2.8, 3.8);
+    const cyanStadiumFill = new THREE.DirectionalLight(0xdbeafe, 0.54);
+    cyanStadiumFill.position.set(-4.8, 4.4, 5.6);
     scene.add(cyanStadiumFill);
 
-    const amberStadiumRim = new THREE.DirectionalLight(0xfbbf24, 0.28);
+    const amberStadiumRim = new THREE.DirectionalLight(0xfbbf24, 0.26);
     amberStadiumRim.position.set(6.2, 2.6, -4.4);
     scene.add(amberStadiumRim);
 

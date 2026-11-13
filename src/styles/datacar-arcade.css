@@ -502,13 +502,25 @@
   border-radius: 20px;
 }
 
-/* Override legacy grid rules on redesigned arcade stages */
-.dc99-game .dc-wet-asphalt,
-.dc99-game .dc-arcade-stage {
+/* Override legacy grid rules on redesigned arcade stages (only direct main scroll containers shrink to viewport) */
+.dc99-game > main.dc-wet-asphalt,
+.dc99-game > main.dc-arcade-stage {
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 0% !important;
   min-height: 0 !important;
+  touch-action: pan-y !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dc99-game main .dc-arcade-card,
+.dc99-game main .dc-arcade-stage {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 0 0 auto !important;
+  min-height: min-content !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 /* Mockup 7: Briefing / Loading Panels & Segmented Bar */
@@ -1933,13 +1945,164 @@
 
 @media (max-width: 640px) {
   .dc-compare-duel-bar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 5px;
+  }
+  .dc-compare-slot {
+    padding: 6px 8px;
     gap: 6px;
   }
+  .dc-compare-slot img {
+    display: none;
+  }
   .dc-compare-vs-badge {
-    margin: -2px auto;
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==========================================================================
+   MOBILE CIRCUIT & COMPARATOR CARDS — ZERO CLIPPING IN LANDSCAPE & PORTRAIT
+   ========================================================================== */
+.dc99-game .dc-mobile-track-card,
+.dc99-game.dc-force-arcade .dc-mobile-track-card {
+  height: auto !important;
+  min-height: 245px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dc99-game .dc-mobile-track-art,
+.dc99-game.dc-force-arcade .dc-mobile-track-art {
+  height: 132px;
+  min-height: 120px;
+  margin-bottom: 0;
+  border-radius: 12px;
+}
+
+.dc99-game .dc-mobile-track-title,
+.dc99-game.dc-force-arcade .dc-mobile-track-title {
+  font-size: clamp(18px, 2.8vw, 25px) !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dc99-game .dc-mobile-track-hazard,
+.dc99-game.dc-force-arcade .dc-mobile-track-hazard {
+  font-size: 11.5px !important;
+  line-height: 1.3 !important;
+  white-space: normal !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dc99-game .dc-mobile-compare-card,
+.dc99-game.dc-force-arcade .dc-mobile-compare-card {
+  height: auto !important;
+  min-height: 235px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dc99-game .dc-mobile-compare-art,
+.dc99-game.dc-force-arcade .dc-mobile-compare-art {
+  height: 122px;
+  min-height: 105px;
+}
+
+/* Short Mobile Landscape (800x360, 844x390, 932x430): Horizontal Split Cards & Compact Header */
+@media (orientation: landscape) and (max-height: 540px) {
+  .dc99-game .dc-arena-header {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+    min-height: 38px !important;
+  }
+
+  .dc99-game .dc99-picker,
+  .dc99-game.dc-force-arcade .dc99-picker {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    touch-action: pan-y !important;
+    padding: 4px max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)) !important;
+  }
+
+  .dc99-game .dc99-deck,
+  .dc99-game.dc-force-arcade .dc99-deck {
+    flex: 1 0 auto !important;
+    min-height: 158px !important;
+    padding: 2px 0 10px !important;
+  }
+
+  .dc99-game .dc99-snap-row,
+  .dc99-game.dc-force-arcade .dc99-snap-row {
+    width: min(760px, 90%) !important;
+    height: auto !important;
+    min-height: 148px !important;
+    max-height: none !important;
+  }
+
+  .dc99-game .dc99-snap-slide,
+  .dc99-game.dc-force-arcade .dc99-snap-slide {
+    flex: 0 0 86% !important;
+    display: flex !important;
+  }
+
+  .dc99-game .dc-mobile-track-card,
+  .dc99-game.dc-force-arcade .dc-mobile-track-card {
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    min-height: 146px !important;
+    padding: 8px 12px !important;
+  }
+
+  .dc99-game .dc-mobile-track-art,
+  .dc99-game.dc-force-arcade .dc-mobile-track-art {
+    width: 44% !important;
+    height: auto !important;
+    min-height: 128px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .dc99-game .dc-mobile-track-info,
+  .dc99-game.dc-force-arcade .dc-mobile-track-info {
+    width: 56% !important;
+  }
+
+  .dc99-game .dc-mobile-compare-card,
+  .dc99-game.dc-force-arcade .dc-mobile-compare-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    min-height: 148px !important;
+    padding: 8px 12px !important;
+  }
+
+  .dc99-game .dc-mobile-compare-art,
+  .dc99-game.dc-force-arcade .dc-mobile-compare-art {
+    width: 38% !important;
+    height: 124px !important;
+    min-height: 112px !important;
+    margin: 0 !important;
+  }
+
+  .dc99-game .dc-mobile-compare-info,
+  .dc99-game.dc-force-arcade .dc-mobile-compare-info {
+    width: 62% !important;
   }
 }
