@@ -291,7 +291,10 @@ export interface HyperrealEnvironmentController {
 export function createHyperrealSkyAndIBL(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
+  options?: { skyRadius?: number; fogDensityMultiplier?: number },
 ): HyperrealEnvironmentController {
+  const skyRadius = options?.skyRadius ?? 960;
+  const fogScale = options?.fogDensityMultiplier ?? 1;
   const pmrem = new THREE.PMREMGenerator(renderer);
   pmrem.compileEquirectangularShader();
 
@@ -312,7 +315,7 @@ export function createHyperrealSkyAndIBL(
     uTime: { value: 0 },
   };
 
-  const skyGeo = new THREE.SphereGeometry(960, 32, 20);
+  const skyGeo = new THREE.SphereGeometry(skyRadius, 32, 20);
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: SKY_VERTEX_SHADER,
     fragmentShader: SKY_FRAGMENT_SHADER,
@@ -329,7 +332,7 @@ export function createHyperrealSkyAndIBL(
 
   // Mantener color de fallback limpio y niebla calibrada con el horizonte del domo
   scene.background = new THREE.Color(initial.horizonHex);
-  scene.fog = new THREE.FogExp2(initial.fogHex, initial.fogDensity);
+  scene.fog = new THREE.FogExp2(initial.fogHex, initial.fogDensity * fogScale);
 
   let appliedWeather: WeatherMode | null = null;
   let lastFlashApplied = 0;
@@ -348,7 +351,7 @@ export function createHyperrealSkyAndIBL(
     timeSec: number,
     lightningFlash01 = 0,
   ) => {
-    skyDome.position.set(camPos.x, 0, camPos.z);
+    skyDome.position.set(camPos.x, camPos.y, camPos.z);
     uniforms.uTime.value = timeSec;
 
     const spec = getHyperrealAtmosphere(weatherMode);
@@ -374,7 +377,7 @@ export function createHyperrealSkyAndIBL(
       }
       if (scene.fog instanceof THREE.FogExp2) {
         scene.fog.color.copy(_targetFog);
-        scene.fog.density = spec.fogDensity;
+        scene.fog.density = spec.fogDensity * fogScale;
       }
     }
 

@@ -158,3 +158,137 @@ test('experiencia mobile habilita touch-action:pan-y y evita recortar Iniciar Ca
   assert.ok(mobileTsx.includes('hidden sm:flex items-center justify-center pointer-events-none shrink-0'), 'El logo central del header no debe tapar el botón Volver en portrait estrecho');
   assert.ok(mobileTsx.includes('dc-mobile-track-card') && mobileTsx.includes('dc-mobile-compare-card'), 'Las tarjetas mobile de circuitos y comparador deben usar el layout responsivo sin aplastamiento');
 });
+
+test('perfil mobile 3D reserva GLB solo para el vehículo del jugador y usa modelos 3D livianos para rivales', async () => {
+  const {
+    resolveRace3DPerformanceProfile,
+    shouldUseLightweightProceduralVehicle,
+    filterVehiclesForRacePreload,
+  } = await import('./mobilePerformanceProfile');
+
+  const mobileProfile = resolveRace3DPerformanceProfile({
+    isMobilePerf: true,
+    isSoftwareGl: false,
+    devicePixelRatio: 3,
+    innerWidth: 800,
+  });
+  assert.equal(mobileProfile.antialias, false);
+  assert.equal(mobileProfile.maxDpr, 1);
+  assert.equal(mobileProfile.shadowsEnabled, false);
+  assert.equal(mobileProfile.defaultRearviewMirror, false);
+  assert.equal(mobileProfile.defaultSideMirrors, false);
+  assert.equal(mobileProfile.gameplayCameraFar, 420);
+  assert.equal(mobileProfile.skyDomeRadius, 360);
+
+  const desktopProfile = resolveRace3DPerformanceProfile({
+    isMobilePerf: false,
+    isSoftwareGl: false,
+    devicePixelRatio: 2,
+    innerWidth: 1440,
+  });
+  assert.equal(desktopProfile.antialias, true);
+  assert.equal(desktopProfile.maxDpr, 1.5);
+  assert.equal(desktopProfile.shadowsEnabled, true);
+  assert.equal(desktopProfile.defaultRearviewMirror, true);
+  assert.equal(desktopProfile.defaultSideMirrors, true);
+
+  // En mobile durante carrera: el auto elegido usa su GLB (false) y todos los rivales / pares online usan el 3D liviano (true)
+  assert.equal(
+    shouldUseLightweightProceduralVehicle({
+      isMobilePerf: true,
+      experience: 'race',
+      vehicleId: 'nissan-kicks-2027',
+      playerVehicleId: 'nissan-kicks-2027',
+    }),
+    false,
+  );
+  assert.equal(
+    shouldUseLightweightProceduralVehicle({
+      isMobilePerf: true,
+      experience: 'race',
+      vehicleId: 'chevrolet-tracker-lite',
+      playerVehicleId: 'nissan-kicks-2027',
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseLightweightProceduralVehicle({
+      isMobilePerf: true,
+      experience: 'race',
+      vehicleId: 'nissan-kicks-2027',
+      playerVehicleId: 'nissan-kicks-2027',
+      isOnlinePeer: true,
+    }),
+    true,
+  );
+  // En desktop todos conservan su GLB
+  assert.equal(
+    shouldUseLightweightProceduralVehicle({
+      isMobilePerf: false,
+      experience: 'race',
+      vehicleId: 'chevrolet-tracker-lite',
+      playerVehicleId: 'nissan-kicks-2027',
+    }),
+    false,
+  );
+
+  const preloadedMobile = filterVehiclesForRacePreload(PRESET_VEHICLES.slice(0, 3), PRESET_VEHICLES[1].id, true);
+  assert.equal(preloadedMobile.length, 1);
+  assert.equal(preloadedMobile[0].id, PRESET_VEHICLES[1].id);
+});
+
+test('createVehicleEntity con preferProceduralModel instancia inmediatamente el modelo 3D liviano por defecto sin descargar GLB', async () => {
+  const prevDocument = (globalThis as { document?: unknown }).document;
+  (globalThis as { document?: unknown }).document = {
+    createElement: () => ({
+      width: 0,
+      height: 0,
+      getContext: () => null,
+    }),
+  };
+  try {
+    const { createVehicleEntity } = await import('./vehicle3DEntity');
+    const tracker = DEALERSHIP_VEHICLES.find((v) => v.id === 'chevrolet-tracker-lite')!;
+    let loadedSync = false;
+    const entity = createVehicleEntity(
+      tracker,
+      1,
+      3,
+      () => {
+        loadedSync = true;
+      },
+      undefined,
+      null,
+      undefined,
+      { preferProceduralModel: true },
+    );
+    assert.equal(loadedSync, true, 'El modelo 3D liviano debe quedar montado síncronamente sin red');
+    assert.equal(entity.usesProceduralModel, true, 'El rival debe marcar usesProceduralModel = true');
+    entity.dispose();
+  } finally {
+    if (prevDocument === undefined) {
+      delete (globalThis as { document?: unknown }).document;
+    } else {
+      (globalThis as { document?: unknown }).document = prevDocument;
+    }
+  }
+});
+
+test('Race3DPerspectiveView elimina backdrop-blur sobre WebGL y expone botón visible PONER CINTURÓN', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const raceSource = fs.readFileSync(path.join(process.cwd(), 'src/components/Race3DPerspectiveView.tsx'), 'utf8');
+
+  assert.equal(
+    raceSource.includes('backdrop-blur'),
+    false,
+    'No deben existir clases backdrop-blur sobre el canvas WebGL activo',
+  );
+  assert.ok(
+    raceSource.includes('data-testid="seatbelt-button"') &&
+      raceSource.includes('PONER CINTURÓN') &&
+      raceSource.includes('✓ CINTURÓN PUESTO') &&
+      raceSource.includes('onClick={buckleSeatbelt}'),
+    'El botón de cinturón de seguridad debe estar visible y conectado a buckleSeatbelt',
+  );
+});

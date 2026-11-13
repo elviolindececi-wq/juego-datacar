@@ -287,7 +287,7 @@
    Un showroom y resultados completos son overlays desplazables. */
 @media (pointer:coarse) and (max-width:1100px) {
  .dc99-race-stage .dc11-desktop-hud {display:none!important;}
- .dc99-race-stage .dc11-mobile-speed {position:absolute;right:max(12px,env(safe-area-inset-right));top:55px;z-index:32;min-width:clamp(132px,18vw,206px);border:1px solid #38d7fa80;border-radius:14px;padding:9px 13px;background:linear-gradient(145deg,#071626eb,#122940d9);box-shadow:0 10px 32px #0008;pointer-events:auto;text-align:right;backdrop-filter:blur(8px);}
+ .dc99-race-stage .dc11-mobile-speed {position:absolute;right:max(12px,env(safe-area-inset-right));top:55px;z-index:32;min-width:clamp(132px,18vw,206px);border:1px solid #38d7fa80;border-radius:14px;padding:9px 13px;background:linear-gradient(145deg,#071626f5,#122940f0);box-shadow:0 10px 32px #0008;pointer-events:auto;text-align:right;}
  .dc11-mobile-speed>span {font-size:9px;letter-spacing:.18em;color:#7ae9fb;font-weight:900;}
  .dc11-mobile-speed>div {display:flex;align-items:baseline;gap:7px;justify-content:flex-end;}
  .dc11-mobile-speed>div strong {font-size:clamp(34px,5.8vw,61px);font-weight:950;line-height:1;color:white;font-variant-numeric:tabular-nums;}
@@ -391,7 +391,7 @@
 
 /* V11.2 · La pista permanece visible detrás del botón START mientras termina de montarse. */
 .dc11-start-gate {background:linear-gradient(90deg,#020b15b8,#05101c44 50%,#020b15b8);}
-.dc11-start-card {background:#061524e8;backdrop-filter:blur(7px);}
+.dc11-start-card {background:#061524f5;}
 .dc11-start-card button:disabled {cursor:progress;opacity:.8;}
 
 /* DATACAR V12 · identidad y controles mobile mejorados */
@@ -812,11 +812,12 @@
     max-width: none !important;
   }
 
-  /* Fila C dedicada para señaleros por encima de dirección/pedales (cero solapamiento incluso en 320px) */
+  /* Fila C dedicada para señaleros + cinturón por encima de dirección/pedales (cero solapamiento incluso en 320px) */
   .dc-v5-turn-signals-pod {
     bottom: max(122px, calc(env(safe-area-inset-bottom) + 114px)) !important;
     translate: -50% 0 !important;
     transform: none !important;
+    max-width: calc(100vw - 16px) !important;
   }
 
   .dc-mockup5-driving-iq,

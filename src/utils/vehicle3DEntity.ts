@@ -28,11 +28,16 @@ export interface InteractiveVehiclePose {
   suspension?: { heaveM: number; pitchRad: number; rollRad: number; wheelRoadM: { FL: number; FR: number; RL: number; RR: number }; impact: number };
 }
 
+export interface VehicleEntityOptions {
+  preferProceduralModel?: boolean;
+}
+
 export interface VehicleEntityRunner {
   group: THREE.Group; // VehicleRoot (posición y orientación física oficial)
   vehicle: Vehicle;
   laneX: number;
   is3DModel: boolean;
+  usesProceduralModel?: boolean;
   updateState: (
     distanceMeters: number,
     speedKmh: number,
@@ -182,6 +187,7 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
   public vehicle: Vehicle;
   public laneX: number;
   public is3DModel: boolean = true;
+  public usesProceduralModel: boolean = false;
 
   private effectsGroup: THREE.Group; // VehicleEffects
   private modelInstance: THREE.Group | null = null;
@@ -217,7 +223,8 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
     config: Vehicle3DConfig,
     onLoaded?: () => void,
     onError?: (err: unknown) => void,
-    envMap?: THREE.Texture | null
+    envMap?: THREE.Texture | null,
+    options?: VehicleEntityOptions,
   ) {
     this.vehicle = vehicle;
     this.config = config;
@@ -425,11 +432,17 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
       this.wheelRig.setDistanceMeters(this.lastDistanceMeters);
       this.wheelRig.setSteeringRadians(this.currentSteeringAngle, 1);
       this.effectsGroup.add(built.group);
+      this.usesProceduralModel = true;
       this.isLoaded = true;
       if (onLoaded) onLoaded();
     };
 
     const tryLoadSequence = async () => {
+      if (options?.preferProceduralModel) {
+        attachFaithfulOemModel();
+        return;
+      }
+
       if (vehicle.isCustom) {
         const customUrls = [
           ...(getCustomVehicleGlbUrl(vehicle.id) ? [getCustomVehicleGlbUrl(vehicle.id)!] : []),
@@ -603,6 +616,7 @@ export function createVehicleEntity(
   onGLBError?: (err: unknown) => void,
   envMap?: THREE.Texture | null,
   customLabel?: string,
+  options?: VehicleEntityOptions,
 ): VehicleEntityRunner {
   const config = getVehicle3DConfig(vehicle.id);
   const targetLengthMeters = (vehicle.dimensions?.lengthMm || 4300) / 1000;
@@ -614,7 +628,7 @@ export function createVehicleEntity(
       targetLengthMeters,
       scale: targetLengthMeters / 0.12,
     };
-    return new Vehicle3DGLBEntity(vehicle, laneIndex, totalLanes, effectiveConfig, onGLBLoaded, onGLBError, envMap);
+    return new Vehicle3DGLBEntity(vehicle, laneIndex, totalLanes, effectiveConfig, onGLBLoaded, onGLBError, envMap, options);
   }
 
   // Fallback seguro en caso de vehículo no registrado
@@ -631,5 +645,5 @@ export function createVehicleEntity(
     isUnifiedMesh: false,
     isProvisional3D: true,
   };
-  return new Vehicle3DGLBEntity(vehicle, laneIndex, totalLanes, defaultConfig, onGLBLoaded, onGLBError, envMap);
+  return new Vehicle3DGLBEntity(vehicle, laneIndex, totalLanes, defaultConfig, onGLBLoaded, onGLBError, envMap, options);
 }

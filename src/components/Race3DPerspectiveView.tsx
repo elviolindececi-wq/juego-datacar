@@ -91,7 +91,15 @@ import {
   createForwardMotorcyclesVisuals3D,
   type ForwardMotorcycleActor,
 } from '../utils/forwardMotorcycleTraffic';
-import { createDigitalRearviewMirror } from '../utils/digitalRearviewMirror';
+import {
+  createDigitalRearviewMirror,
+  type DigitalRearviewMirrorController,
+} from '../utils/digitalRearviewMirror';
+import {
+  detectMobilePerformanceMode,
+  resolveRace3DPerformanceProfile,
+  shouldUseLightweightProceduralVehicle,
+} from '../utils/mobilePerformanceProfile';
 import {
   applyTurnSignalAction,
   evaluateTurnSignalBlink,
@@ -181,7 +189,7 @@ const ArcadeGauge: React.FC<ArcadeGaugeProps> = ({
   const dangerStart = typeof dangerRatio === 'number' ? startDeg + dangerRatio * (endDeg - startDeg) : null;
 
   return (
-    <div className="relative w-[148px] h-[148px] rounded-full border border-sky-400/20 bg-slate-950/85 shadow-[0_8px_30px_rgba(2,6,23,0.65)] backdrop-blur-md overflow-hidden">
+    <div className="relative w-[148px] h-[148px] rounded-full border border-sky-400/20 bg-slate-950/95 shadow-[0_8px_30px_rgba(2,6,23,0.65)] overflow-hidden">
       <div className={`absolute inset-3 rounded-full bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.55),rgba(2,6,23,0.95)_68%)] ring-1 ring-inset ring-white/5 ${glowClass}`} />
       <svg viewBox="0 0 160 160" className="absolute inset-0 w-full h-full">
         <path d={describeArc(80, 80, 60, startDeg, endDeg)} stroke="rgba(148,163,184,0.18)" strokeWidth="11" fill="none" strokeLinecap="round" />
@@ -241,7 +249,7 @@ const ArcadeRaceHud: React.FC<{
 
   return (
     <div className="dc100-race-gauges absolute bottom-4 right-4 z-20 pointer-events-none select-none">
-      <div className="relative rounded-[26px] border border-sky-400/20 bg-[linear-gradient(180deg,rgba(2,6,23,0.84),rgba(2,6,23,0.96))] px-4 pt-3 pb-2 shadow-[0_20px_45px_rgba(2,6,23,0.6)] backdrop-blur-md overflow-hidden">
+      <div className="relative rounded-[26px] border border-sky-400/20 bg-[linear-gradient(180deg,rgba(2,6,23,0.92),rgba(2,6,23,0.98))] px-4 pt-3 pb-2 shadow-[0_20px_45px_rgba(2,6,23,0.6)] overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-sky-400/80 to-transparent" />
         <div className="flex items-end gap-3">
           <div className="relative">
@@ -358,7 +366,7 @@ const RaceMiniMap: React.FC<{
   return (
     <div className="dc100-race-map dc-mockup5-minimap absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 pointer-events-none flex flex-col items-start select-none">
       {/* 1. Minimapa circular con borde cian brillante */}
-      <div className="relative w-[110px] h-[110px] sm:w-[116px] sm:h-[116px] rounded-full border-2 border-[#00e5ff] bg-[#030914]/90 backdrop-blur-md shadow-[0_0_20px_rgba(0,229,255,0.7),inset_0_0_14px_rgba(0,229,255,0.22)] overflow-hidden flex items-center justify-center">
+      <div className="relative w-[110px] h-[110px] sm:w-[116px] sm:h-[116px] rounded-full border-2 border-[#00e5ff] bg-[#030914]/94 shadow-[0_0_20px_rgba(0,229,255,0.7),inset_0_0_14px_rgba(0,229,255,0.22)] overflow-hidden flex items-center justify-center">
         {/* Indicador brújula N con flecha hacia arriba */}
         <div className="absolute top-1 inset-x-0 flex flex-col items-center pointer-events-none z-10">
           <span className="text-[9px] font-black tracking-widest text-[#00e5ff] leading-none drop-shadow-[0_0_4px_#00e5ff]">N</span>
@@ -405,7 +413,7 @@ const RaceMiniMap: React.FC<{
       </div>
 
       {/* Píldora inferior: POS. 2/8 (dorado) y VUELTA 2/3 */}
-      <div className="mt-1.5 w-[110px] sm:w-[116px] px-2.5 py-1 bg-[#030914]/90 backdrop-blur-md border border-cyan-400/40 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.85)] flex flex-col gap-0.5">
+      <div className="mt-1.5 w-[110px] sm:w-[116px] px-2.5 py-1 bg-[#030914]/94 border border-cyan-400/40 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.85)] flex flex-col gap-0.5">
         <div className="flex items-center justify-between text-[10px] leading-tight font-black tracking-wider">
           <span className="text-white/80">POS.</span>
           <span className="text-[#ffb800] text-[13px] font-black italic drop-shadow-[0_0_6px_rgba(255,184,0,0.7)]">{playerRank}/{totalCars}</span>
@@ -447,7 +455,7 @@ const Mockup5SpeedCluster: React.FC<{
         <button
           type="button"
           onClick={onCycleCamera}
-          className="w-9 h-9 rounded-xl bg-[#030914]/85 backdrop-blur-md border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-[#030914]/94 border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
           aria-label="Cambiar vista de cámara"
           title="Cambiar vista de cámara"
         >
@@ -456,7 +464,7 @@ const Mockup5SpeedCluster: React.FC<{
         <button
           type="button"
           onClick={onPause}
-          className="w-9 h-9 rounded-xl bg-[#030914]/85 backdrop-blur-md border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
+          className="w-9 h-9 rounded-xl bg-[#030914]/94 border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
           aria-label="Pausa"
           title="Pausa"
         >
@@ -465,7 +473,7 @@ const Mockup5SpeedCluster: React.FC<{
       </div>
 
       {/* Tacómetro / Velocímetro digital estilo arcade */}
-      <div className="dc11-mobile-speed dc-mockup5-cluster pointer-events-auto relative w-[164px] sm:w-[178px] rounded-2xl border border-cyan-400/50 bg-[#030914]/90 backdrop-blur-md px-3 pt-2 pb-2 shadow-[0_0_24px_rgba(0,229,255,0.28),inset_0_0_14px_rgba(0,229,255,0.08)] flex flex-col items-center">
+      <div className="dc11-mobile-speed dc-mockup5-cluster pointer-events-auto relative w-[164px] sm:w-[178px] rounded-2xl border border-cyan-400/50 bg-[#030914]/94 px-3 pt-2 pb-2 shadow-[0_0_24px_rgba(0,229,255,0.28),inset_0_0_14px_rgba(0,229,255,0.08)] flex flex-col items-center">
         {/* Semicírculo de RPM con escala 0-8 y zona roja 7-8 */}
         <div className="relative w-[150px] h-[64px] overflow-visible">
           <svg viewBox="0 0 150 68" className="w-full h-full overflow-visible">
@@ -547,7 +555,7 @@ const Mockup5SpeedCluster: React.FC<{
           </div>
 
           {/* Marcha en cuadro dorado 4 */}
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg border-2 border-[#ffb800] bg-[#1a1202]/85 backdrop-blur-sm flex items-center justify-center shadow-[0_0_16px_rgba(255,184,0,0.55),inset_0_0_8px_rgba(255,184,0,0.25)]">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg border-2 border-[#ffb800] bg-[#1a1202]/94 flex items-center justify-center shadow-[0_0_16px_rgba(255,184,0,0.55),inset_0_0_8px_rgba(255,184,0,0.25)]">
             <span className="font-display font-black italic text-xl sm:text-2xl text-[#ffb800] drop-shadow-[0_0_6px_#ffb800] leading-none">
               {gear === 0 ? 'R' : gear === -1 ? 'N' : gear}
             </span>
@@ -731,6 +739,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const [liveVehicleStates, setLiveVehicleStates] = useState<Record<string, { lateralX?: number, distance: number, speedKmh: number, accelG: number, gear: number, rpm: number, impacts: number, slip: number, pothole: boolean, absActive: boolean, tcsActive?: boolean, escActive?: boolean, aebActive?: boolean, fcwWarning?: boolean, laneDepartureWarning?: boolean }>>({});
   const [raceEvent, setRaceEvent] = useState('');
   const [seatbeltBuckled, setSeatbeltBuckled] = useState(false);
+  const seatbeltBuckledRef = useRef(false);
+  const lastSeatbeltSessionKeyRef = useRef('');
   const [activeSpeedZone, setActiveSpeedZone] = useState<SpeedLimitZone | null>(null);
   const [upcomingTrafficLight, setUpcomingTrafficLight] = useState<(TrafficLightLiveState & { distanceToStopM: number }) | null>(null);
   const [blindSpotState, setBlindSpotState] = useState<BlindSpotFlankState>({
@@ -748,11 +758,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const rearviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const leftMirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightMirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [showRearviewMirror, setShowRearviewMirror] = useState(true);
+  const [showRearviewMirror, setShowRearviewMirror] = useState(() => !detectMobilePerformanceMode());
   const [showSideMirrors, setShowSideMirrors] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
+    !detectMobilePerformanceMode() && (typeof window !== 'undefined' ? window.innerWidth >= 768 : true),
   );
-  const showRearviewMirrorRef = useRef(true);
+  const showRearviewMirrorRef = useRef(showRearviewMirror);
   const showSideMirrorsRef = useRef(showSideMirrors);
   useEffect(() => {
     showRearviewMirrorRef.current = showRearviewMirror;
@@ -813,6 +823,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const buckleSeatbelt = () => {
     soundEngine.unlock();
     soundEngine.playSeatbeltClick();
+    seatbeltBuckledRef.current = true;
     physicsRef.current?.setSeatbeltBuckled(true);
     setSeatbeltBuckled(true);
   };
@@ -1027,7 +1038,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     setRaceEvent('');
     setRaceInsight(null);
     setGoFlash(false);
-    setSeatbeltBuckled(false);
+    const sessionKey = `${track.id}:${restartSequence}:${experience}`;
+    if (lastSeatbeltSessionKeyRef.current !== sessionKey) {
+      lastSeatbeltSessionKeyRef.current = sessionKey;
+      seatbeltBuckledRef.current = false;
+      setSeatbeltBuckled(false);
+    }
     setTrafficNotice(null);
     setSplashHudActive(false);
     lastNoticeSeqRef.current = 0;
@@ -1205,21 +1221,30 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       return /SwiftShader|llvmpipe|softpipe|Software|Basic Render/i.test(gpu);
     })();
 
+    const perfProfile = resolveRace3DPerformanceProfile({
+      isMobilePerf: detectMobilePerformanceMode(),
+      isSoftwareGl,
+      compact,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      innerWidth: window.innerWidth,
+    });
+    container.dataset.mobilePerf = perfProfile.isMobilePerf ? '1' : '0';
+
     const scene = new THREE.Scene();
 
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 500;
 
-    // FOV vertical calibrado y plano lejano extendido (1250m) para vista aérea tipo Dron
-    const camera = new THREE.PerspectiveCamera(compact ? 58 : 48, width / height, 0.2, 1250);
+    // FOV vertical calibrado y plano lejano optimizado (420m en mobile, 1250m en desktop)
+    const camera = new THREE.PerspectiveCamera(compact ? 58 : 48, width / height, 0.2, perfProfile.gameplayCameraFar);
     camera.position.set(0, 3.2, -10.5);
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: !isSoftwareGl,
+      antialias: perfProfile.antialias,
       powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
-    const maxDpr = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, compact ? 1.15 : 1.5);
+    const maxDpr = perfProfile.maxDpr;
     let renderDpr = maxDpr;
     renderer.setPixelRatio(renderDpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1228,10 +1253,13 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
     // Domo atmosférico hiperrealista (Rayleigh/Mie + nubes fBm) + mapa IBL exterior PMREM
     // que da reflejos reales de cielo, sol y horizonte sobre la laca automotriz, vidrios y agua.
-    const hyperrealEnv = createHyperrealSkyAndIBL(renderer, scene);
+    const hyperrealEnv = createHyperrealSkyAndIBL(renderer, scene, {
+      skyRadius: perfProfile.skyDomeRadius,
+      fogDensityMultiplier: perfProfile.fogDensityMultiplier,
+    });
     const vehicleEnvTexture = hyperrealEnv.envMap;
 
-    renderer.shadowMap.enabled = !isSoftwareGl;
+    renderer.shadowMap.enabled = perfProfile.shadowsEnabled;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     container.innerHTML = '';
@@ -1343,6 +1371,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         event.preventDefault();
         soundEngine.unlock();
         soundEngine.playSeatbeltClick();
+        seatbeltBuckledRef.current = true;
         physicsRef.current?.setSeatbeltBuckled(true);
         setSeatbeltBuckled(true);
         return;
@@ -1405,8 +1434,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     const sunDirVec = new THREE.Vector3(sunnyAtm.sunDir[0], sunnyAtm.sunDir[1], sunnyAtm.sunDir[2]);
     const keyLight = new THREE.DirectionalLight(sunnyAtm.sunLightHex, sunnyAtm.sunIntensity);
     keyLight.position.copy(sunDirVec).multiplyScalar(55);
-    keyLight.castShadow = !isSoftwareGl;
-    if (!isSoftwareGl) {
+    keyLight.castShadow = perfProfile.shadowsEnabled;
+    if (perfProfile.shadowsEnabled) {
       keyLight.shadow.mapSize.set(1024, 1024);
       keyLight.shadow.camera.near = 2;
       keyLight.shadow.camera.far = 135;
@@ -1623,6 +1652,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         })
       : null;
     physicsRef.current = racePhysics;
+    if (seatbeltBuckledRef.current) {
+      racePhysics?.setSeatbeltBuckled(true);
+    }
     racePhysics?.setWeather(weatherModeRef.current);
     setHazardCount(racePhysics?.hazards.length ?? 0);
     const urbanTrafficVisuals = racePhysics?.urbanRulesEnabled
@@ -1667,8 +1699,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     });
     scene.add(forwardMotorcyclesVisuals.group);
 
-    const digitalRearviewMirror =
-      experience === 'race' ? createDigitalRearviewMirror({ isSoftwareGl }) : null;
+    let digitalRearviewMirror: DigitalRearviewMirrorController | null = null;
 
     const hazardsGroup = new THREE.Group();
     hazardsGroup.name = 'obstaculos_fisicos';
@@ -1756,14 +1787,24 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     let lastSkidTime = 0;
     let skidIndex = 0;
 
-    // 4. Instanciar los tres competidores en 3D GLB (Reutilizando la geometría única en caché)
+    // 4. Instanciar competidores en 3D: en mobile solo el auto elegido por el jugador carga .glb
+    // y los rivales emplean su modelo 3D liviano por defecto (0 MB descarga extra, mínima VRAM).
     const vehicleEntities: VehicleEntityRunner[] = [];
+    const activePlayerId = playerVehicleId || stateRef.current.selectedVehicleId || vehicles[0]?.id || '';
     let sceneDisposed = false;
     let completedModels = 0;
+    let proceduralRivalCount = 0;
     setLoadedVehicleModels(0);
     setGlbLoadError(null);
     setIsGlbLoading(requiredVehicleModels > 0);
     vehicles.forEach((vehicle, idx) => {
+      const preferProceduralModel = shouldUseLightweightProceduralVehicle({
+        isMobilePerf: perfProfile.isMobilePerf,
+        experience,
+        vehicleId: vehicle.id,
+        playerVehicleId: activePlayerId,
+      });
+      if (preferProceduralModel) proceduralRivalCount += 1;
       const entity = createVehicleEntity(
         vehicle,
         idx,
@@ -1780,12 +1821,15 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           setGlbLoadError(`No se pudo cargar el modelo 3D de ${vehicle.name}`);
           setIsGlbLoading(false);
         },
-        vehicleEnvTexture
+        vehicleEnvTexture,
+        undefined,
+        { preferProceduralModel },
       );
       entity.setNameplateVisible(stateRef.current.showVehicleLabels);
       scene.add(entity.group);
       vehicleEntities.push(entity);
     });
+    container.dataset.lightweightRivals = String(proceduralRivalCount);
 
     // Entidades 3D en tiempo real para rivales humanos conectados en línea por WebSocket
     const onlinePeerEntities = new Map<
@@ -2305,6 +2349,15 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               undefined,
               vehicleEnvTexture,
               `ONLINE · ${peer.pilotName}`,
+              {
+                preferProceduralModel: shouldUseLightweightProceduralVehicle({
+                  isMobilePerf: perfProfile.isMobilePerf,
+                  experience,
+                  vehicleId: peerCarSpec.id,
+                  playerVehicleId: activePlayerId,
+                  isOnlinePeer: true,
+                }),
+              },
             );
             peerEntity.setHeadlights(true, false);
             peerEntity.setNameplateVisible(true);
@@ -2412,7 +2465,6 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       const selectedTrackS = livePhysics?.getCar(selectedVehicleId)?.z ?? centerZ;
       const currentWeather = weatherModeRef.current;
       const stormStep = weatherVisuals.update(currentWeather, dt, selectedX, selectedZ);
-      hyperrealEnv.update(currentWeather, camera.position, ambientCityTimeSec, stormStep.flashIntensity);
       if (stormStep.triggeredStrike && !stateRef.current.hasFinished) {
         soundEngine.playThunder(stormStep.triggeredStrike.proximity01);
       }
@@ -2452,6 +2504,14 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       urbanEnvironment.userData.updateScenery?.(ambientCityTimeSec, selectedTrackS, roadPath);
       const activeUrbanPhysics = interactiveMode ? physicsRef.current : null;
       const isAerialDroneShot = effectiveShot === 'dron' || effectiveShot === 'dron_prestart';
+      const wantedFar = isAerialDroneShot ? perfProfile.droneCameraFar : perfProfile.gameplayCameraFar;
+      if (Math.abs(camera.far - wantedFar) > 1) {
+        camera.far = wantedFar;
+        camera.updateProjectionMatrix();
+        hyperrealEnv.skyDome.scale.setScalar(
+          isAerialDroneShot && perfProfile.isMobilePerf ? 1.75 : 1,
+        );
+      }
       urbanTrafficVisuals?.update(
         isPlaying ? (activeUrbanPhysics?.time ?? stateRef.current.currentTimeSec) : ambientCityTimeSec,
         dt,
@@ -2786,6 +2846,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         _smoothedCamTarget.z = THREE.MathUtils.damp(_smoothedCamTarget.z, _camTarget.z, 9, dt);
       }
       camera.lookAt(_smoothedCamTarget);
+      hyperrealEnv.update(currentWeather, camera.position, ambientCityTimeSec, stormStep.flashIntensity);
 
       // Luz de apoyo solar alineada detrás de la cámara activa para que la parte trasera
       // de los autos permanezca bien iluminada incluso al girar 180° en circuitos cerrados.
@@ -2802,12 +2863,17 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       );
 
       if (
-        digitalRearviewMirror &&
+        experience === 'race' &&
         selectedEntity &&
         showRearviewMirrorRef.current &&
         !stateRef.current.hasFinished &&
         !isPreloadingRef.current
       ) {
+        if (!digitalRearviewMirror) {
+          digitalRearviewMirror = createDigitalRearviewMirror({
+            isSoftwareGl: isSoftwareGl || perfProfile.isMobilePerf,
+          });
+        }
         const prevPlayerVis = selectedEntity.group.visible;
         digitalRearviewMirror.renderFrame({
           renderer,
@@ -3199,6 +3265,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               raceHazardsSnapshotRef.current = rebuilt.hazards.map(h => ({...h}));
               resetVisualRaceRef.current?.();
               stuckRef.current = {seconds:0,lastDistance:0};
+              seatbeltBuckledRef.current = false;
+              setSeatbeltBuckled(false);
               setCurrentTimeSec(0);
               stateRef.current.currentTimeSec = 0;
               setLiveVehicleStates({});
@@ -3556,21 +3624,6 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                 </div>
               )}
 
-              {/* Botón interactivo de Cinturón de Seguridad [C] */}
-              <button
-                type="button"
-                onClick={buckleSeatbelt}
-                aria-pressed={seatbeltBuckled}
-                title="Abrochar cinturón de seguridad (Tecla C)"
-                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 min-h-[28px] text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
-                  seatbeltBuckled
-                    ? 'border-emerald-500/65 bg-emerald-950/90 text-emerald-200'
-                    : 'border-amber-400 bg-amber-950/95 text-amber-200'
-                }`}
-              >
-                <span>{seatbeltBuckled ? '✓ CINTURÓN' : '🔒 CINTURÓN [C]'}</span>
-              </button>
-
               {/* Lectura ADAS auditada (OEM verificado vs No disponible vs Asistencia simulada del juego) */}
               {adasReadout && (
                 <div
@@ -3682,13 +3735,13 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </div>
         )}
 
-        {/* 4B. COMANDO COMPACTO DE SEÑALEROS / INTERMITENTES Y BALIZAS (§9 — visual + interactivo, cero colisión) */}
+        {/* 4B. COMANDO DE CONDUCCIÓN SEGURA: SEÑALEROS / BALIZAS + CINTURÓN DE SEGURIDAD VISIBLE */}
         {experience === 'race' && !hasFinished && (
           <div
             role="group"
-            aria-label="Señaleros e intermitentes"
+            aria-label="Señaleros y cinturón de seguridad"
             data-testid="turn-signals-pod"
-            className="dc-v5-turn-signals-pod absolute left-1/2 -translate-x-1/2 z-35 flex items-center gap-1 rounded-xl border border-cyan-400/35 bg-[#040c1a]/92 px-1.5 py-1 shadow-[0_6px_20px_rgba(0,0,0,0.75)] backdrop-blur-md pointer-events-auto select-none"
+            className="dc-v5-turn-signals-pod absolute left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 sm:gap-1.5 rounded-xl border border-cyan-400/40 bg-[#040c1a]/96 px-1.5 sm:px-2 py-1 shadow-[0_6px_20px_rgba(0,0,0,0.82)] pointer-events-auto select-none"
           >
             <button
               type="button"
@@ -3696,12 +3749,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               aria-label="Señalero izquierdo"
               aria-pressed={turnSignalMode === 'left'}
               title="Señalero izquierdo (Tecla Q)"
-              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+              className={`min-w-[36px] sm:min-w-[38px] min-h-[36px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
                 turnSignalMode === 'left'
                   ? turnSignalBlinkHud.leftLit
                     ? 'border-amber-300 bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.85)]'
-                    : 'border-amber-500/70 bg-amber-950/90 text-amber-300'
-                  : 'border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-400/50'
+                    : 'border-amber-500/70 bg-amber-950/95 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/95 text-slate-200 hover:border-amber-400/50'
               }`}
             >
               ◀
@@ -3712,12 +3765,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               aria-label="Balizas de emergencia"
               aria-pressed={turnSignalMode === 'hazards'}
               title="Balizas / 4 luces (Tecla B)"
-              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+              className={`min-w-[36px] sm:min-w-[38px] min-h-[36px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
                 turnSignalMode === 'hazards'
                   ? turnSignalBlinkHud.leftLit
                     ? 'border-rose-300 bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.85)]'
-                    : 'border-rose-500/70 bg-rose-950/90 text-rose-300'
-                  : 'border-slate-700 bg-slate-900/90 text-rose-300 hover:border-rose-400/50'
+                    : 'border-rose-500/70 bg-rose-950/95 text-rose-300'
+                  : 'border-slate-700 bg-slate-900/95 text-rose-300 hover:border-rose-400/50'
               }`}
             >
               ⚠
@@ -3728,12 +3781,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               aria-label="Señalero derecho"
               aria-pressed={turnSignalMode === 'right'}
               title="Señalero derecho (Tecla E)"
-              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+              className={`min-w-[36px] sm:min-w-[38px] min-h-[36px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
                 turnSignalMode === 'right'
                   ? turnSignalBlinkHud.rightLit
                     ? 'border-amber-300 bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.85)]'
-                    : 'border-amber-500/70 bg-amber-950/90 text-amber-300'
-                  : 'border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-400/50'
+                    : 'border-amber-500/70 bg-amber-950/95 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/95 text-slate-200 hover:border-amber-400/50'
               }`}
             >
               ▶
@@ -3744,18 +3797,58 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                 onClick={() => triggerTurnSignalAction('turn_off')}
                 aria-label="Apagar señaleros"
                 title="Apagar señaleros (Tecla X)"
-                className="min-w-[34px] min-h-[34px] px-1.5 rounded-lg border border-slate-600 bg-slate-800/95 text-[11px] font-black text-slate-200 hover:bg-slate-700 cursor-pointer flex items-center justify-center"
+                className="min-w-[32px] min-h-[36px] px-1.5 rounded-lg border border-slate-600 bg-slate-800/95 text-[11px] font-black text-slate-200 hover:bg-slate-700 cursor-pointer flex items-center justify-center"
               >
                 ✕
               </button>
             )}
+
+            <span aria-hidden="true" className="h-5 w-px bg-cyan-500/30 mx-0.5 shrink-0" />
+
+            <button
+              type="button"
+              data-testid="seatbelt-button"
+              onClick={buckleSeatbelt}
+              aria-pressed={seatbeltBuckled}
+              aria-label={seatbeltBuckled ? 'Cinturón de seguridad puesto' : 'Ponerse el cinturón de seguridad'}
+              title="Abrochar cinturón de seguridad (Tecla C)"
+              className={`min-h-[36px] px-2.5 sm:px-3.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                seatbeltBuckled
+                  ? 'border border-emerald-400/85 bg-emerald-950/95 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.28)]'
+                  : 'border-2 border-amber-400 bg-amber-500 text-slate-950 hover:bg-amber-400 active:scale-95 shadow-[0_0_16px_rgba(245,158,11,0.55)]'
+              }`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="w-4 h-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="5.5" r="2.5" />
+                <path d="M7.5 20.5v-5a4.5 4.5 0 0 1 9 0v5" />
+                <path d="M6.5 10.5l11 8" />
+                <rect x="13.2" y="15.2" width="3.8" height="3.2" rx="0.8" fill="currentColor" />
+              </svg>
+              <span className="whitespace-nowrap">
+                {seatbeltBuckled ? '✓ CINTURÓN PUESTO' : 'PONER CINTURÓN'}
+              </span>
+              {!seatbeltBuckled && (
+                <span className="hidden lg:inline-block rounded bg-slate-950/20 px-1 py-0.5 font-mono text-[9px] font-black">
+                  C
+                </span>
+              )}
+            </button>
           </div>
         )}
 
-        {/* 5. CENTRO INFERIOR: Píldora flotante translúcida de Driving IQ con feedback dinámico */}
+        {/* 5. CENTRO INFERIOR: Píldora flotante de Driving IQ con feedback dinámico */}
         {experience === 'race' && !hasFinished && (
           <div className="dc-mockup5-driving-iq absolute left-1/2 -translate-x-1/2 z-25 pointer-events-none select-none max-w-[min(380px,calc(100vw-620px))]">
-            <div className="flex items-center gap-2 px-3.5 py-1 bg-[#030914]/90 backdrop-blur-md border border-[#00e5ff]/45 rounded-xl shadow-[0_0_14px_rgba(0,229,255,0.28)] text-white w-full overflow-hidden">
+            <div className="flex items-center gap-2 px-3.5 py-1 bg-[#030914]/94 border border-[#00e5ff]/45 rounded-xl shadow-[0_0_14px_rgba(0,229,255,0.28)] text-white w-full overflow-hidden">
               <Gauge size={14} className="text-[#00e5ff] shrink-0" />
               <span className="text-[11px] font-semibold text-slate-100 tracking-wide truncate">
                 {dynamicDrivingFeedback}
@@ -3791,12 +3884,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </>
         )}
         {experience === 'race' && !hasFinished && countdown === null && raceInsight && (
-          <div key={raceInsight.id} className={`dc100-race-insight absolute top-[260px] left-3 z-20 pointer-events-none w-[min(290px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg hidden md:block select-none ${
+          <div key={raceInsight.id} className={`dc100-race-insight absolute top-[260px] left-3 z-20 pointer-events-none w-[min(290px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl hidden md:block select-none ${
             raceInsight.kind === 'warning'
-              ? 'border-amber-500/45 border-l-amber-400 bg-slate-950/85'
+              ? 'border-amber-500/45 border-l-amber-400 bg-slate-950/94'
               : raceInsight.kind === 'event'
-                ? 'border-emerald-500/45 border-l-emerald-400 bg-slate-950/85'
-                : 'border-cyan-500/40 border-l-cyan-400 bg-slate-950/85'
+                ? 'border-emerald-500/45 border-l-emerald-400 bg-slate-950/94'
+                : 'border-cyan-500/40 border-l-cyan-400 bg-slate-950/94'
           }`} aria-live="polite" aria-atomic="true">
             <div className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">DATACAR · DATO EN CARRERA</div>
             <div className="mt-1 text-[11px] font-black uppercase tracking-wide text-white">{raceInsight.title}</div>
@@ -3812,7 +3905,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             role="alert"
             aria-label="Advertencia de bache en la calzada"
           >
-            <div className="flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/90 via-red-950/95 to-amber-950/90 border-2 border-amber-400 shadow-[0_0_28px_rgba(245,158,11,0.7),inset_0_0_12px_rgba(239,68,68,0.35)] backdrop-blur-md animate-pulse">
+            <div className="flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/95 via-red-950/98 to-amber-950/95 border-2 border-amber-400 shadow-[0_0_28px_rgba(245,158,11,0.7),inset_0_0_12px_rgba(239,68,68,0.35)] animate-pulse">
               <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6 text-amber-300 shrink-0 drop-shadow-[0_0_8px_#f59e0b] animate-bounce" />
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-2">
@@ -3828,13 +3921,13 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </div>
         )}
 
-        <div className={`dc-v5-kbd-hint absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 text-[10px] text-slate-300 font-mono bg-slate-950/85 border border-slate-700/60 rounded-xl backdrop-blur-md shadow-lg hidden lg:flex items-center gap-2.5 whitespace-nowrap select-none max-w-[min(560px,calc(100vw-700px))] overflow-hidden`}>
-          <span className="truncate">{experience === 'race' ? '↑/W Acelerar · ↓/S Reversa · Espacio Freno · ←→ Giro · Q/E/B/X Señaleros' : experience === 'replay' ? 'Director TV · repetición real' : 'Comparación automática'}</span>
+        <div className={`dc-v5-kbd-hint absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 text-[10px] text-slate-300 font-mono bg-slate-950/94 border border-slate-700/60 rounded-xl shadow-lg hidden lg:flex items-center gap-2.5 whitespace-nowrap select-none max-w-[min(560px,calc(100vw-700px))] overflow-hidden`}>
+          <span className="truncate">{experience === 'race' ? '↑/W Acelerar · ↓/S Reversa · Espacio Freno · ←→ Giro · C Cinturón · Q/E/B/X Señaleros' : experience === 'replay' ? 'Director TV · repetición real' : 'Comparación automática'}</span>
         </div>
 
         {/* Floating Diagnostics Panel (Toggleable) */}
         {showDiagnostics && (
-          <div className="absolute top-14 right-3 z-30 bg-slate-950/90 backdrop-blur-md border border-slate-800 p-2.5 rounded-xl shadow-2xl font-mono text-[11px] text-slate-300 w-52 pointer-events-none">
+          <div className="absolute top-14 right-3 z-30 bg-slate-950/95 border border-slate-800 p-2.5 rounded-xl shadow-2xl font-mono text-[11px] text-slate-300 w-52 pointer-events-none">
             <div className="text-amber-400 font-bold mb-1 border-b border-slate-800 pb-1 flex items-center justify-between">
               <span>DIAGNÓSTICO 3D</span>
               <span className="text-emerald-400 font-bold">{diagStats.fps} FPS</span>
@@ -3844,7 +3937,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               <div className="flex justify-between"><span>Draw Calls:</span><span className="text-white">{diagStats.drawCalls}</span></div>
               <div className="flex justify-between"><span>Triángulos:</span><span className="text-white">{(diagStats.triangles / 1000).toFixed(1)}k</span></div>
               <div className="flex justify-between"><span>Física:</span><span className="text-sky-400">{interactiveMode ? '100 Hz · Fuerzas / colisiones' : 'Replay telemetría'}</span></div>
-              <div className="flex justify-between"><span>Modelos 3D:</span><span className="text-emerald-400">3x GLB Instanced</span></div>
+              <div className="flex justify-between"><span>Modelos 3D:</span><span className="text-emerald-400">{detectMobilePerformanceMode() ? '1x GLB + Rivales 3D OEM' : 'GLB + 3D OEM'}</span></div>
             </div>
           </div>
         )}
@@ -3852,20 +3945,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         {/* Cinematic Countdown Overlay (transparente para lucir el vuelo de cámara Dron sobre la ciudad) */}
         {(countdown !== null || goFlash) && (
           <div className="absolute inset-0 z-30 bg-[radial-gradient(circle_at_center,transparent_55%,rgba(2,6,23,0.42)_100%)] flex flex-col items-center justify-center animate-fadeIn pointer-events-none">
-            <span className="rounded-full border border-cyan-400/45 bg-slate-950/80 px-3.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest mb-2 shadow-lg">
+            <span className="rounded-full border border-cyan-400/45 bg-slate-950/90 px-3.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest mb-2 shadow-lg">
               {goFlash ? 'LARGADA OFICIAL · DATACAR ARENA' : 'CÁMARA DRON · SOBREVOLANDO ASUNCIÓN'}
             </span>
             <div className="text-8xl sm:text-9xl font-black font-display text-white tracking-wider drop-shadow-[0_8px_28px_rgba(2,6,23,0.95)] animate-bounce">
               {goFlash ? <span className="text-emerald-400 drop-shadow-[0_0_26px_rgba(52,211,153,0.85)]">¡YA!</span> : countdown}
             </div>
-            <span className="rounded-lg bg-slate-950/75 px-3 py-0.5 text-xs font-mono text-slate-200 mt-2 border border-slate-700/60">
+            <span className="rounded-lg bg-slate-950/90 px-3 py-0.5 text-xs font-mono text-slate-200 mt-2 border border-slate-700/60">
               {track.name} · Doble mano 3D
             </span>
           </div>
         )}
 
         {/* Floating Mini Camera Selector (Top Right of Canvas) */}
-        <div className="dc100-race-camera-desktop absolute top-3 right-3 z-20 hidden lg:flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-800/80 shadow-xl select-none">
+        <div className="dc100-race-camera-desktop absolute top-3 right-3 z-20 hidden lg:flex items-center gap-1 bg-slate-950/94 p-1 rounded-xl border border-slate-800/80 shadow-xl select-none">
           {experience === 'race' && <button
             onClick={() => setCameraMode('arcade')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${cameraMode === 'arcade' ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'}`}
@@ -3969,7 +4062,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
         {/* Full-screen Arcade Preloader Gate */}
         {isPreloading && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050914]/95 backdrop-blur-xl px-4 py-6 select-none transition-all duration-300">
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050914]/98 px-4 py-6 select-none transition-all duration-300">
             <div className="w-full max-w-xl mx-auto flex flex-col items-center text-center">
               {/* Badge */}
               <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 font-mono text-xs uppercase tracking-widest mb-3">
@@ -4059,7 +4152,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         )}
 
         {/* Live Race Positions Pill (Cleanly stacked below Minimap on desktop) */}
-        <div className="dc100-race-ranking absolute top-[186px] left-3 z-20 hidden md:flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none select-none max-w-[280px]">
+        <div className="dc100-race-ranking absolute top-[186px] left-3 z-20 hidden md:flex flex-col gap-1 bg-slate-950/94 p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none select-none max-w-[280px]">
           {vehicles.map((v) => {
             const st = interactiveMode && liveVehicleStates[v.id]
               ? liveVehicleStates[v.id]
@@ -4074,7 +4167,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                   </span>
                 ) : (
                   <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/25 text-sky-300 border border-sky-400/40 font-bold">
-                    {v.id === 'toyota-corolla-cross-seg-2027' || v.id === 'chevrolet-tracker-lite' ? '3D GLB' : '3D OEM'}
+                    {!detectMobilePerformanceMode() && (v.id === 'toyota-corolla-cross-seg-2027' || v.id === 'chevrolet-tracker-lite') ? '3D GLB' : '3D OEM'}
                   </span>
                 )}
                 <span className="text-sky-400 tabular-nums">{st.speedKmh.toFixed(0)} km/h</span>

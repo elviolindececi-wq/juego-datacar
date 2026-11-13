@@ -291,13 +291,13 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
       const reqCircuit=initialQuery.get('circuit');
       if(reqCircuit && ASUNCION_CIRCUITS.some(c=>c.id===reqCircuit))setCircuitId(reqCircuit);
       else setCircuitId('aviadores');
-      void warmup('race',raceCars);
+      void warmup('race',[car]);
     } else {
       void warmup('boot');
     }
     return ()=>{loadingSequence.current++;};
   },[warmup]);
-  const beginRace=()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setOnlineSession(false);setSpeedModeNewlyUnlocked(false);setShowShowroom(false);setShowSpecs(false);soundEngine.unlock();void enterGame();void warmup('race',raceCars);};
+  const beginRace=()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);return;}setOnlineSession(false);setSpeedModeNewlyUnlocked(false);setShowShowroom(false);setShowSpecs(false);soundEngine.unlock();void enterGame();void warmup('race',[car]);};
   const handleOnlineMatchReady=(room:OnlineRoomSnapshot)=>{
     if(isPlayerCurrentlyJailed()){setShowOnlineLobby(false);setJailAcknowledged(false);return;}
     setShowOnlineLobby(false);
@@ -308,7 +308,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
     setSpeedModeNewlyUnlocked(false);
     soundEngine.unlock();
     void enterGame();
-    void warmup('race',raceCars);
+    void warmup('race',[car]);
   };
   const nextFromHome=()=>{setPlayerId(featuredCar.id);void enterGame();setStage('circuits');};
   const toggleCompare=(id:string)=>setCompareIds(list=>list.includes(id)?list.filter(x=>x!==id):list.length===2?[list[1],id]:[...list,id]);
@@ -320,7 +320,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
     if(stage!=='briefing') return;
     let cancelled=false;
     setBriefingPercent(24);
-    const carIds=Array.from(new Set(raceCars.map(v=>v.id)));
+    const carIds=[car.id];
     const fractions=new Map(carIds.map(id=>[id,0]));
     const sync=()=>{
       if(cancelled) return;
@@ -337,7 +337,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
       sync();
     })).then(()=>{if(!cancelled)setBriefingPercent(100);});
     return ()=>{cancelled=true;};
-  },[stage,raceCars]);
+  },[stage,car.id]);
 
   return <section ref={rootRef} className={`dc99-game ${forceArcadeMode?'dc-force-arcade':''} ${portraitDismissed?'dc99-allow-portrait':''} ${stage==='race'||stage==='replay'?'dc99-in-race':''}`} aria-label="DATACAR ARENA para celular">
     {!landscape && !forceArcadeMode && !portraitDismissed && <div className="dc99-rotate" role="dialog" aria-label="Girar celular">
@@ -936,7 +936,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
           raceMode={raceMode}
           speedModeUnlocked={progression.speedModeUnlocked}
           speedModeNewlyUnlocked={speedModeNewlyUnlocked}
-          onLaunchSpeedMode={()=>{setRaceMode('speed_pro');setOnlineSession(false);setSpeedModeNewlyUnlocked(false);void warmup('race',[car,...allCars.filter(v=>v.id!==car.id).slice(0,4)]);}}
+          onLaunchSpeedMode={()=>{setRaceMode('speed_pro');setOnlineSession(false);setSpeedModeNewlyUnlocked(false);void warmup('race',[car]);}}
           payloadKg={playerPayloadKg}
           isDatacarMember={isMember}
           onOpenAccount={()=>setShowAccountModal(true)}
