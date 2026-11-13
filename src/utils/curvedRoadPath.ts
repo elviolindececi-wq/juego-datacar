@@ -31,7 +31,9 @@ export class CurvedRoadPath {
     this.isCurved = !!track.cityCircuitId && !!variants[track.cityCircuitId];
     this.length = Math.max(10, track.distanceMeters);
     this.stride = Math.max(.5, stride);
-    this.coeff = variants[track.cityCircuitId || ''] ?? [.16, .032, 2];
+    const baseCoeff = variants[track.cityCircuitId || ''] ?? [.16, .032, 2];
+    const lapScale = Math.max(1, Math.round(track.laps ?? 1));
+    this.coeff = [baseCoeff[0], baseCoeff[1], baseCoeff[2] * lapScale];
     const count = Math.ceil((this.length + 150) / this.stride);
     const ds = (this.length + 150) / count;
     this.samples = [];

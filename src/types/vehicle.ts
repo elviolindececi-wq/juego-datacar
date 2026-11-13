@@ -218,6 +218,7 @@ export interface VehicleRaceResult {
   fuelBurned: number;
   fuelRemaining: number;
   effectivePowerToWeight: number; // HP/Tonelada con la carga incluida
+  effectiveWeightKg?: number;
   verdict: string;
   telemetryHistory: SimulationTelemetrySample[];
   /** Eventos reales de esta partida; sirven exclusivamente para Driving IQ. */

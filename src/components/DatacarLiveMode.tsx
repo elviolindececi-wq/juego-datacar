@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle, RaceTrackConfig, VehicleRaceResult, PreferenceWeights } from '../types/vehicle';
 import { Photographic360Viewer } from './Photographic360Viewer';
-import { RaceCanvas } from './RaceCanvas';
 import { Race3DPerspectiveView } from './Race3DPerspectiveView';
 import { 
   Play, 
@@ -238,11 +237,12 @@ export const DatacarLiveMode: React.FC<DatacarLiveModeProps> = ({
                     compact={true}
                   />
                 ) : (
-                  <RaceCanvas
+                  <Race3DPerspectiveView
                     vehicles={vehicles}
                     track={currentTrack}
                     simulationResults={simulationResults}
                     onFinishRace={onOpenResults}
+                    compact={true}
                   />
                 )}
               </div>

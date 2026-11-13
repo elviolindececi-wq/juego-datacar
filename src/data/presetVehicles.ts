@@ -1,5 +1,22 @@
 import type { Vehicle } from '../types/vehicle';
 
+export const OFFICIAL_VEHICLE_IMAGE_URLS: Record<string, string> = {
+  'chery-t2-pro-max': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_31_06_p.m-1_0037395c.webp',
+  'chery-t4-pro-luxury-hev': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_28_p.m-2_fd75af55.webp',
+  'chevrolet-tracker-lite': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_30_p.m-3_624afcdc.webp',
+  'toyota-corolla-cross-seg-2027': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_33_p.m-4_b7494638.webp',
+  'kia-carens-ex': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_35_p.m-5_e95cddf5.webp',
+  'nissan-kicks-2027': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_37_p.m-6_f744f9b4.webp',
+  'suzuki-fronx': '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__05_32_39_p.m-7_af60b22d.webp',
+};
+
+export function getOfficialVehicleImageUrl(vehicleId: string): string {
+  return (
+    OFFICIAL_VEHICLE_IMAGE_URLS[vehicleId] ||
+    OFFICIAL_VEHICLE_IMAGE_URLS['toyota-corolla-cross-seg-2027']
+  );
+}
+
 export const DEALERSHIP_VEHICLES: Vehicle[] = [
   {
     id: 'nissan-kicks-2027',
@@ -9,21 +26,13 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2027,
     category: 'suv_compact',
     color: '#eab308', // Amber / Gold highlight like Nissan signature
-    imageUrl: '/assets/vehicle-previews/nissan-kicks-2027.jpg',
+    imageUrl: OFFICIAL_VEHICLE_IMAGE_URLS['nissan-kicks-2027'],
     video360Url: '/assets/aistudio/Nissan_Kicks_f04e26bd.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Nissan_Kicks_f04e26bd.mp4',
       framesCount: 120,
-      framesBaseUrl: '/assets/360_frames/kicks/frame_',
-      framesExtension: '.jpg',
-    },
-    photoAngles: {
-      front: '/src/assets/images/kicks_front_direct_1793825636931.jpg',
-      threeQuarterFront: '/src/assets/images/nissan_kicks_sense_1793824276957.jpg',
-      side: '/src/assets/images/kicks_side_profile_1793824926230.jpg',
-      threeQuarterRear: '/src/assets/images/kicks_rear_angle_1793824926558.jpg',
-      rear: '/src/assets/images/kicks_rear_direct_1793825659532.jpg',
-      topZenith: '/assets/top_zenith/kicks_zenith.png',
+      framesBaseUrl: '/assets/360_race_frames/kicks/frame_',
+      framesExtension: '.webp',
     },
     engineDescription: '1.6L 16V DOHC (HR16DE)',
     transmissionDescription: 'Automática Xtronic CVT con D-Step Logic',
@@ -87,21 +96,13 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2024,
     category: 'suv_familiar',
     color: '#06b6d4', // Cyan
-    imageUrl: '/assets/vehicle-previews/kia-carens-ex.jpg',
+    imageUrl: OFFICIAL_VEHICLE_IMAGE_URLS['kia-carens-ex'],
     video360Url: '/assets/aistudio/Kia_Carens_12bf1817.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Kia_Carens_12bf1817.mp4',
       framesCount: 120,
-      framesBaseUrl: '/assets/360_frames/carens/frame_',
-      framesExtension: '.jpg',
-    },
-    photoAngles: {
-      front: '/src/assets/images/carens_front_direct_1793825675700.jpg',
-      threeQuarterFront: '/src/assets/images/kia_carens_ex_1793824276943.jpg',
-      side: '/src/assets/images/carens_side_profile_1793825089572.jpg',
-      threeQuarterRear: '/src/assets/images/carens_rear_angle_1793825104271.jpg',
-      rear: '/src/assets/images/carens_rear_direct_1793825692834.jpg',
-      topZenith: '/assets/top_zenith/carens_zenith.png',
+      framesBaseUrl: '/assets/360_race_frames/carens/frame_',
+      framesExtension: '.webp',
     },
     engineDescription: '1.5L CRDi Turbo Diésel',
     transmissionDescription: 'Automático secuencial 6 velocidades',
@@ -162,7 +163,7 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2027,
     category: 'suv_compact',
     color: '#e5e7eb',
-    imageUrl: '/assets/vehicle-previews/toyota-corolla-cross-seg-2027.jpg',
+    imageUrl: OFFICIAL_VEHICLE_IMAGE_URLS['toyota-corolla-cross-seg-2027'],
     video360Url: '/assets/aistudio/Toyota_Corolla_Cross_SEG_2027.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Toyota_Corolla_Cross_SEG_2027.mp4',
@@ -245,21 +246,13 @@ export const DEALERSHIP_VEHICLES: Vehicle[] = [
     year: 2024,
     category: 'suv_compact',
     color: '#3b82f6', // Cobalt Blue
-    imageUrl: '/assets/vehicle-previews/chevrolet-tracker-lite.jpg',
+    imageUrl: OFFICIAL_VEHICLE_IMAGE_URLS['chevrolet-tracker-lite'],
     video360Url: '/assets/aistudio/Chevrole_tracker_d0c39633.mp4',
     turntable360: {
       videoUrl: '/assets/aistudio/Chevrole_tracker_d0c39633.mp4',
       framesCount: 120,
-      framesBaseUrl: '/assets/360_frames/tracker/frame_',
-      framesExtension: '.jpg',
-    },
-    photoAngles: {
-      front: '/src/assets/images/tracker_front_direct_1793825707992.jpg',
-      threeQuarterFront: '/src/assets/images/chevrolet_tracker_lite_1793824277485.jpg',
-      side: '/src/assets/images/tracker_side_profile_1793825135689.jpg',
-      threeQuarterRear: '/src/assets/images/tracker_rear_angle_1793825150483.jpg',
-      rear: '/src/assets/images/tracker_rear_direct_1793825722711.jpg',
-      topZenith: '/assets/top_zenith/tracker_zenith.png',
+      framesBaseUrl: '/assets/360_race_frames/tracker/frame_',
+      framesExtension: '.webp',
     },
     engineDescription: '1.0L Turbo 3 cilindros (999 cc)',
     transmissionDescription: 'Automática de 6 velocidades',
@@ -325,7 +318,7 @@ const NO_ADAS_EXPLICIT = {
 const DATACAR_V88_VEHICLES: Vehicle[] = [
   {
     id:'chery-t4-pro-luxury-hev', brand:'CHERY', name:'T4 PRO', trim:'LUXURY HEV',year:2026,
-    category:'suv_compact',color:'#b7c2c6',imageUrl:'/assets/vehicle-previews/chery-t4-pro-luxury-hev.jpg',
+    category:'suv_compact',color:'#b7c2c6',imageUrl:OFFICIAL_VEHICLE_IMAGE_URLS['chery-t4-pro-luxury-hev'],
     engineDescription:'HEV 1.5 L (1.498 cc) · naftero 100 HP + eléctrico 95 HP · potencia conjunta 195 HP',
     transmissionDescription:'DHT automática híbrida',fuelType:'hybrid',fuelFeeding:'Híbrido autorrecargable (HEV), nafta + motor eléctrico, batería 1,86 kWh',
     hybridSystem:{kind:'self-charging-hev',combustionHp:100,combustionTorqueNm:125,electricHp:95,electricTorqueNm:310,batteryKWh:1.86,torqueNmIsElectricOnly:true},
@@ -350,7 +343,7 @@ const DATACAR_V88_VEHICLES: Vehicle[] = [
   },
   {
     id:'suzuki-fronx',brand:'SUZUKI',name:'FRONX',trim:'1.5 DUALJET MILD HYBRID AT',year:2026,
-    category:'suv_compact',color:'#f97316',imageUrl:'/assets/vehicle-previews/suzuki-fronx.jpg',
+    category:'suv_compact',color:'#f97316',imageUrl:OFFICIAL_VEHICLE_IMAGE_URLS['suzuki-fronx'],
     engineDescription:'1.5 L Dualjet, 1.462 cc, 102 HP @ 6.000 rpm, 137 Nm @ 4.400 rpm + ISG 3 HP / 55 Nm',
     transmissionDescription:'Automática de 6 velocidades',fuelType:'hybrid',fuelFeeding:'Inyección multipunto · Mild Hybrid ISG 12 V',
     hybridSystem:{kind:'mild-12v',combustionHp:102,combustionTorqueNm:137,electricHp:3,electricTorqueNm:55},
@@ -372,7 +365,7 @@ const DATACAR_V88_VEHICLES: Vehicle[] = [
   },
   {
     id:'chery-t2-pro-max',brand:'CHERY',name:'T2 PRO MAX',trim:'1.5 CVT',year:2026,
-    category:'suv_compact',color:'#ef4444',imageUrl:'/assets/vehicle-previews/chery-t2-pro-max.jpg',
+    category:'suv_compact',color:'#ef4444',imageUrl:OFFICIAL_VEHICLE_IMAGE_URLS['chery-t2-pro-max'],
     engineDescription:'1.5 L Euro 6B · potencia y torque NO declarados en la ficha recibida',
     transmissionDescription:'Automática CVT (CVT18)',fuelType:'gasoline',fuelFeeding:'Atmosférico',
     // Valores necesarios para motor físico: NO son valores de fabricante ni se muestran como oficiales.
@@ -461,7 +454,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 0,
     cargoPayloadKg: 0,
     description: 'Evalúa la arrancada desde 0 km/h: la potencia, torque, masa y tipo de transmisión de los modelos elegidos.',
-    imageBanner: '/src/assets/images/drag_race_launch_1792620341868.jpg',
+    imageBanner: '/assets/aistudio/Imagen_de_ChatGPT_12_nov_2026__04_39_22_p.m-3_a43d1bb0.webp',
   },
   {
     id: 'load_hillclimb' as const,
@@ -471,7 +464,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 8,
     cargoPayloadKg: 400,
     description: 'Ensayo exigente de fuerza de tiro y par motor en subida: los 250 Nm de torque Turbo Diésel de Carens frente a motores nafteros.',
-    imageBanner: '/src/assets/images/truck_heavy_load_1792620343364.jpg',
+    imageBanner: '/assets/aistudio/avenida_en_ruinas_al_atardecer_ba6dfeb9.webp',
   },
   {
     id: 'brake_slalom' as const,
@@ -481,7 +474,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 0,
     cargoPayloadKg: 0,
     description: 'Trazado revirado con 4 horquillas cerradas sucesivas. Compara la distancia de frenado y disipación térmica (Kicks y Carens con 4 discos vs Tracker con tambores).',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+    imageBanner: '/assets/aistudio/intersecci_n_lluviosa_en_el_microcentro_asunceno_e11ab2d7.webp',
   },
   {
     id: 'route_500km' as const,
@@ -491,7 +484,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 0.5,
     cargoPayloadKg: 150,
     description: 'Compara el consumo real en ruta y costo total de combustible (Diésel 5.4 L/100km de Carens vs 6.2 L/100km de Tracker vs Flex 6.8 L/100km de Kicks).',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+    imageBanner: '/assets/aistudio/calle_hist_rica_de_asunci_n_al_atardecer_e19f74fb.webp',
   },
   {
     id: 'family_challenge' as const,
@@ -501,7 +494,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 4.0,
     cargoPayloadKg: 450,
     description: 'Compara habitabilidad real para 7 ocupantes: la Carens cuenta con 3 filas de asientos y 620 kg de carga útil, mientras que Kicks y Tracker tienen 5 plazas.',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+    imageBanner: '/assets/aistudio/calle_deteriorada_hacia_la_terminal_de_asunci_n_1db0397e.webp',
   },
   {
     id: 'smart_buy' as const,
@@ -511,7 +504,7 @@ export const PRESET_TRACKS = [
     inclineGradePercent: 0,
     cargoPayloadKg: 100,
     description: 'Evalúa el costo-beneficio oficial: Tracker lidera en precio de entrada (US$ 19.990), Kicks en seguridad activa ADAS, y Carens en versatilidad de 7 plazas.',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+    imageBanner: '/assets/aistudio/calle_hist_rica_de_asunci_n_al_atardecer_e19f74fb.webp',
   },
   {
     id: 'fuel_critical' as const,
@@ -522,6 +515,6 @@ export const PRESET_TRACKS = [
     cargoPayloadKg: 0,
     initialFuelPercent: 1.5,
     description: 'Demuestra qué ocurre si se agota la energía motriz en marcha: el motor se apaga, rueda por inercia hasta detenerse varado con balizas de emergencia.',
-    imageBanner: '/src/assets/images/circuit_track_view_1792620343367.jpg',
+    imageBanner: '/assets/aistudio/avenida_inundada_al_atardecer_en_asunci_n_b57c3cda.webp',
   }
 ];

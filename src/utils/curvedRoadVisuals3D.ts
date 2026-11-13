@@ -51,6 +51,7 @@ export function bendRoadsideGroup(group: THREE.Group, path: CurvedRoadPath): voi
   const headingQ = new THREE.Quaternion();
   const children = group.children.slice();
   for (const child of children) {
+    if (child.userData?.skipBend) continue;
     if (child instanceof THREE.InstancedMesh) {
       for (let i = 0; i < child.count; i++) {
         child.getMatrixAt(i, tempMatrix);

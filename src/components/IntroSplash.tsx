@@ -1,119 +1,624 @@
 import React, { useEffect, useState } from 'react';
+import {
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Cog,
+  ExternalLink,
+  Gauge,
+  Maximize2,
+  Settings,
+  ShieldCheck,
+  Smartphone,
+  Volume2,
+  VolumeX,
+  X,
+  Zap,
+} from 'lucide-react';
 import type { Vehicle } from '../types/vehicle';
-import { ArrowRight, CarFront, ChevronLeft, ChevronRight, GitCompareArrows, Gauge, Play, ShieldCheck } from 'lucide-react';
+import { Photographic360Viewer } from './Photographic360Viewer';
+import { ArenaHero3DStage } from './ArenaHero3DStage';
+import {
+  ArenaBrandEmblem,
+  ArenaCenterLogo,
+  ArenaCircuitsIcon,
+  ArenaCompareIcon,
+  ArenaCrownTitle,
+  ArenaGarageIcon,
+  ArenaPilotHelmetAvatar,
+  ArenaRunChevronsIcon,
+  formatArenaVehicleCardData,
+} from './ArenaVisualKit';
+import { soundEngine } from '../utils/soundEngine';
 
 interface IntroSplashProps {
   vehicles: Vehicle[];
   onStart: () => void;
-  onCompare: () => void;
+  onCompare: (vehicleId?: string) => void;
   onRace: (vehicleId: string) => void;
+  onGarage?: (vehicleId: string) => void;
+  onCircuits?: (vehicleId: string) => void;
+  onOpenArcade?: () => void;
 }
 
-const preview = (v: Vehicle) => v.imageUrl || `/assets/vehicle-previews/${v.id}.jpg`;
-
-/** Pantalla propia de DATACAR, con energía de juego callejero, sin copiar marcas o artes de otros videojuegos.
- * "Los más buscados" es un nombre creativo, NO un ranking estadístico de búsquedas.
+/**
+ * Pantalla inicial AAA de DATACAR ARENA — "LOS MÁS BUSCADOS".
+ * Nota editorial: "Los más buscados" es un nombre creativo; los modelos no están ordenados por estadísticas de búsqueda.
  */
-export function IntroSplash({ vehicles, onStart, onCompare, onRace }: IntroSplashProps) {
+export function IntroSplash({
+  vehicles,
+  onStart,
+  onCompare,
+  onRace,
+  onGarage,
+  onCircuits,
+  onOpenArcade,
+}: IntroSplashProps) {
+  // Iniciar en Nissan Kicks o el primer vehículo disponible
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [show360Modal, setShow360Modal] = useState(false);
+  const [muted, setMuted] = useState(() => soundEngine.getIsMuted());
+  const [unreadNotice, setUnreadNotice] = useState(true);
+
   const chosen = vehicles[selectedIndex] || vehicles[0];
-  const selectRelative = (offset: number) => setSelectedIndex(i => (i + offset + vehicles.length) % vehicles.length);
+  const selectRelative = (offset: number) => {
+    setSelectedIndex((i) => (i + offset + vehicles.length) % vehicles.length);
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (showNotifications || showSettings || show360Modal) {
+        if (event.code === 'Escape') {
+          setShowNotifications(false);
+          setShowSettings(false);
+          setShow360Modal(false);
+        }
+        return;
+      }
       const element = event.target as HTMLElement | null;
-      if (event.code === 'Enter' && !element?.closest?.('button, a, input, select, textarea, [role=button]')) onStart();
-      if (event.code === 'ArrowLeft') { event.preventDefault(); selectRelative(-1); }
-      if (event.code === 'ArrowRight') { event.preventDefault(); selectRelative(1); }
+      if (
+        event.code === 'Enter' &&
+        !element?.closest?.('button, a, input, select, textarea, [role=button]')
+      ) {
+        onRace(chosen.id);
+      }
+      if (event.code === 'ArrowLeft') {
+        event.preventDefault();
+        selectRelative(-1);
+      }
+      if (event.code === 'ArrowRight') {
+        event.preventDefault();
+        selectRelative(1);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [vehicles.length, onStart]);
+  }, [vehicles.length, chosen?.id, onRace, showNotifications, showSettings, show360Modal]);
 
   if (!chosen) return null;
 
-  return (
-    <>
-    <main className="dc-mobile-start" aria-label="DATACAR ARENA: inicio del juego">
-      <div className="dc-mobile-start-glow" aria-hidden="true" />
-      <div className="dc-mobile-game-brand"><span>DATA<b>CAR</b></span><strong>ARENA</strong><small>ASUNCIÓN · EDICIÓN MOBILE</small></div>
-      <div className="dc-mobile-hero-copy"><span className="dc-mobile-eyebrow">EL ASFALTO TE ESPERA</span><h1>LOS MÁS <em>BUSCADOS</em></h1></div>
-      <div className="dc-mobile-car-picker">
-        <button onClick={() => selectRelative(-1)} aria-label="Auto anterior" className="dc-mobile-pick-arrow"><ChevronLeft/></button>
-        <img src={preview(chosen)} alt={`${chosen.brand} ${chosen.name}`} />
-        <button onClick={() => selectRelative(1)} aria-label="Auto siguiente" className="dc-mobile-pick-arrow"><ChevronRight/></button>
-      </div>
-      <div className="dc-mobile-car-title"><span>{String(selectedIndex + 1).padStart(2,'0')} / {String(vehicles.length).padStart(2,'0')} · SELECCIONÁ TU AUTO</span><strong>{chosen.brand} {chosen.name}</strong><small>{chosen.powerHp} HP · {chosen.torqueNm} Nm</small></div>
-      <nav className="dc-mobile-start-actions" aria-label="Menú principal">
-        <button className="dc-mobile-play" onClick={() => onRace(chosen.id)}><Play fill="currentColor" size={19}/> CORRER AHORA <ArrowRight size={19}/></button>
-        <div><button onClick={onStart}><Gauge size={17}/> MODOS DE JUEGO</button><button onClick={onCompare}><GitCompareArrows size={17}/> COMPARAR</button></div>
-      </nav>
-      <p className="dc-mobile-disclaimer">Simulación recreativa basada en fichas técnicas. No equivale a un ensayo oficial.</p>
-    </main>
-    <main className="dc-desktop-start relative isolate flex min-h-screen flex-col overflow-hidden bg-[#04070c] text-white selection:bg-cyan-300 selection:text-slate-950">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_74%_33%,rgba(7,151,182,.25),transparent_46%),radial-gradient(ellipse_at_15%_80%,rgba(234,179,8,.14),transparent_36%),linear-gradient(145deg,#04070d_10%,#0a1825_56%,#050910_100%)]" />
-      <div className="dc-city-skyline pointer-events-none absolute inset-x-0 top-0 h-[72%] overflow-hidden opacity-65" aria-hidden="true">
-        {Array.from({ length: 19 }, (_, i) => (
-          <div key={i} className="dc-city-building absolute bottom-0 border-x border-white/5"
-            style={{ left: `${i * 5.8 - 1}%`, width: `${4.7 + i % 3}%`, height: `${16 + (i * 47 + 31) % 48}%`, opacity: .22 + i % 4 * .1 }} />
-        ))}
-      </div>
-      <div className="pointer-events-none absolute inset-x-[-30%] bottom-[-15%] h-[41%] -rotate-[11deg] border-t border-slate-500/30 bg-[repeating-linear-gradient(0deg,transparent_0px,transparent_35px,rgba(255,255,255,.025)_36px,transparent_37px),linear-gradient(180deg,#1d2632,#080c11)] shadow-[0_-30px_90px_rgba(0,0,0,.65)]" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-0 opacity-[.07] [background-image:repeating-linear-gradient(0deg,transparent,transparent_2px,#fff_3px,transparent_4px)]" aria-hidden="true" />
+  const specData = formatArenaVehicleCardData(chosen);
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-9">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-400/50 bg-cyan-400/10 text-cyan-300"><Gauge size={27}/></span>
-          <div className="leading-tight"><div className="text-xl font-black tracking-tight">DATA<span className="font-normal text-cyan-300">CAR</span> <span className="text-slate-50">ARENA</span></div><div className="text-[9px] font-bold uppercase tracking-[.32em] text-slate-400">ASUNCIÓN · EDICIÓN 9.1</div></div>
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Ignorar restricciones de iframe si aplica
+    }
+  };
+
+  const toggleSound = () => {
+    const nextMuted = !muted;
+    soundEngine.setMuted(nextMuted);
+    if (!nextMuted) soundEngine.unlock();
+    setMuted(nextMuted);
+  };
+
+  return (
+    <main
+      className="dc-arena-shell relative isolate flex min-h-[100dvh] lg:h-[100dvh] w-full flex-col justify-between overflow-x-hidden lg:overflow-hidden select-none"
+      aria-label="DATACAR ARENA: Los más buscados"
+    >
+      {/* 1. ESCENARIO CINEMATOGRÁFICO DE ESTADIO NOCTURNO */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <img
+          src="/assets/aistudio/arena_home_bg_4f3f8584.webp"
+          alt=""
+          className="h-full w-full object-cover object-[center_62%] scale-[1.02]"
+          loading="eager"
+        />
+        {/* Oscurecimiento superior, inferior y máscara atmosférica central para limpiar el cartel de fondo del estadio */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 36% 22% at 50% 35%, rgba(6, 18, 25, 0.98) 0%, rgba(6, 18, 25, 0.92) 55%, rgba(6, 18, 25, 0) 100%),
+              linear-gradient(180deg, rgba(4, 12, 18, 0.92) 0%, rgba(6, 18, 25, 0.52) 22%, rgba(6, 18, 25, 0.16) 56%, rgba(4, 11, 17, 0.76) 88%, rgba(3, 9, 14, 0.95) 100%),
+              linear-gradient(90deg, rgba(4, 13, 20, 0.68) 0%, rgba(4, 13, 20, 0.08) 38%, rgba(4, 13, 20, 0.05) 72%, rgba(4, 13, 20, 0.42) 100%)
+            `,
+          }}
+        />
+      </div>
+
+      {/* 2. HEADER SUPERIOR PREMIUM */}
+      <header className="dc-arena-header relative z-30 flex w-full items-center justify-between px-3 sm:px-6 lg:px-10 py-2 sm:py-2.5 shrink-0">
+        {/* Izquierda: Perfil del piloto, nivel y barra XP */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          <ArenaPilotHelmetAvatar className="w-10 h-10 sm:w-12 sm:h-12" />
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2 leading-none">
+              <span className="font-display text-base sm:text-xl font-extrabold tracking-wide text-[#F3F7FC] truncate">
+                PilotoDC
+              </span>
+              <span
+                className="inline-block px-2 py-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-[#04131A] bg-[#00E5F5] shadow-[0_0_10px_rgba(0,229,245,0.55)]"
+                style={{ clipPath: 'polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)' }}
+              >
+                NIVEL 12
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <div className="h-2 w-20 sm:w-32 md:w-36 rounded-sm bg-[#091A24] border border-[#00E5F5]/30 overflow-hidden p-[1px]">
+                <div className="h-full w-[78.5%] bg-gradient-to-r from-[#00B4D8] to-[#00E5F5] shadow-[0_0_8px_rgba(0,229,245,0.85)]" />
+              </div>
+              <span className="hidden sm:inline font-mono text-[10px] font-semibold tracking-tight text-slate-300">
+                7.850 / 10.000 XP
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="hidden items-center gap-2 rounded-full border border-slate-700/70 bg-slate-950/60 px-4 py-2 text-[10px] font-bold uppercase tracking-[.26em] text-slate-300 sm:flex"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400"/> SIMULADOR DE CONDUCCIÓN</div>
+
+        {/* Centro: Logo oficial independiente DATACAR ARENA */}
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 z-10 hidden sm:block">
+          <ArenaCenterLogo />
+        </div>
+        <div className="sm:hidden">
+          <ArenaCenterLogo compact />
+        </div>
+
+        {/* Derecha: Notificaciones y Ajustes en paralelogramos biselados */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onOpenArcade && (
+            <button
+              type="button"
+              onClick={onOpenArcade}
+              className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#102C38]/85 border border-[#00E5F5]/40 text-[11px] font-bold uppercase tracking-wider text-[#00E5F5] hover:border-[#00E5F5] hover:text-white transition-colors cursor-pointer"
+            >
+              <Smartphone size={13} />
+              <span>Vista Arcade</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="dc-arena-util-btn"
+            aria-label="Notificaciones"
+            onClick={() => {
+              setUnreadNotice(false);
+              setShowSettings(false);
+              setShowNotifications((v) => !v);
+            }}
+          >
+            <div className="relative flex items-center justify-center">
+              <Bell size={18} />
+              {unreadNotice && (
+                <span className="absolute -top-1 -right-1.5 h-2.5 w-2.5 rounded-full bg-[#FFAA12] ring-2 ring-[#061219] shadow-[0_0_8px_#FFAA12]" />
+              )}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="dc-arena-util-btn"
+            aria-label="Configuración"
+            onClick={() => {
+              setShowNotifications(false);
+              setShowSettings((v) => !v);
+            }}
+          >
+            <Settings size={18} />
+          </button>
+        </div>
       </header>
 
-      <section className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-center gap-8 px-5 pb-10 pt-4 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] md:gap-6 sm:px-9" aria-labelledby="intro-heading">
-        <div className="max-w-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 border-l-[3px] border-amber-400 pl-3 text-xs font-bold uppercase tracking-[.28em] text-amber-300">ESPECIAL ASUNCIÓN · CATÁLOGO DATACAR</div>
-          <h1 id="intro-heading" className="font-display text-[clamp(4rem,9.2vw,8.3rem)] font-black uppercase italic leading-[.79] tracking-[-.035em] drop-shadow-[0_8px_15px_rgba(0,0,0,.55)]">
-            LOS MÁS<br/><span className="text-cyan-300">BUSCADOS</span>
-          </h1>
-          <div className="mt-5 flex items-center gap-3"><div className="h-[2px] w-12 bg-amber-400"/><p className="font-display text-xl font-bold uppercase tracking-[.32em] text-white/90 sm:text-2xl">DE DATACAR</p></div>
-          <p className="mt-5 max-w-md text-sm leading-7 text-slate-300 sm:text-base">Elegí un modelo, compará su ficha o salí a correr en circuitos inspirados en las calles de Asunción. El asfalto no perdona.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button type="button" onClick={onStart} className="inline-flex items-center justify-center gap-3 rounded-xl bg-cyan-300 px-7 py-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-[0_0_35px_rgba(103,232,249,.19)] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300"><Play fill="currentColor" size={18}/> PRESIONÁ START</button>
-            <button type="button" onClick={() => onRace(chosen.id)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/35 bg-slate-950/60 px-6 py-4 text-sm font-bold uppercase text-white backdrop-blur transition hover:border-cyan-300 hover:text-cyan-300"><CarFront size={18}/> MODO CARRERA</button>
-            <button type="button" onClick={onCompare} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-900/50 px-6 py-4 text-sm font-bold uppercase text-white transition hover:border-amber-400 hover:text-amber-300"><GitCompareArrows size={18}/> COMPARAR</button>
-          </div>
-          <p className="mt-5 text-[10px] uppercase tracking-widest text-slate-500">Los más buscados es el nombre creativo de esta experiencia; los modelos no están ordenados por estadísticas de búsqueda.</p>
-        </div>
+      {/* 3. TÍTULO PRINCIPAL CON CORONA DORADA */}
+      <div className="relative z-20 pt-2 sm:pt-3 pb-1 px-4 shrink-0">
+        <ArenaCrownTitle />
+      </div>
 
-        <div className="min-w-0">
-          <div className="relative overflow-hidden rounded-[26px] border border-sky-300/25 bg-[linear-gradient(150deg,rgba(11,25,38,.9),rgba(4,9,16,.95))] p-4 shadow-[0_24px_90px_rgba(0,0,0,.55)] sm:p-6">
-            <div className="pointer-events-none absolute -right-10 -top-8 h-52 w-52 rounded-full bg-cyan-300/10 blur-3xl"/>
-            <div className="relative z-10 flex items-center justify-between gap-3">
-              <span className="font-mono text-[11px] font-bold uppercase tracking-[.22em] text-cyan-300">SELECCIÓN DE VEHÍCULOS</span>
-              <span className="rounded-full border border-slate-700 bg-slate-950/80 px-3 py-1 font-mono text-[11px] text-slate-400">{String(selectedIndex + 1).padStart(2,'0')} / {String(vehicles.length).padStart(2,'0')}</span>
-            </div>
-            <div className="relative mt-4 flex min-h-[220px] items-center justify-center overflow-hidden rounded-xl bg-slate-950/60 sm:min-h-[280px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,64,90,.65),transparent_67%)]"/>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(180deg,transparent,rgba(3,9,18,.9))]"/>
-              <img key={chosen.id} className="relative z-10 max-h-[265px] w-full object-contain p-3 drop-shadow-[0_24px_22px_rgba(0,0,0,.65)]" src={preview(chosen)} alt={`Vista del ${chosen.brand} ${chosen.name}`} loading="eager" />
-              <button type="button" onClick={() => selectRelative(-1)} className="absolute left-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-slate-950/80 transition hover:bg-cyan-500/30" aria-label="Vehículo anterior"><ChevronLeft/></button>
-              <button type="button" onClick={() => selectRelative(1)} className="absolute right-2 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/25 bg-slate-950/80 transition hover:bg-cyan-500/30" aria-label="Siguiente vehículo"><ChevronRight/></button>
-            </div>
-            <div className="relative z-10 mt-5 flex flex-wrap items-end justify-between gap-4">
-              <div><p className="text-[11px] font-bold uppercase tracking-[.25em] text-slate-400">{chosen.brand} · {chosen.year}</p><h2 className="font-display mt-1 text-4xl font-black uppercase tracking-tight text-white sm:text-5xl">{chosen.name}</h2><p className="mt-2 text-xs font-semibold text-cyan-300">{chosen.trim} · {chosen.powerHp} HP · {chosen.torqueNm} Nm</p></div>
-              <button onClick={() => onRace(chosen.id)} className="flex items-center gap-2 rounded-lg border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-xs font-black uppercase tracking-wide text-amber-300 transition hover:bg-amber-400 hover:text-slate-950">CORRER CON ESTE <ArrowRight size={16}/></button>
+      {/* 4. ESCENARIO CENTRAL: PANEL TÉCNICO IZQUIERDO + VEHÍCULO PROTAGONISTA 3D/RGBA */}
+      <section
+        className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-1 min-h-0 flex-col lg:flex-row items-center justify-between gap-4 lg:gap-6 px-4 sm:px-8 lg:px-12 py-1"
+        aria-labelledby="intro-heading"
+      >
+        {/* PANEL IZQUIERDO DEL VEHÍCULO (Diseño geométrico petrol-blue con borde cian y acento ámbar) */}
+        <aside
+          className="dc-arena-spec-wrap w-full max-w-[420px] lg:w-[345px] xl:w-[375px] shrink-0 order-2 lg:order-1"
+          aria-label={`Ficha rápida de ${chosen.brand} ${chosen.name}`}
+        >
+          <div className="dc-arena-spec-card-border">
+            <div className="dc-arena-spec-card px-5 py-4 sm:px-6 sm:py-5">
+              {/* Marca + Emblema vectorial + Modelo + Versión */}
+              <div className="flex items-center gap-3.5">
+                <div className="shrink-0 flex items-center justify-center">
+                  <ArenaBrandEmblem brand={specData.brand} className="w-14 h-12" />
+                </div>
+                <div className="h-11 w-[1.5px] bg-slate-500/45 shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <h2 className="font-display text-3xl sm:text-[38px] font-black italic uppercase leading-[0.9] tracking-wide text-[#F3F7FC] drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)] truncate">
+                    {specData.modelName}
+                  </h2>
+                  <p className="mt-1 font-display text-sm sm:text-base font-extrabold italic uppercase tracking-[0.08em] text-[#00E5F5] truncate">
+                    {specData.trimBadge}
+                  </p>
+                </div>
+              </div>
+
+              {/* Etiqueta de categoría SUV */}
+              <div className="mt-3">
+                <span
+                  className="inline-block px-3.5 py-0.5 font-display text-xs sm:text-sm font-black italic uppercase tracking-[0.10em] text-[#04131A] bg-[#00E5F5] shadow-[0_0_12px_rgba(0,229,245,0.45)]"
+                  style={{ clipPath: 'polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)' }}
+                >
+                  {specData.categoryBadge}
+                </span>
+              </div>
+
+              {/* Descripción concisa real */}
+              <p className="mt-3 text-xs sm:text-[13.5px] leading-[1.45] text-[#F3F7FC]/90 line-clamp-3">
+                {specData.summary}
+              </p>
+
+              {/* Métricas reales con divisores finos */}
+              <div className="mt-4 pt-2 border-t border-[#00E5F5]/25 divide-y divide-[#00E5F5]/20">
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#F3F7FC]">
+                    <Zap className="w-4 h-4 text-[#00E5F5] fill-[#00E5F5]/30 shrink-0" />
+                    <span>POTENCIA</span>
+                  </div>
+                  <span className="font-display text-xl sm:text-2xl font-black italic tracking-wide text-[#00E5F5] drop-shadow-[0_0_8px_rgba(0,229,245,0.35)]">
+                    {specData.powerDisplay}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#F3F7FC]">
+                    <Cog className="w-4 h-4 text-[#00E5F5] shrink-0" />
+                    <span>TORQUE</span>
+                  </div>
+                  <span className="font-display text-xl sm:text-2xl font-black italic tracking-wide text-[#00E5F5] drop-shadow-[0_0_8px_rgba(0,229,245,0.35)]">
+                    {specData.torqueDisplay}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 pb-0.5">
+                  <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#F3F7FC]">
+                    <Gauge className="w-4 h-4 text-[#00E5F5] shrink-0" />
+                    <span>0 – 100 km/h</span>
+                  </div>
+                  <span className="font-display text-xl sm:text-2xl font-black italic tracking-wide text-[#00E5F5] drop-shadow-[0_0_8px_rgba(0,229,245,0.35)]">
+                    {specData.accelDisplay}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-center gap-2" aria-label="Elegir vehículo destacado">
-            {vehicles.map((v, i) => <button key={v.id} aria-label={`Mostrar ${v.brand} ${v.name}`} aria-pressed={i === selectedIndex} type="button" onClick={() => setSelectedIndex(i)} className={`h-1.5 rounded-full transition-all ${i === selectedIndex ? 'w-10 bg-cyan-300' : 'w-4 bg-slate-600 hover:bg-slate-400'}`}/>) }
+        </aside>
+
+        {/* VEHÍCULO PROTAGONISTA EN EL ESTADIO + CARRUSEL DE 7 VEHÍCULOS */}
+        <div className="relative flex-1 w-full h-[34dvh] sm:h-[42dvh] lg:h-full min-h-[230px] max-h-[540px] flex flex-col items-center justify-center order-1 lg:order-2 min-w-0">
+          <div className="relative w-full flex-1 min-h-0 flex items-center justify-center">
+            {/* Flecha izquierda hexagonal */}
+            <button
+              type="button"
+              onClick={() => selectRelative(-1)}
+              aria-label="Vehículo anterior"
+              className="dc-arena-arrow-wrap absolute left-0 sm:left-2 z-30 w-12 h-11 sm:w-14 sm:h-12"
+            >
+              <span className="dc-arena-arrow-inner">
+                <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.8]" />
+              </span>
+            </button>
+
+            {/* Escenario protagonista con imagen oficial WebP (sin cargar modelos 3D en el inicio) */}
+            <div className="w-full h-full px-10 sm:px-14">
+              <ArenaHero3DStage
+                vehicle={chosen}
+                pngOnly
+                imageBadgeLabel={null}
+                onOpen360Modal={() => setShow360Modal(true)}
+              />
+            </div>
+
+            {/* Flecha derecha hexagonal */}
+            <button
+              type="button"
+              onClick={() => selectRelative(1)}
+              aria-label="Siguiente vehículo"
+              className="dc-arena-arrow-wrap absolute right-0 sm:right-2 z-30 w-12 h-11 sm:w-14 sm:h-12"
+            >
+              <span className="dc-arena-arrow-inner">
+                <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.8]" />
+              </span>
+            </button>
+          </div>
+
+          {/* Indicadores inferiores de paginación (7 puntos sobre el asfalto) */}
+          <div
+            className="relative z-30 flex items-center justify-center gap-2.5 pt-1 pb-1"
+            aria-label="Elegir vehículo destacado"
+          >
+            {vehicles.map((v, i) => {
+              const active = i === selectedIndex;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  aria-label={`Mostrar ${v.brand} ${v.name}`}
+                  aria-pressed={active}
+                  onClick={() => setSelectedIndex(i)}
+                  className={`rounded-full transition-all duration-200 cursor-pointer ${
+                    active
+                      ? 'h-3 w-3 bg-[#E0FBFF] ring-2 ring-[#00E5F5] shadow-[0_0_12px_#00E5F5,0_0_22px_rgba(0,229,245,0.85)] scale-110'
+                      : 'h-2.5 w-2.5 bg-slate-400/45 hover:bg-slate-200/80'
+                  }`}
+                />
+              );
+            })}
           </div>
         </div>
       </section>
-      <footer className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-slate-950/40 px-5 py-4 text-[10px] uppercase tracking-wider text-slate-500 sm:px-9">
-        <span className="inline-flex items-center gap-2"><ShieldCheck size={14}/> Simulación recreativa basada en fichas técnicas; no prueba homologada</span>
-        <a className="font-bold text-cyan-300 hover:text-white" href="https://datacarpy.com" target="_blank" rel="noopener noreferrer">Conocé autos reales en datacarpy.com <ArrowRight size={12} className="inline"/></a>
+
+      {/* 5. BARRA INFERIOR DE 4 BOTONES BISELADOS + NOTA DISCRETA */}
+      <footer className="relative z-30 mx-auto w-full max-w-[1440px] px-3 sm:px-8 lg:px-12 pt-1 pb-2.5 sm:pb-3.5 shrink-0">
+        <nav
+          className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.32fr] gap-2 sm:gap-4 items-stretch"
+          aria-label="Acciones principales"
+        >
+          {/* 1. GARAJE */}
+          <button
+            type="button"
+            onClick={() => (onGarage ? onGarage(chosen.id) : onStart())}
+            className="dc-arena-dock-btn-wrap min-w-0"
+          >
+            <span className="dc-arena-dock-btn !px-2.5 sm:!px-4 text-xs sm:text-xl md:text-[22px] whitespace-nowrap">
+              <ArenaGarageIcon className="w-5 h-5 sm:w-7 sm:h-7 shrink-0" />
+              <span className="truncate">GARAJE</span>
+            </span>
+          </button>
+
+          {/* 2. COMPARAR */}
+          <button
+            type="button"
+            onClick={() => onCompare(chosen.id)}
+            className="dc-arena-dock-btn-wrap min-w-0"
+          >
+            <span className="dc-arena-dock-btn !px-2.5 sm:!px-4 text-xs sm:text-xl md:text-[22px] whitespace-nowrap">
+              <ArenaCompareIcon className="w-5 h-5 sm:w-7 sm:h-7 shrink-0" />
+              <span className="truncate">COMPARAR</span>
+            </span>
+          </button>
+
+          {/* 3. CIRCUITOS */}
+          <button
+            type="button"
+            onClick={() => (onCircuits ? onCircuits(chosen.id) : onRace(chosen.id))}
+            className="dc-arena-dock-btn-wrap min-w-0"
+          >
+            <span className="dc-arena-dock-btn !px-2.5 sm:!px-4 text-xs sm:text-xl md:text-[22px] whitespace-nowrap">
+              <ArenaCircuitsIcon className="w-5 h-5 sm:w-7 sm:h-7 shrink-0" />
+              <span className="truncate">CIRCUITOS</span>
+            </span>
+          </button>
+
+          {/* 4. >> CORRER AHORA (CTA Principal Naranja Energía) */}
+          <button
+            type="button"
+            onClick={() => onRace(chosen.id)}
+            className="dc-arena-cta-wrap min-w-0"
+          >
+            <span className="dc-arena-cta-btn !px-2.5 sm:!px-6 text-xs sm:text-2xl md:text-[26px] whitespace-nowrap">
+              <ArenaRunChevronsIcon className="w-5 h-5 sm:w-7 sm:h-7 shrink-0" />
+              <span className="truncate">CORRER AHORA</span>
+            </span>
+          </button>
+        </nav>
+
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400/75">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck size={12} className="text-[#00E5F5]/80 shrink-0" />
+            <span>
+              Simulación recreativa · Los más buscados es el nombre creativo de esta experiencia; los modelos no están ordenados por estadísticas de búsqueda.
+            </span>
+          </span>
+          <a
+            href="https://datacarpy.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-bold text-[#00E5F5]/90 hover:text-white transition-colors"
+          >
+            <span>datacarpy.com</span>
+            <ExternalLink size={11} />
+          </a>
+        </div>
       </footer>
+
+      {/* MODAL DE NOTIFICACIONES */}
+      {showNotifications && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Notificaciones de DATACAR ARENA"
+          onClick={() => setShowNotifications(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-[#00E5F5]/55 bg-[#061219] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#00E5F5]/25 pb-3">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-[#FFAA12]" />
+                <h3 className="font-display text-xl font-black italic uppercase tracking-wider text-white">
+                  CENTRO DE AVISOS
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNotifications(false)}
+                className="rounded-lg border border-slate-700 p-1.5 text-slate-300 hover:border-[#00E5F5] hover:text-white cursor-pointer"
+                aria-label="Cerrar notificaciones"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="mt-4 space-y-3 text-xs leading-relaxed text-slate-300">
+              <div className="rounded-lg border border-[#00E5F5]/30 bg-[#102C38]/60 p-3">
+                <p className="font-bold uppercase tracking-wider text-[#00E5F5]">
+                  Temporada Asunción · 7 SUVs en catálogo
+                </p>
+                <p className="mt-1">
+                  Arrastrá horizontalmente sobre el vehículo en el estadio para inspeccionarlo en 360°, o usá las flechas laterales para explorar los 7 modelos.
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Los circuitos son recreaciones temáticas inspiradas en calles de Asunción y los parámetros no declarados en ficha se calibran únicamente para la simulación recreativa.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE AJUSTES */}
+      {showSettings && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Ajustes de DATACAR ARENA"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-[#00E5F5]/55 bg-[#061219] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#00E5F5]/25 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-[#00E5F5]" />
+                <h3 className="font-display text-xl font-black italic uppercase tracking-wider text-white">
+                  CONFIGURACIÓN
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="rounded-lg border border-slate-700 p-1.5 text-slate-300 hover:border-[#00E5F5] hover:text-white cursor-pointer"
+                aria-label="Cerrar configuración"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2.5">
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-[#102C38]/55 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white hover:border-[#00E5F5] cursor-pointer"
+              >
+                <span className="flex items-center gap-2.5">
+                  {muted ? <VolumeX size={16} className="text-rose-400" /> : <Volume2 size={16} className="text-[#00E5F5]" />}
+                  <span>Audio del motor y efectos</span>
+                </span>
+                <span className={muted ? 'text-rose-400' : 'text-[#00E5F5]'}>
+                  {muted ? 'SILENCIADO' : 'ACTIVO'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-[#102C38]/55 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white hover:border-[#00E5F5] cursor-pointer"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Maximize2 size={16} className="text-[#00E5F5]" />
+                  <span>Pantalla completa</span>
+                </span>
+                <span className="text-slate-300">ALTERNAR</span>
+              </button>
+
+              {onOpenArcade && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettings(false);
+                    onOpenArcade();
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border border-[#FFAA12]/50 bg-[#FFAA12]/10 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#FFAA12] hover:bg-[#FFAA12]/20 cursor-pointer"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Smartphone size={16} />
+                    <span>Cambiar a Vista Arcade compacta</span>
+                  </span>
+                  <span>ABRIR</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettings(false);
+                  onStart();
+                }}
+                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-200 hover:border-[#00E5F5] cursor-pointer"
+              >
+                <span>Selector clásico de modalidades</span>
+                <span className="text-[#00E5F5]">IR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SHOWROOM 360° FOTOGRÁFICO */}
+      {show360Modal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Showroom 360 de ${chosen.brand} ${chosen.name}`}
+          onClick={() => setShow360Modal(false)}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl border border-[#00E5F5]/55 bg-[#061219] p-4 sm:p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#00E5F5]/25 pb-3 mb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#00E5F5]">
+                  SHOWROOM 360° INTERACTIVO
+                </p>
+                <h3 className="font-display text-2xl font-black italic uppercase text-white">
+                  {chosen.brand} {chosen.name} · {specData.trimBadge}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShow360Modal(false)}
+                className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-[#00E5F5] hover:text-white cursor-pointer"
+                aria-label="Cerrar visor 360"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <Photographic360Viewer key={chosen.id} vehicle={chosen} compact initialMode="frames" />
+          </div>
+        </div>
+      )}
     </main>
-    </>
   );
 }

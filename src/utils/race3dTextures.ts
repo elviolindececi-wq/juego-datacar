@@ -15,46 +15,117 @@ export function createAsphaltTexture(): THREE.CanvasTexture {
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
   let seed = 45172;
-  const rand = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-  ctx.fillStyle = '#414448';
+  const rand = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  ctx.fillStyle = '#31363c';
   ctx.fillRect(0, 0, 1024, 1024);
-  // Árido de varios tamaños: pequeñas variaciones sin el aspecto de ruido TV.
-  for (let i = 0; i < 36000; i++) {
-    const x = rand() * 1024, y = rand() * 1024;
-    const r = .28 + rand() * 2.4;
-    ctx.fillStyle = rand() > .6 ? 'rgba(193,193,181,.18)' : 'rgba(5,9,13,.17)';
-    ctx.fillRect(x, y, r, r * (.5 + rand()));
+
+  // Huellas sutiles de rodadura de neumáticos en cada carril
+  for (const laneCenter of [140, 310, 480, 544, 714, 884]) {
+    for (const trackOff of [-42, 42]) {
+      const grad = ctx.createLinearGradient(laneCenter + trackOff - 32, 0, laneCenter + trackOff + 32, 0);
+      grad.addColorStop(0, 'rgba(10, 13, 18, 0)');
+      grad.addColorStop(0.5, 'rgba(10, 13, 18, 0.24)');
+      grad.addColorStop(1, 'rgba(10, 13, 18, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(laneCenter + trackOff - 32, 0, 64, 1024);
+    }
   }
-  // Reparaciones de pavimento y oscurecimiento por rodadura.
-  for (let i = 0; i < 11; i++) {
-    const x = 18 + rand() * 930, y = rand() * 1024;
-    const w = 28 + rand() * 85, h = 12 + rand() * 165;
-    ctx.fillStyle = i % 2 ? 'rgba(12,17,20,.18)' : 'rgba(160,164,166,.11)';
+
+  // Árido basáltico y cuarcítico de granulometría variada
+  for (let i = 0; i < 46000; i++) {
+    const x = rand() * 1024;
+    const y = rand() * 1024;
+    const r = 0.35 + rand() * 2.3;
+    const roll = rand();
+    ctx.fillStyle =
+      roll > 0.72
+        ? 'rgba(206, 210, 204, 0.19)'
+        : roll > 0.38
+          ? 'rgba(84, 92, 100, 0.16)'
+          : 'rgba(8, 11, 16, 0.22)';
+    ctx.fillRect(x, y, r, r * (0.55 + rand() * 0.9));
+  }
+
+  // Parches de sellado asfáltico
+  for (let i = 0; i < 12; i++) {
+    const x = 22 + rand() * 920;
+    const y = rand() * 1024;
+    const w = 24 + rand() * 78;
+    const h = 16 + rand() * 150;
+    ctx.fillStyle = i % 2 ? 'rgba(15, 20, 26, 0.20)' : 'rgba(136, 144, 152, 0.09)';
     ctx.fillRect(x, y, w, h);
   }
-  ctx.fillStyle = 'rgba(8,12,16,.09)';
-  ctx.fillRect(230, 0, 70, 1024);
-  ctx.fillRect(724, 0, 70, 1024);
-  // Grietas orgánicas finas, sin figuras repetitivas ni manchas negras.
-  for (let j = 0; j < 14; j++) {
+
+  // Fisuras capilares selladas con alquitrán
+  for (let j = 0; j < 15; j++) {
     ctx.beginPath();
-    let x = rand() * 1024, y = rand() * 1024;
+    let x = rand() * 1024;
+    let y = rand() * 1024;
     ctx.moveTo(x, y);
     for (let i = 0; i < 7; i++) {
-      x += (rand() - .5) * 55;
-      y += rand() * 17;
+      x += (rand() - 0.5) * 48;
+      y += rand() * 19;
       ctx.lineTo(x, y);
     }
-    ctx.lineWidth = .6 + rand() * 1.8;
-    ctx.strokeStyle = 'rgba(13,17,18,.36)';
+    ctx.lineWidth = 0.65 + rand() * 1.5;
+    ctx.strokeStyle = 'rgba(9, 13, 18, 0.42)';
     ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 20);
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Mapa PBR de rugosidad del asfalto (linear data texture: sin SRGBColorSpace):
+ * huellas de neumáticos ligeramente pulidas vs árido mate en banquinas.
+ */
+export function createAsphaltRoughnessTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#d4d4d4'; // ~0.83 base roughness
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (const laneCenter of [70, 155, 240, 272, 357, 442]) {
+      for (const trackOff of [-21, 21]) {
+        const g = ctx.createLinearGradient(laneCenter + trackOff - 18, 0, laneCenter + trackOff + 18, 0);
+        g.addColorStop(0, 'rgba(135, 135, 135, 0)');
+        g.addColorStop(0.5, 'rgba(112, 112, 112, 0.68)'); // más especular en huella pulida
+        g.addColorStop(1, 'rgba(135, 135, 135, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(laneCenter + trackOff - 18, 0, 36, 512);
+      }
+    }
+
+    let seed = 8819;
+    const rand = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    for (let i = 0; i < 9500; i++) {
+      const x = rand() * 512;
+      const y = rand() * 512;
+      const v = Math.round(135 + rand() * 95);
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, 1 + rand() * 2.5, 1 + rand() * 2.5);
+    }
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(1, 20);
-  tex.anisotropy = 4;
-  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   return tex;
 }
 

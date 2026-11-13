@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Vehicle } from '../types/vehicle';
 import { RotateCw, ZoomIn } from 'lucide-react';
+import { getOfficialVehicleImageUrl } from '../data/presetVehicles';
 
 // Memoria caché global de fotogramas por URL base para que el cambio entre vehículos sea instantáneo
 const globalVehicleFramesCache = new Map<string, HTMLImageElement[]>();
@@ -254,11 +255,10 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
     }
   };
 
-  // Fallback source URL
   const currentPaddedIndex = String((frameIndex % totalFrames) + 1).padStart(3, '0');
   const currentFallbackSrc = hasFrames && turntable?.framesBaseUrl
     ? `${turntable.framesBaseUrl}${currentPaddedIndex}${turntable.framesExtension || '.jpg'}`
-    : vehicle.imageUrl;
+    : vehicle.imageUrl || getOfficialVehicleImageUrl(vehicle.id);
 
   return (
     <div className={`relative flex flex-col ${compact ? 'w-full' : 'w-full bg-[#080d1a] rounded-2xl border border-slate-800/80 p-4 sm:p-6 shadow-2xl overflow-hidden'}`}>
@@ -307,7 +307,7 @@ export const Photographic360Viewer: React.FC<Photographic360ViewerProps> = ({
             <img
               src={currentFallbackSrc}
               alt={`${vehicle.brand} ${vehicle.name}`}
-              className="w-full h-full object-contain pointer-events-none"
+              className="dc-arena-cutout-img w-full h-full max-h-[85%] object-contain pointer-events-none"
               referrerPolicy="no-referrer"
               draggable={false}
             />

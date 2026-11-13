@@ -16,12 +16,17 @@ export interface DrivingEventStats {
   tcsInterventions: number;
   escInterventions: number;
   aebInterventions: number;
+  redLightViolations: number;
+  speedLimitViolations: number;
+  unbuckledSeatbelt: number;
+  wrongWayInvasions: number;
 }
 
 export const emptyDrivingEvents = (): DrivingEventStats => ({
   collisions: 0, collisionSeverity: 0, potholesHit: 0, speedBumpsTooFast: 0,
   waterEntries: 0, lossOfControl: 0, absInterventions: 0, tcsInterventions: 0,
   escInterventions: 0, aebInterventions: 0,
+  redLightViolations: 0, speedLimitViolations: 0, unbuckledSeatbelt: 0, wrongWayInvasions: 0,
 });
 
 export interface DrivingIQAssessment {
@@ -53,13 +58,17 @@ export function scoreDrivingIQ(
   const progress = clamp(distance / Math.max(1, trackLengthMeters ?? 1), 0, 1);
 
   // Referencia por VEHÍCULO (modelo virtual sin incidentes), nunca 0-100 homologado.
-  // El tiempo no puede borrar las penalizaciones por conducción peligrosa.
+  // El tiempo no puede borrar las penalizaciones por conducción peligrosa ni infracciones viales.
   const performance = completed
     ? ref ? clamp(35 - Math.max(0, ratio! - 1) * 6.5, 12, 35) : 27
     : 12 * progress;
-  const safety = clamp(30 - e.collisions * 3.8 - e.collisionSeverity * 0.65, 0, 30);
+  const trafficSafetyPenalty =
+    e.redLightViolations * 6.5 +
+    e.unbuckledSeatbelt * 6.0 +
+    e.wrongWayInvasions * 3.5;
+  const safety = clamp(30 - e.collisions * 3.8 - e.collisionSeverity * 0.65 - trafficSafetyPenalty, 0, 30);
   const obstacles = clamp(20 - e.potholesHit * 2.5 - e.speedBumpsTooFast * 1.8 - e.waterEntries * 1.2, 0, 20);
-  const control = clamp(15 - e.lossOfControl * 2.7, 0, 15);
+  const control = clamp(15 - e.lossOfControl * 2.7 - e.speedLimitViolations * 3.0, 0, 15);
   return {
     vehicleId: result.vehicle.id,
     total: round1(performance + safety + obstacles + control),
@@ -95,6 +104,15 @@ export function explainDriving(
   if (e.potholesHit > 0 || e.speedBumpsTooFast > 0) {
     messages.push(`Atravesaste ${e.potholesHit} ${e.potholesHit === 1 ? 'bache' : 'baches'} y ${e.speedBumpsTooFast} ${e.speedBumpsTooFast === 1 ? 'reductor' : 'reductores'} a velocidad elevada. Los golpes de suspensión registrados son eventos del simulador, no daños mecánicos certificados.`);
   } else messages.push('Gestionaste los baches y reductores sin contactos o excesos registrados en esta simulación.');
+  if (e.redLightViolations > 0 || e.speedLimitViolations > 0 || e.unbuckledSeatbelt > 0 || e.wrongWayInvasions > 0) {
+    const infractions = [
+      e.redLightViolations > 0 ? `${e.redLightViolations} ${e.redLightViolations === 1 ? 'semáforo en rojo' : 'semáforos en rojo'}` : null,
+      e.speedLimitViolations > 0 ? `${e.speedLimitViolations} ${e.speedLimitViolations === 1 ? 'infracción de velocidad' : 'infracciones de velocidad'}` : null,
+      e.unbuckledSeatbelt > 0 ? 'conducción sin cinturón abrochado' : null,
+      e.wrongWayInvasions > 0 ? `${e.wrongWayInvasions} ${e.wrongWayInvasions === 1 ? 'invasión de contramano' : 'invasiones de contramano'}` : null,
+    ].filter(Boolean).join(', ');
+    messages.push(`Penalización vial en el simulador: ${infractions}. Respetar luces rojas, límites y el carril derecho preserva tu Driving IQ.`);
+  }
   if (e.lossOfControl) messages.push(`Se detectaron ${e.lossOfControl} episodios de pérdida de adherencia o control. Una entrada más lenta en curvas y un manejo progresivo podrían mejorar el resultado.`);
   if (e.absInterventions || e.tcsInterventions || e.escInterventions || e.aebInterventions) {
     const active = [

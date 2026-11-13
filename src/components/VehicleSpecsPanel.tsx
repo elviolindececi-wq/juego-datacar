@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Vehicle } from '../types/vehicle';
 import { ChevronDown, ChevronUp, Gauge, Fuel, ShieldCheck, Settings2 } from 'lucide-react';
 import { SAFETY_KEYS, SAFETY_LABELS, getSafetyState } from '../utils/vehicleSafetySystems';
+import { formatOfficialClearance, formatOfficialPower, formatOfficialTorque } from '../utils/specFidelity';
 
 type VehicleSpecsPanelProps = {
   vehicle: Vehicle;
@@ -45,7 +46,7 @@ export function VehicleSpecsPanel({ vehicle, context = 'compare' }: VehicleSpecs
     { label: 'Combustible', value: fuelName[vehicle.fuelType] },
     { label: 'Depósito', value: `${vehicle.estimatedSimulationParameters ? '≈ ' : ''}${digits(vehicle.fuelCapacityL)} L${vehicle.estimatedSimulationParameters ? ' (sim.)' : ''}` },
     { label: 'Largo × ancho × alto', value: `${digits(vehicle.dimensions.lengthMm)} × ${digits(vehicle.dimensions.widthMm)} × ${digits(vehicle.dimensions.heightMm)} mm` },
-    { label: 'Despeje del suelo', value: `${digits(vehicle.dimensions.clearanceMm)} mm` },
+    { label: 'Despeje del suelo', value: formatOfficialClearance(vehicle) },
     { label: 'Plazas', value: `${vehicle.equipment.seatingCapacity}` },
     { label: 'Baúl', value: `${digits(vehicle.equipment.trunkLiters)} L` },
     { label: 'Airbags', value: `${vehicle.equipment.airbags}` },
@@ -70,10 +71,10 @@ export function VehicleSpecsPanel({ vehicle, context = 'compare' }: VehicleSpecs
     </div>
     <div className="grid grid-cols-2 gap-2 p-3">
       {[
-        ['Potencia', unknown('powerHp') ? 'Sin dato oficial' : `${digits(vehicle.powerHp)} HP`],
-        ['Torque', unknown('torqueNm') ? 'Sin dato oficial' : vehicle.hybridSystem?.torqueNmIsElectricOnly ? `${digits(vehicle.torqueNm)} Nm eléct.` : `${digits(vehicle.torqueNm)} Nm`],
-        ['0–100 km/h', `${vehicle.estimatedSimulationParameters ? '≈ ' : ''}${digits(vehicle.accel0100)} s`],
-        ['Vel. máxima', `${vehicle.estimatedSimulationParameters ? '≈ ' : ''}${digits(vehicle.topSpeedKmh)} km/h`],
+        ['Potencia', formatOfficialPower(vehicle, 'HP')],
+        ['Torque', formatOfficialTorque(vehicle)],
+        ['0–100 km/h', `${vehicle.estimatedSimulationParameters ? '≈ ' : ''}${digits(vehicle.accel0100)} s${vehicle.estimatedSimulationParameters ? ' (sim.)' : ''}`],
+        ['Vel. máxima', `${vehicle.estimatedSimulationParameters ? '≈ ' : ''}${digits(vehicle.topSpeedKmh)} km/h${vehicle.estimatedSimulationParameters ? ' (sim.)' : ''}`],
       ].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-800 bg-slate-950/85 p-3">
         <span className="block text-[10px] text-slate-400">{label}</span>
         <strong className="mt-1 block text-lg font-black tabular-nums text-white">{value}</strong>

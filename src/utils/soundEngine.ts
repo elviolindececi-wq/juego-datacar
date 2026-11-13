@@ -52,6 +52,34 @@ class EngineSoundSynthesizer {
   private voices = new Map<string, Voice>();
   private sampleCache = new Map<string, Promise<AudioBuffer[] | null>>();
   private startingTones = new Set<{ oscillator: OscillatorNode; harmonic: OscillatorNode; gain: GainNode }>();
+  private thunderTimers = new Set<number>();
+  private activeThunderDisposers = new Set<() => void>();
+  private lastThunderAt = -Infinity;
+  private suspendTimer: number | null = null;
+
+  private clearSuspendTimer() {
+    if (this.suspendTimer !== null && typeof window !== 'undefined') {
+      window.clearTimeout(this.suspendTimer);
+      this.suspendTimer = null;
+    }
+  }
+
+  private clearThunderAudio() {
+    if (typeof window !== 'undefined') {
+      for (const timerId of this.thunderTimers) {
+        window.clearTimeout(timerId);
+      }
+    }
+    this.thunderTimers.clear();
+    for (const disposeFn of Array.from(this.activeThunderDisposers)) {
+      try {
+        disposeFn();
+      } catch {
+        // Nodo ya desconectado
+      }
+    }
+    this.activeThunderDisposers.clear();
+  }
 
   private noise(): AudioBuffer {
     const ctx = this.ctx!;
@@ -63,6 +91,7 @@ class EngineSoundSynthesizer {
 
   /** Debe iniciarse desde un clic de usuario: los navegadores bloquean audio automático. */
   unlock() {
+    this.clearSuspendTimer();
     if (!this.ctx) {
       const Constructor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Constructor) return;
@@ -85,6 +114,7 @@ class EngineSoundSynthesizer {
 
   /** 3 pitidos cortos + un tono largo. El navegador exige iniciar el audio desde un clic. */
   playCountdownTone(step: 3 | 2 | 1 | 0) {
+    this.clearSuspendTimer();
     if (this.muted || !this.ctx || !this.master) return;
     const now = this.ctx.currentTime;
     const finalTone = step === 0;
@@ -122,13 +152,20 @@ class EngineSoundSynthesizer {
 
   setMuted(muted: boolean) {
     this.muted = muted;
-    if (!muted) this.unlock();
+    if (muted) {
+      this.clearThunderAudio();
+    } else {
+      this.unlock();
+    }
     if (this.ctx && this.master) this.master.gain.setTargetAtTime(muted ? 0 : .48, this.ctx.currentTime, .06);
   }
   getIsMuted() { return this.muted; }
 
   setWeather(mode: WeatherMode) {
     this.weather = mode;
+    if (mode !== 'storm') {
+      this.clearThunderAudio();
+    }
     if (!this.ctx || !this.rainGain) return;
     const vol = mode === 'storm' ? .13 : mode === 'flood' ? .11 : mode === 'rain' ? .07 : 0;
     this.rainGain.gain.setTargetAtTime(vol, this.ctx.currentTime, .16);
@@ -298,24 +335,268 @@ class EngineSoundSynthesizer {
     grit.onended = () => { grit.disconnect(); filter.disconnect(); gritGain.disconnect(); };
   }
 
-  stopAll(fadeSeconds = 0.15) {
+  private lastSplashAt = -Infinity;
+  private lastWarningToneAt = -Infinity;
+
+  /** Salpicadura de agua sobre bache/charco mojado: spray agudo + chapoteo medio. */
+  playWaterSplash(strength = .7) {
+    if (!this.ctx || !this.master || this.muted) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastSplashAt < .22) return;
+    this.lastSplashAt = t;
+    const v = clamp(strength, .2, 1);
+    const dur = .34 + v * .18;
+    const length = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+    const samples = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      const u = i / length;
+      const env = Math.sin(Math.min(1, u * 9) * Math.PI * .5) * Math.exp(-u * 4.4);
+      samples[i] = (Math.random() * 2 - 1) * env;
+    }
+    const spray = this.ctx.createBufferSource();
+    spray.buffer = buffer;
+    const band = this.ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(1650 + v * 900, t);
+    band.frequency.exponentialRampToValueAtTime(680, t + dur);
+    band.Q.value = .95;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(.28 * v, t);
+    gain.gain.exponentialRampToValueAtTime(.001, t + dur);
+    spray.connect(band);
+    band.connect(gain);
+    gain.connect(this.master);
+    spray.start(t);
+    spray.stop(t + dur + .02);
+    spray.onended = () => { spray.disconnect(); band.disconnect(); gain.disconnect(); };
+  }
+
+  /** Aviso acústico vial (semáforo en rojo, exceso de velocidad, cinturón o punto ciego). */
+  playTrafficWarningTone(urgent = false) {
+    if (!this.ctx || !this.master || this.muted) return;
+    const t = this.ctx.currentTime;
+    if (t - this.lastWarningToneAt < (urgent ? .45 : .85)) return;
+    this.lastWarningToneAt = t;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = urgent ? 'sawtooth' : 'triangle';
+    const f1 = urgent ? 880 : 660;
+    const f2 = urgent ? 620 : 820;
+    osc.frequency.setValueAtTime(f1, t);
+    osc.frequency.setValueAtTime(f2, t + .09);
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.linearRampToValueAtTime(urgent ? .12 : .085, t + .015);
+    gain.gain.setValueAtTime(urgent ? .11 : .075, t + .16);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .24);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + .25);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+  }
+
+  /** Clic mecánico al abrochar el cinturón de seguridad. */
+  playSeatbeltClick() {
+    if (!this.ctx || !this.master || this.muted) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1420, t);
+    osc.frequency.exponentialRampToValueAtTime(520, t + .045);
+    osc.frequency.setValueAtTime(1880, t + .055);
+    osc.frequency.exponentialRampToValueAtTime(760, t + .10);
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.linearRampToValueAtTime(.14, t + .006);
+    gain.gain.exponentialRampToValueAtTime(.02, t + .048);
+    gain.gain.linearRampToValueAtTime(.15, t + .06);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .115);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + .12);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+  }
+
+  /** Sirena policial bitonal al atropellar a un peatón e ir detenido a la comisaría. */
+  playPoliceSiren() {
+    this.clearSuspendTimer();
+    if (!this.ctx || !this.master || this.muted) return;
+    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    const cycles = 4;
+    for (let i = 0; i < cycles; i++) {
+      const base = t + i * 0.42;
+      osc.frequency.setValueAtTime(670, base);
+      osc.frequency.linearRampToValueAtTime(980, base + 0.21);
+      osc.frequency.linearRampToValueAtTime(670, base + 0.42);
+    }
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.16, t + 0.04);
+    gain.gain.setValueAtTime(0.14, t + cycles * 0.42 - 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + cycles * 0.42 + 0.06);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + cycles * 0.42 + 0.08);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+  }
+
+  /**
+   * Trueno realista multicapa para el modo Tormenta (`storm`):
+   * - Retardo acústico según proximidad del rayo (velocidad del sonido)
+   * - Chasquido eléctrico inicial de alta tensión si la centella cae cerca
+   * - Onda de choque sub-grave (32–68 Hz) + retumbo rodante de nubes con ecos naturales
+   * - Se cancela de inmediato al terminar la carrera (`stopAll`) o silenciar (`setMuted`).
+   */
+  playThunder(proximity01 = 0.78) {
+    if (this.muted || !this.ctx || !this.master || typeof window === 'undefined') return;
+    const prox = clamp(proximity01, 0.18, 1);
+    const delayMs = Math.round((1 - prox) * 1150);
+
+    const triggerThunderSynthesis = () => {
+      this.thunderTimers.delete(timerId);
+      if (this.muted || !this.ctx || !this.master || this.weather !== 'storm') return;
+      if (this.ctx.state === 'suspended') void this.ctx.resume();
+
+      const ctx = this.ctx;
+      const t = ctx.currentTime;
+      if (t - this.lastThunderAt < 1.1) return;
+      this.lastThunderAt = t;
+
+      const rumbleDur = 2.55 + (1 - prox * 0.3) * 1.15;
+      const sampleLen = Math.max(1, Math.floor(ctx.sampleRate * rumbleDur));
+      const rumbleBuf = ctx.createBuffer(1, sampleLen, ctx.sampleRate);
+      const ch = rumbleBuf.getChannelData(0);
+
+      // Ruido marrón/rosa modulado con 3 oleadas de eco entre nubes para retumbo atmosférico real
+      let brown = 0;
+      for (let i = 0; i < sampleLen; i++) {
+        const sec = i / ctx.sampleRate;
+        const u = i / sampleLen;
+        const white = Math.random() * 2 - 1;
+        brown = (brown + 0.045 * white) / 1.045;
+        const swell1 = Math.exp(-Math.pow((sec - 0.14) / 0.20, 2)) * 1.0;
+        const swell2 = Math.exp(-Math.pow((sec - 0.68) / 0.42, 2)) * 0.76;
+        const swell3 = Math.exp(-Math.pow((sec - 1.48) / 0.68, 2)) * 0.48;
+        const tail = Math.exp(-u * 3.1) * 0.34;
+        const crackleMod = 0.78 + 0.22 * Math.sin(sec * 31.0 + Math.sin(sec * 11.0) * 2.4);
+        ch[i] = clamp(brown * 3.2 * (swell1 + swell2 + swell3 + tail) * crackleMod, -1, 1);
+      }
+
+      const rumbleSrc = ctx.createBufferSource();
+      rumbleSrc.buffer = rumbleBuf;
+
+      const rumbleLowpass = ctx.createBiquadFilter();
+      rumbleLowpass.type = 'lowpass';
+      rumbleLowpass.frequency.setValueAtTime(190 + prox * 210, t);
+      rumbleLowpass.frequency.exponentialRampToValueAtTime(78, t + rumbleDur);
+      rumbleLowpass.Q.value = 0.85;
+
+      const rumbleGain = ctx.createGain();
+      const peakGain = 0.26 + prox * 0.24;
+      rumbleGain.gain.setValueAtTime(0.0001, t);
+      rumbleGain.gain.linearRampToValueAtTime(peakGain, t + 0.045);
+      rumbleGain.gain.setValueAtTime(peakGain * 0.86, t + rumbleDur * 0.38);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.0001, t + rumbleDur);
+
+      rumbleSrc.connect(rumbleLowpass);
+      rumbleLowpass.connect(rumbleGain);
+      rumbleGain.connect(this.master);
+
+      // Sub-grave de onda de presión atmosférica
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'triangle';
+      subOsc.frequency.setValueAtTime(58 + prox * 24, t);
+      subOsc.frequency.exponentialRampToValueAtTime(28, t + 0.92);
+      const subGain = ctx.createGain();
+      subGain.gain.setValueAtTime(0.0001, t);
+      subGain.gain.linearRampToValueAtTime(0.18 * prox, t + 0.025);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.98);
+      subOsc.connect(subGain);
+      subGain.connect(this.master);
+
+      // Chasquido seco de centella cercana
+      let snapSrc: AudioBufferSourceNode | null = null;
+      let snapFilter: BiquadFilterNode | null = null;
+      let snapGain: GainNode | null = null;
+      if (prox > 0.48) {
+        const snapLen = Math.max(1, Math.floor(ctx.sampleRate * 0.19));
+        const snapBuf = ctx.createBuffer(1, snapLen, ctx.sampleRate);
+        const snapData = snapBuf.getChannelData(0);
+        for (let i = 0; i < snapLen; i++) {
+          const u = i / snapLen;
+          snapData[i] = (Math.random() * 2 - 1) * Math.exp(-u * 9.5);
+        }
+        snapSrc = ctx.createBufferSource();
+        snapSrc.buffer = snapBuf;
+        snapFilter = ctx.createBiquadFilter();
+        snapFilter.type = 'bandpass';
+        snapFilter.frequency.setValueAtTime(1950, t);
+        snapFilter.frequency.exponentialRampToValueAtTime(520, t + 0.18);
+        snapFilter.Q.value = 0.9;
+        snapGain = ctx.createGain();
+        snapGain.gain.setValueAtTime(0.24 * prox, t);
+        snapGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.185);
+        snapSrc.connect(snapFilter);
+        snapFilter.connect(snapGain);
+        snapGain.connect(this.master);
+        snapSrc.start(t);
+        snapSrc.stop(t + 0.19);
+      }
+
+      const cleanupThunder = () => {
+        this.activeThunderDisposers.delete(cleanupThunder);
+        try { rumbleSrc.stop(); } catch { /* finalizado */ }
+        try { subOsc.stop(); } catch { /* finalizado */ }
+        try { snapSrc?.stop(); } catch { /* finalizado */ }
+        try { rumbleSrc.disconnect(); } catch { /* desconectado */ }
+        try { rumbleLowpass.disconnect(); } catch { /* desconectado */ }
+        try { rumbleGain.disconnect(); } catch { /* desconectado */ }
+        try { subOsc.disconnect(); } catch { /* desconectado */ }
+        try { subGain.disconnect(); } catch { /* desconectado */ }
+        try { snapSrc?.disconnect(); } catch { /* desconectado */ }
+        try { snapFilter?.disconnect(); } catch { /* desconectado */ }
+        try { snapGain?.disconnect(); } catch { /* desconectado */ }
+      };
+
+      this.activeThunderDisposers.add(cleanupThunder);
+      rumbleSrc.onended = cleanupThunder;
+
+      rumbleSrc.start(t);
+      rumbleSrc.stop(t + rumbleDur + 0.03);
+      subOsc.start(t);
+      subOsc.stop(t + 1.0);
+    };
+
+    const timerId = window.setTimeout(triggerThunderSynthesis, Math.max(0, delayMs));
+    this.thunderTimers.add(timerId);
+  }
+
+  stopAll(fadeSeconds = 0.12) {
     this.stopCountdownTones();
-    const now = this.ctx?.currentTime ?? 0;
-    const endAt = now + Math.max(0.04, fadeSeconds);
+    this.clearThunderAudio();
+    this.clearSuspendTimer();
+    const ctx = this.ctx;
+    const now = ctx?.currentTime ?? 0;
+    const safeFade = Math.max(0.03, fadeSeconds);
+    const endAt = now + safeFade;
     const fadeGain = (gain: GainNode) => {
       gain.gain.cancelScheduledValues(now);
       gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
       gain.gain.linearRampToValueAtTime(0.0001, endAt);
     };
     for (const voice of this.voices.values()) {
-      // Cortar inmediatamente los nodos crea un clic audible. Dejarlos
-      // terminar detrás de una rampa de 150–220 ms y liberar al finalizar.
       fadeGain(voice.gain);
       fadeGain(voice.tireGain);
       fadeGain(voice.brakeGain);
       const sources = [voice.engine, voice.harmonic, voice.source];
       for (const src of sources) {
-        try { src.stop(endAt + 0.03); } catch { /* stopped */ }
+        try { src.stop(endAt + 0.02); } catch { /* stopped */ }
         src.onended = () => {
           try { src.disconnect(); } catch { /* liberado */ }
           if (src === voice.source) {
@@ -327,16 +608,27 @@ class EngineSoundSynthesizer {
       if (voice.sampled) {
         voice.sampled.gains.forEach(fadeGain);
         voice.sampled.sources.forEach((src, i) => {
-          try { src.stop(endAt + 0.03); } catch { /* stopped */ }
+          try { src.stop(endAt + 0.02); } catch { /* stopped */ }
           const g = voice.sampled!.gains[i];
           src.onended = () => { src.disconnect(); g.disconnect(); };
         });
       }
-      // El GC liberará el resto de nodos después del fade. Evita desconexión
-      // sincrónica que podía causar artefactos en la meta.
     }
     this.voices.clear();
-    if (this.rainGain && this.ctx) this.rainGain.gain.setTargetAtTime(0, this.ctx.currentTime, .04);
+    if (this.rainGain && ctx) {
+      this.rainGain.gain.cancelScheduledValues(now);
+      this.rainGain.gain.setValueAtTime(Math.max(0.0001, this.rainGain.gain.value), now);
+      this.rainGain.gain.linearRampToValueAtTime(0, endAt);
+    }
+    if (ctx && typeof window !== 'undefined') {
+      const waitMs = Math.round((safeFade + 0.09) * 1000);
+      this.suspendTimer = window.setTimeout(() => {
+        this.suspendTimer = null;
+        if (this.voices.size === 0 && ctx.state === 'running') {
+          void ctx.suspend().catch(() => {});
+        }
+      }, waitMs);
+    }
   }
 }
 export const soundEngine = new EngineSoundSynthesizer();

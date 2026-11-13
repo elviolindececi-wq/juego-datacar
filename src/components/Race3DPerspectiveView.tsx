@@ -1,17 +1,17 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { Vehicle, RaceTrackConfig, VehicleRaceResult } from '../types/vehicle';
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Award, 
-  Volume2, 
-  VolumeX, 
-  Video, 
-  Tv, 
-  Compass, 
-  Clapperboard, 
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Award,
+  Volume2,
+  VolumeX,
+  Video,
+  Tv,
+  Compass,
+  Clapperboard,
   Flag,
   Activity,
   ChevronDown,
@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   CloudRain,
   ArrowLeft, ArrowRight, ArrowUp, ArrowDown, CircleStop, Maximize2, Smartphone, X,
+  MapPin, Timer, Gauge, ChevronLeft, ChevronRight, ChevronsUp, ChevronsDown, AlertCircle,
 } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import { canStartCountdown, raceStartupMessage } from '../utils/raceStartupGate';
@@ -52,15 +53,60 @@ import { chooseDirectorShot, DirectorShot } from '../utils/cinematicDirector';
 import { simulatedGear } from '../utils/powertrainDynamics';
 import { InteractiveRacePhysics, PHYSICS_STEP } from '../utils/interactiveRacePhysics';
 import type { TrackHazard, HazardKind } from '../utils/interactiveRacePhysics';
-import { 
+import { createUrbanTrafficVisuals3D } from '../utils/urbanTrafficVisuals3D';
+import {
+  URBAN_ROAD_WIDTH,
+  hasVerifiedBlindSpotAdas,
+  stepOncomingTraffic,
+  type BlindSpotFlankState,
+  type SpeedLimitZone,
+  type TrafficLightLiveState,
+  type TrafficRuleNotice,
+} from '../utils/urbanTrafficRules';
+import { PRESET_VEHICLES } from '../data/presetVehicles';
+import { triggerPedestrianArrest, type RaceModeId } from '../utils/careerProgression';
+import { multiplayerClient } from '../utils/multiplayerClient';
+import {
   createAsphaltTexture,
   createAsphaltMicroRelief,
-  createKerbTexture, 
+  createAsphaltRoughnessTexture,
+  createKerbTexture,
   createCheckeredFinishTexture,
-  createDistanceSignTexture 
+  createDistanceSignTexture
 } from '../utils/race3dTextures';
+import {
+  createHyperrealSkyAndIBL,
+  getHyperrealAtmosphere,
+} from '../utils/hyperrealEnvironment3D';
+import {
+  formatOfficialPower,
+  formatOfficialTorque,
+  formatOfficialTopSpeed,
+  isVehicleFieldUnconfirmed,
+} from '../utils/specFidelity';
+import { createCentralMedianVisuals3D } from '../utils/centralMedianVisuals3D';
+import {
+  createForwardMotorcyclePool,
+  stepForwardMotorcycles,
+  createForwardMotorcyclesVisuals3D,
+  type ForwardMotorcycleActor,
+} from '../utils/forwardMotorcycleTraffic';
+import { createDigitalRearviewMirror } from '../utils/digitalRearviewMirror';
+import {
+  applyTurnSignalAction,
+  evaluateTurnSignalBlink,
+  mapKeyCodeToTurnSignalAction,
+  type TurnSignalMode,
+} from '../utils/turnSignalsController';
+import {
+  evaluateAdasHudReadout,
+  type AdasHudReadout,
+} from '../utils/adasPresentationAudit';
+import { useVehicleStuckDetection } from '../utils/useVehicleStuckDetection';
+import { VehicleStuckModal } from './VehicleStuckModal';
+import { formatTargetMinutesSec, getCircuitTargetTime } from '../utils/circuitTargetTimes';
 
-export type CameraViewMode = 'arcade' | 'trasera' | 'lateral' | 'cenital' | 'frontal_meta' | 'automatica' | 'libre';
+export type CameraViewMode = 'arcade' | 'trasera' | 'lateral' | 'cenital' | 'dron' | 'frontal_meta' | 'automatica' | 'libre';
 
 interface Race3DPerspectiveViewProps {
   vehicles: Vehicle[];
@@ -78,6 +124,16 @@ interface Race3DPerspectiveViewProps {
   onRestartRace?: () => void;
   /** La carrera mobile espera el toque START después de preparar render y modelos. */
   manualStart?: boolean;
+  /** Fase 1 ('city_trial' con semáforos/peatones) o Fase 2 ('speed_pro' sin obstáculos con IA élite). */
+  raceMode?: RaceModeId;
+  /** Sesión multijugador en línea sincronizada por WebSockets. */
+  onlineSession?: boolean;
+  /** Se invoca de inmediato cuando el jugador atropella a un peatón y va 2 minutos a la cárcel. */
+  onPedestrianArrest?: (incident: { label: string; timeSec: number }) => void;
+  /** Peso adicional seleccionado (pasajeros extra + equipaje) en kg. */
+  playerPayloadKg?: number;
+  /** Si el piloto está registrado en DATACARPY. */
+  isDatacarMember?: boolean;
 }
 
 const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
@@ -197,7 +253,11 @@ const ArcadeRaceHud: React.FC<{
               unit="km/h"
               accentClass="text-sky-400"
               glowClass="shadow-[0_0_24px_rgba(56,189,248,0.16)]"
-              subValue={`MAX ${vehicle.topSpeedKmh.toFixed(0)}`}
+              subValue={
+                isVehicleFieldUnconfirmed(vehicle, 'topSpeedKmh')
+                  ? `≈${Math.round(vehicle.topSpeedKmh)} sim.`
+                  : `Máx ${Math.round(vehicle.topSpeedKmh)}`
+              }
             />
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/90 border border-slate-700 px-3 py-1 text-[11px] font-black tracking-[0.22em] text-sky-300 shadow-lg">
               {state.gear === 0 ? 'R' : `${state.gear}ª`}
@@ -241,27 +301,49 @@ const ArcadeRaceHud: React.FC<{
 };
 
 
-/** Minimapa local: la ruta, rivales y meta comparten la geometría física real.
- * No emplea un recorrido dibujado a mano; se orienta al rumbo del auto.
+export const formatRaceStopwatch = (sec: number): string => {
+  if (isNaN(sec) || sec < 0) return '00:00.000';
+  const minutes = Math.floor(sec / 60);
+  const seconds = Math.floor(sec % 60);
+  const ms = Math.floor((sec * 1000) % 1000);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+};
+
+/** Minimapa circular Mockup 5:
+ * Borde cian brillante, flecha dorada del jugador, trazado con glow, bandera a cuadros en la meta,
+ * y píldora inferior con POS. (dorado) y VUELTA.
  */
 const RaceMiniMap: React.FC<{
   path: CurvedRoadPath;
   player: { distance: number; lateralX?: number };
   opponents: { id: string; distance: number; lateralX?: number }[];
   playerId: string;
-}> = ({ path, player, opponents, playerId }) => {
+  playerRank?: number;
+  totalCars?: number;
+  currentLap?: number;
+  totalLaps?: number;
+}> = ({
+  path,
+  player,
+  opponents,
+  playerId,
+  playerRank = 2,
+  totalCars = 8,
+  currentLap = 2,
+  totalLaps = 3,
+}) => {
   const center = path.world(player.distance, player.lateralX ?? 0);
   const c = Math.cos(center.yaw), s = Math.sin(center.yaw);
   const project = (worldX: number, worldZ: number) => {
     const dx = worldX - center.x, dz = worldZ - center.z;
     const lateral = dx * c - dz * s;
     const forward = dx * s + dz * c;
-    return { x: 85 + lateral * .68, y: 121 - forward * .68 };
+    return { x: 58 + lateral * 0.44, y: 76 - forward * 0.44 };
   };
   const points: string[] = [];
-  const from = Math.max(0, player.distance - 65);
-  const to = Math.min(path.length, player.distance + 215);
-  for (let dist = from; dist <= to; dist += 5) {
+  const from = Math.max(0, player.distance - 75);
+  const to = Math.min(path.length, player.distance + 240);
+  for (let dist = from; dist <= to; dist += 6) {
     const sample = path.at(dist);
     const q = project(sample.x, sample.z);
     points.push(`${q.x.toFixed(1)},${q.y.toFixed(1)}`);
@@ -271,27 +353,222 @@ const RaceMiniMap: React.FC<{
   points.push(`${lastPoint.x.toFixed(1)},${lastPoint.y.toFixed(1)}`);
   const finish = path.world(path.length);
   const finishPoint = project(finish.x, finish.z);
-  const canShowFinish = path.length - player.distance < 250;
+  const canShowFinish = path.length - player.distance < 280;
+
   return (
-    <div className="dc100-race-map absolute left-4 bottom-5 z-20 pointer-events-none rounded-[22px] border border-cyan-400/30 bg-slate-950/90 p-2 shadow-[0_12px_45px_rgba(2,6,23,.7)] backdrop-blur-md">
-      <div className="text-[9px] font-black tracking-[.22em] uppercase text-cyan-300 pl-2 pt-0.5">Ruta · Asunción</div>
-      <svg viewBox="0 0 170 170" className="block w-[150px] h-[150px] sm:w-[170px] sm:h-[170px] overflow-hidden" aria-label="Minimapa de la carretera real y posición de rivales">
-        <circle cx="85" cy="85" r="80" fill="rgba(13,20,34,.70)" stroke="rgba(148,163,184,.18)" strokeWidth="1"/>
-        <polyline points={points.join(' ')} fill="none" stroke="rgba(148,163,184,.34)" strokeWidth="14" strokeLinejoin="round" strokeLinecap="round" />
-        <polyline points={points.join(' ')} fill="none" stroke="#dbeafe" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {canShowFinish && <g transform={`translate(${finishPoint.x},${finishPoint.y})`}>
-          <circle r="7" fill="#f8fafc" stroke="#020617" strokeWidth="2"/><path d="M-4 -4 L4 4 M4 -4 L-4 4" stroke="#0f172a" strokeWidth="2"/>
-        </g>}
-        {opponents.filter(v => v.id !== playerId).map(v => {
-          const p = path.world(v.distance, v.lateralX ?? 0);
-          const xy = project(p.x, p.z);
-          return <circle key={v.id} cx={xy.x} cy={xy.y} r="4" fill="#fb923c" stroke="#0f172a" strokeWidth="1.3"/>;
-        })}
-        <g transform="translate(85,121)"><path d="M0 -12 L-7 8 L0 5 L7 8 Z" fill="#06d3f5" stroke="white" strokeWidth="1.2" /></g>
-      </svg>
-      <div className="flex justify-between px-2 pb-1 font-mono text-[10px] text-slate-300">
-        <span>{Math.round(player.distance)} m</span>
-        <span className="text-cyan-300">META {Math.round(path.length - player.distance)} m</span>
+    <div className="dc100-race-map dc-mockup5-minimap absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 pointer-events-none flex flex-col items-start select-none">
+      {/* 1. Minimapa circular con borde cian brillante */}
+      <div className="relative w-[110px] h-[110px] sm:w-[116px] sm:h-[116px] rounded-full border-2 border-[#00e5ff] bg-[#030914]/90 backdrop-blur-md shadow-[0_0_20px_rgba(0,229,255,0.7),inset_0_0_14px_rgba(0,229,255,0.22)] overflow-hidden flex items-center justify-center">
+        {/* Indicador brújula N con flecha hacia arriba */}
+        <div className="absolute top-1 inset-x-0 flex flex-col items-center pointer-events-none z-10">
+          <span className="text-[9px] font-black tracking-widest text-[#00e5ff] leading-none drop-shadow-[0_0_4px_#00e5ff]">N</span>
+          <div className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[4px] border-b-[#00e5ff] mt-0.5" />
+        </div>
+
+        <svg viewBox="0 0 116 116" className="w-full h-full block" aria-label="Minimapa circular">
+          {/* Anillos de cuadrícula de radar */}
+          <circle cx="58" cy="58" r="48" fill="none" stroke="rgba(0,229,255,0.09)" strokeWidth="1" strokeDasharray="3 3"/>
+          <circle cx="58" cy="58" r="28" fill="none" stroke="rgba(0,229,255,0.09)" strokeWidth="1"/>
+
+          {/* Trazado base de pista */}
+          <polyline points={points.join(' ')} fill="none" stroke="rgba(15,23,42,0.85)" strokeWidth="12" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Trazado neón cian brillante */}
+          <polyline points={points.join(' ')} fill="none" stroke="#00e5ff" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" className="drop-shadow-[0_0_6px_#00e5ff]" />
+
+          {/* Bandera a cuadros en la meta */}
+          {canShowFinish && (
+            <g transform={`translate(${finishPoint.x},${finishPoint.y})`}>
+              <circle r="7" fill="#000" stroke="#00e5ff" strokeWidth="1.5"/>
+              <rect x="-4" y="-4" width="4" height="4" fill="#fff"/>
+              <rect x="0" y="-4" width="4" height="4" fill="#000"/>
+              <rect x="-4" y="0" width="4" height="4" fill="#000"/>
+              <rect x="0" y="0" width="4" height="4" fill="#fff"/>
+            </g>
+          )}
+
+          {/* Rivales */}
+          {opponents.filter(v => v.id !== playerId).map(v => {
+            const p = path.world(v.distance, v.lateralX ?? 0);
+            const xy = project(p.x, p.z);
+            return (
+              <g key={v.id} transform={`translate(${xy.x},${xy.y})`}>
+                <circle r="4" fill="#ff9900" stroke="#ffffff" strokeWidth="1.2" className="drop-shadow-[0_0_4px_#ff9900]" />
+              </g>
+            );
+          })}
+
+          {/* Flecha dorada indicando la posición y rumbo del jugador */}
+          <g transform="translate(58,76)">
+            <polygon points="0,-12 7,8 0,4 -7,8" fill="#ffb800" stroke="#ffffff" strokeWidth="1.4" className="drop-shadow-[0_0_8px_#ffb800]" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Píldora inferior: POS. 2/8 (dorado) y VUELTA 2/3 */}
+      <div className="mt-1.5 w-[110px] sm:w-[116px] px-2.5 py-1 bg-[#030914]/90 backdrop-blur-md border border-cyan-400/40 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.85)] flex flex-col gap-0.5">
+        <div className="flex items-center justify-between text-[10px] leading-tight font-black tracking-wider">
+          <span className="text-white/80">POS.</span>
+          <span className="text-[#ffb800] text-[13px] font-black italic drop-shadow-[0_0_6px_rgba(255,184,0,0.7)]">{playerRank}/{totalCars}</span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] leading-tight font-black tracking-wider">
+          <span className="text-white/80">VUELTA</span>
+          <span className="text-cyan-300 text-[13px] font-black italic drop-shadow-[0_0_6px_rgba(0,229,255,0.7)]">{currentLap}/{totalLaps}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** Clúster digital arcade Mockup 5/6:
+ * Botones de cámara y pausa en cristal oscuro, arco semicircular de RPM (RPM x1000) con zona roja,
+ * velocidad en números gigantes 168 km/h y marcha en cuadro dorado 4.
+ */
+const Mockup5SpeedCluster: React.FC<{
+  speedKmh: number;
+  rpm: number;
+  gear: number;
+  onCycleCamera: () => void;
+  onPause: () => void;
+  onOpenDetailed?: () => void;
+}> = ({ speedKmh, rpm, gear, onCycleCamera, onPause, onOpenDetailed }) => {
+  const maxRpm = 8000;
+  const clampedRpm = Math.max(0, Math.min(maxRpm, rpm));
+  const ratio = clampedRpm / maxRpm;
+  const radius = 54;
+  const cx = 75;
+  const cy = 64;
+  const circumference = Math.PI * radius; // ~169.6
+  const strokeDashoffset = circumference * (1 - ratio);
+
+  return (
+    <div className="dc-mockup5-cluster-wrapper absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 flex flex-col items-end gap-1.5 select-none pointer-events-none">
+      {/* Botones superiores de cámara y pausa en cristal oscuro */}
+      <div className="flex items-center gap-2 pointer-events-auto">
+        <button
+          type="button"
+          onClick={onCycleCamera}
+          className="w-9 h-9 rounded-xl bg-[#030914]/85 backdrop-blur-md border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
+          aria-label="Cambiar vista de cámara"
+          title="Cambiar vista de cámara"
+        >
+          <Video size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={onPause}
+          className="w-9 h-9 rounded-xl bg-[#030914]/85 backdrop-blur-md border border-cyan-400/40 text-cyan-300 flex items-center justify-center hover:bg-cyan-950/60 active:scale-95 transition-all shadow-[0_0_12px_rgba(0,0,0,0.7)] cursor-pointer"
+          aria-label="Pausa"
+          title="Pausa"
+        >
+          <Pause size={17} />
+        </button>
+      </div>
+
+      {/* Tacómetro / Velocímetro digital estilo arcade */}
+      <div className="dc11-mobile-speed dc-mockup5-cluster pointer-events-auto relative w-[164px] sm:w-[178px] rounded-2xl border border-cyan-400/50 bg-[#030914]/90 backdrop-blur-md px-3 pt-2 pb-2 shadow-[0_0_24px_rgba(0,229,255,0.28),inset_0_0_14px_rgba(0,229,255,0.08)] flex flex-col items-center">
+        {/* Semicírculo de RPM con escala 0-8 y zona roja 7-8 */}
+        <div className="relative w-[150px] h-[64px] overflow-visible">
+          <svg viewBox="0 0 150 68" className="w-full h-full overflow-visible">
+            <defs>
+              <linearGradient id="dcRpmGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#00e5ff" />
+                <stop offset="55%" stopColor="#22c55e" />
+                <stop offset="75%" stopColor="#eab308" />
+                <stop offset="90%" stopColor="#ef4444" />
+              </linearGradient>
+            </defs>
+            {/* Pista de fondo */}
+            <path
+              d={`M ${cx - radius},${cy} A ${radius},${radius} 0 0,1 ${cx + radius},${cy}`}
+              fill="none"
+              stroke="rgba(255,255,255,0.12)"
+              strokeWidth="7"
+              strokeLinecap="round"
+            />
+            {/* Zona roja indicativa en 7-8 */}
+            <path
+              d={`M ${cx + radius * Math.cos(Math.PI * 0.15)},${cy - radius * Math.sin(Math.PI * 0.15)} A ${radius},${radius} 0 0,1 ${cx + radius},${cy}`}
+              fill="none"
+              stroke="rgba(239,68,68,0.4)"
+              strokeWidth="7"
+              strokeLinecap="round"
+            />
+            {/* Arco dinámico de revoluciones */}
+            <path
+              d={`M ${cx - radius},${cy} A ${radius},${radius} 0 0,1 ${cx + radius},${cy}`}
+              fill="none"
+              stroke="url(#dcRpmGrad)"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="transition-all duration-75"
+            />
+            {/* Marcas numéricas 0 a 8 */}
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => {
+              const angle = Math.PI - (i / 8) * Math.PI;
+              const tr = radius + 9;
+              const tx = cx + tr * Math.cos(angle);
+              const ty = cy - tr * Math.sin(angle) + 2;
+              const isRed = i >= 7;
+              return (
+                <text
+                  key={i}
+                  x={tx}
+                  y={ty}
+                  textAnchor="middle"
+                  className={`text-[8px] font-mono font-bold ${isRed ? 'fill-red-400' : 'fill-slate-300'}`}
+                >
+                  {i}
+                </text>
+              );
+            })}
+          </svg>
+          {/* Texto RPM x1000 */}
+          <div className="absolute inset-x-0 bottom-0 flex justify-center">
+            <span className="text-[8px] font-mono font-bold tracking-widest text-slate-400 uppercase">
+              RPM x1000
+            </span>
+          </div>
+        </div>
+
+        {/* Fila: Velocidad en números gigantes + Marcha en cuadro dorado */}
+        <div className="mt-1 flex items-end justify-between w-full px-1">
+          {/* Velocidad en números gigantes 168 km/h */}
+          <div className="flex flex-col items-start leading-none">
+            <div className="flex items-baseline gap-1">
+              <strong className="font-display font-black italic text-[34px] sm:text-[38px] text-white tracking-tight leading-none tabular-nums drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]">
+                {Math.round(speedKmh)}
+              </strong>
+            </div>
+            <span className="text-[10px] font-extrabold text-cyan-300 tracking-wider uppercase pl-0.5 -mt-0.5">
+              km/h
+            </span>
+          </div>
+
+          {/* Marcha en cuadro dorado 4 */}
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg border-2 border-[#ffb800] bg-[#1a1202]/85 backdrop-blur-sm flex items-center justify-center shadow-[0_0_16px_rgba(255,184,0,0.55),inset_0_0_8px_rgba(255,184,0,0.25)]">
+            <span className="font-display font-black italic text-xl sm:text-2xl text-[#ffb800] drop-shadow-[0_0_6px_#ffb800] leading-none">
+              {gear === 0 ? 'R' : gear === -1 ? 'N' : gear}
+            </span>
+          </div>
+        </div>
+
+        {/* Pie de datos / compatibilidad de tests */}
+        <footer className="w-full flex items-center justify-between mt-1 pt-1 border-t border-cyan-500/20 text-[9px] text-slate-300">
+          <b>{gear === 0 ? 'R' : `${gear}ª`}</b>
+          <b>{Math.round(rpm)} RPM</b>
+          {onOpenDetailed && (
+            <button
+              type="button"
+              onClick={onOpenDetailed}
+              className="text-cyan-300 hover:text-white px-1.5 py-0.5 rounded bg-cyan-950/40 border border-cyan-500/30 font-bold text-[8px] tracking-wider"
+              aria-label="Ver telemetría completa"
+            >
+              DATOS +
+            </button>
+          )}
+        </footer>
       </div>
     </div>
   );
@@ -312,6 +589,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   onExitRace,
   onRestartRace,
   manualStart = false,
+  raceMode = 'city_trial',
+  onlineSession = false,
+  onPedestrianArrest,
+  playerPayloadKg = 0,
+  isDatacarMember: _isDatacarMember = false,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   type TouchControl = 'left' | 'right' | 'throttle' | 'reverse' | 'brake';
@@ -355,6 +637,18 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     <button type="button" key={control} aria-label={label} aria-pressed={!!touchPressed[control]}
       className={`dc-touch-button ${extra} ${touchPressed[control] ? 'dc-touch-active' : ''}`}
       onContextMenu={event => event.preventDefault()}
+      onTouchStart={event => {
+        event.stopPropagation();
+        setTouchControl(control, true);
+      }}
+      onTouchEnd={event => {
+        event.stopPropagation();
+        setTouchControl(control, false);
+      }}
+      onTouchCancel={event => {
+        event.stopPropagation();
+        setTouchControl(control, false);
+      }}
       onPointerDown={event => {
         event.preventDefault();
         if (touchPointersRef.current[control] !== null) return;
@@ -365,7 +659,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       onPointerUp={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}
       onPointerCancel={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}
       onLostPointerCapture={event => { if (touchPointersRef.current[control] === event.pointerId) { touchPointersRef.current[control] = null; setTouchControl(control, false); } }}>
-      {icon}<span>{label}</span>
+      {icon}<span className="sr-only">{label}</span>
     </button>
   );
   const enableLandscape = async () => {
@@ -390,7 +684,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultDeliveredRef = useRef(false);
   const timeDisplayRef = useRef<HTMLSpanElement | null>(null);
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeSec, setCurrentTimeSec] = useState(0);
   // Velocidad de reproducción visual: 0.75x por defecto según especificación
@@ -421,7 +715,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const [potholeWarning, setPotholeWarning] = useState<PotholeLookahead | null>(null);
   const [steeringDemoDeg, setSteeringDemoDeg] = useState(0);
   const [headlightsOn, setHeadlightsOn] = useState(true);
-  const [showVehicleLabels, setShowVehicleLabels] = useState(experience !== 'race');
+  const [showVehicleLabels, setShowVehicleLabels] = useState(() => experience !== 'race');
   const [interactiveMode, setInteractiveMode] = useState(() => experience === 'race' || (experience === 'legacy' && track.distanceMeters <= 3500));
   const [hazardsEnabled, setHazardsEnabled] = useState(true);
   const [hazardCount, setHazardCount] = useState(0);
@@ -433,14 +727,109 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     setSelectedVehicleId(playerVehicleId || vehicles[0]?.id || '');
     setCameraMode(experience === 'replay' || experience === 'legacy' ? 'automatica' : 'arcade');
   }, [track.distanceMeters, experience, playerVehicleId]);
-  const roadPath = useMemo(() => makeRoadPath(track), [track.cityCircuitId, track.distanceMeters]);
+  const roadPath = useMemo(() => makeRoadPath(track), [track.cityCircuitId, track.distanceMeters, track.laps]);
   const [liveVehicleStates, setLiveVehicleStates] = useState<Record<string, { lateralX?: number, distance: number, speedKmh: number, accelG: number, gear: number, rpm: number, impacts: number, slip: number, pothole: boolean, absActive: boolean, tcsActive?: boolean, escActive?: boolean, aebActive?: boolean, fcwWarning?: boolean, laneDepartureWarning?: boolean }>>({});
   const [raceEvent, setRaceEvent] = useState('');
+  const [seatbeltBuckled, setSeatbeltBuckled] = useState(false);
+  const [activeSpeedZone, setActiveSpeedZone] = useState<SpeedLimitZone | null>(null);
+  const [upcomingTrafficLight, setUpcomingTrafficLight] = useState<(TrafficLightLiveState & { distanceToStopM: number }) | null>(null);
+  const [blindSpotState, setBlindSpotState] = useState<BlindSpotFlankState>({
+    equipped: false,
+    leftAlert: false,
+    rightAlert: false,
+    leftDistanceM: null,
+    rightDistanceM: null,
+  });
+  const [trafficNotice, setTrafficNotice] = useState<TrafficRuleNotice | null>(null);
+  const [splashHudActive, setSplashHudActive] = useState(false);
+  const lastNoticeSeqRef = useRef(0);
+  const lastSplashSeqRef = useRef(0);
+  const splashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rearviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const leftMirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rightMirrorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [showRearviewMirror, setShowRearviewMirror] = useState(true);
+  const [showSideMirrors, setShowSideMirrors] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
+  );
+  const showRearviewMirrorRef = useRef(true);
+  const showSideMirrorsRef = useRef(showSideMirrors);
+  useEffect(() => {
+    showRearviewMirrorRef.current = showRearviewMirror;
+  }, [showRearviewMirror]);
+  useEffect(() => {
+    showSideMirrorsRef.current = showSideMirrors;
+  }, [showSideMirrors]);
+  const [portraitPromptDismissed, setPortraitPromptDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('autostart') === '1';
+  });
+  const [turnSignalMode, setTurnSignalMode] = useState<TurnSignalMode>('off');
+  const [turnSignalBlinkHud, setTurnSignalBlinkHud] = useState<{ leftLit: boolean; rightLit: boolean }>({
+    leftLit: false,
+    rightLit: false,
+  });
+  const turnSignalRef = useRef<{ mode: TurnSignalMode; activatedAtSec: number }>({
+    mode: 'off',
+    activatedAtSec: 0,
+  });
+  const triggerTurnSignalAction = (action: 'toggle_left' | 'toggle_right' | 'toggle_hazards' | 'turn_off') => {
+    soundEngine.unlock();
+    const next = applyTurnSignalAction(turnSignalRef.current.mode, action);
+    turnSignalRef.current = {
+      mode: next,
+      activatedAtSec: performance.now() / 1000,
+    };
+    setTurnSignalMode(next);
+    const immediate = evaluateTurnSignalBlink(next, turnSignalRef.current.activatedAtSec, turnSignalRef.current.activatedAtSec);
+    setTurnSignalBlinkHud({ leftLit: immediate.leftLit, rightLit: immediate.rightLit });
+  };
+  useEffect(() => {
+    if (turnSignalMode === 'off') {
+      setTurnSignalBlinkHud({ leftLit: false, rightLit: false });
+      return;
+    }
+    const timer = window.setInterval(() => {
+      const readout = evaluateTurnSignalBlink(
+        turnSignalRef.current.mode,
+        performance.now() / 1000,
+        turnSignalRef.current.activatedAtSec,
+      );
+      setTurnSignalBlinkHud(prev =>
+        prev.leftLit === readout.leftLit && prev.rightLit === readout.rightLit
+          ? prev
+          : { leftLit: readout.leftLit, rightLit: readout.rightLit },
+      );
+    }, 110);
+    return () => window.clearInterval(timer);
+  }, [turnSignalMode]);
+  const [adasReadout, setAdasReadout] = useState<AdasHudReadout | null>(null);
+  const {
+    isStuckModalOpen,
+    reportSimulationFrame,
+    handleKeepTrying,
+    resetDetection: resetStuckDetection,
+  } = useVehicleStuckDetection({ requiredStuckSeconds: 3.0 });
+  const buckleSeatbelt = () => {
+    soundEngine.unlock();
+    soundEngine.playSeatbeltClick();
+    physicsRef.current?.setSeatbeltBuckled(true);
+    setSeatbeltBuckled(true);
+  };
   const [isGlbLoading, setIsGlbLoading] = useState<boolean>(() => vehicles.some((v) => hasVehicle3DModel(v.id)));
   const [loadedVehicleModels, setLoadedVehicleModels] = useState(0);
   const requiredVehicleModels = vehicles.filter(v => hasVehicle3DModel(v.id)).length;
   const [glbLoadError, setGlbLoadError] = useState<string | null>(null);
-  const raceGateReady = canStartCountdown({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: Boolean(glbLoadError)});
+  const raceGateReady = canStartCountdown({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: false});
+  const isPreloading = !raceGateReady;
+  const isPreloadingRef = useRef(isPreloading);
+  useEffect(() => {
+    isPreloadingRef.current = isPreloading;
+  }, [isPreloading]);
+  const mobileMenuOpenRef = useRef(mobileMenuOpen);
+  useEffect(() => {
+    mobileMenuOpenRef.current = mobileMenuOpen;
+  }, [mobileMenuOpen]);
 
   // Métricas de diagnóstico en tiempo real (GPU / Engine)
   const [diagStats, setDiagStats] = useState({
@@ -521,7 +910,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     }
 
     const history = result.telemetryHistory;
-    
+
     // Antes del primer instante
     if (time <= history[0].timeSec) {
       const s0 = history[0];
@@ -629,11 +1018,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     stateRef.current.currentTimeSec = 0;
     setHasFinished(false);
     setStuckInPothole(false);stuckRef.current={seconds:0,lastDistance:0};
+    resetStuckDetection();
+    turnSignalRef.current = { mode: 'off', activatedAtSec: 0 };
+    setTurnSignalMode('off');
+    setAdasReadout(null);
     finalResultsRef.current = null;
     setLiveVehicleStates({});
     setRaceEvent('');
     setRaceInsight(null);
     setGoFlash(false);
+    setSeatbeltBuckled(false);
+    setTrafficNotice(null);
+    setSplashHudActive(false);
+    lastNoticeSeqRef.current = 0;
+    lastSplashSeqRef.current = 0;
     insightSequenceRef.current = 0;
     lastUrgentInsightAtRef.current = 0;
     lastInsightIdRef.current = null;
@@ -649,8 +1047,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       stateRef.current.isPlaying = true;
       return () => { soundEngine.stopAll(); };
     }
-    // En mobile la grilla debe permanecer quieta hasta pulsar START.
-    if (experience === 'race' && !startRequested) {
+    // Si la compuerta de preparación aún no ha habilitado la largada o está precargando, esperar
+    if (!startRequested || isPreloading) {
       setCountdown(null);
       stateRef.current.countdown = null;
       stateRef.current.isPlaying = false;
@@ -670,7 +1068,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         setCountdown(step);
         stateRef.current.countdown = step;
         stateRef.current.isPlaying = false;
-        if (experience === 'race') soundEngine.playCountdownTone(step);
+        if (experience === 'race') {
+          if (step === 3) soundEngine.playCountdownTone(3);
+          else if (step === 2) soundEngine.playCountdownTone(2);
+          else soundEngine.playCountdownTone(1);
+        }
         stageTimer = setTimeout(() => startStep((step - 1) as 3 | 2 | 1 | 0), 1000);
         return;
       }
@@ -706,17 +1108,38 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     };
   }, [track.id, vehicles, interactiveMode, hazardsEnabled, experience, restartSequence, manualStart, startRequested]);
 
-  // Flujo mobile único: INICIAR CARRERA -> precarga -> pista renderizada -> 3, 2, 1.
-  // No se exige un segundo toque START y ningún pitido ocurre antes del primer render.
+  // Compuerta universal de preparación: precarga 3D -> paneo aéreo Dron sobre Asunción -> 3, 2, 1.
+  // En modo multijugador en línea, sincroniza la largada con el servidor WebSocket cuando ambos están listos.
+  const [onlinePeersHud, setOnlinePeersHud] = useState<{ id: string; pilotName: string; distance: number; lateralX: number }[]>([]);
   useEffect(() => {
-    if (experience !== 'race' || !raceGateReady || startRequested) return;
+    if (!raceGateReady || startRequested) return;
+    if (onlineSession && experience === 'race') {
+      const startMarker = multiplayerClient.synchronizedStartCounter;
+      multiplayerClient.notifySceneReady();
+      const triggerLaunch = () => {
+        soundEngine.unlock();
+        stateRef.current.isPlaying = false;
+        setStartRequested(true);
+      };
+      const unsubscribe = multiplayerClient.subscribe(() => {
+        if (multiplayerClient.synchronizedStartCounter > startMarker || multiplayerClient.room?.status === 'racing') {
+          triggerLaunch();
+        }
+      });
+      const safetyFallback = window.setTimeout(triggerLaunch, 4200);
+      return () => {
+        unsubscribe();
+        window.clearTimeout(safetyFallback);
+      };
+    }
+    const droneShowcaseDelayMs = experience === 'race' ? 1650 : 450;
     const timer = window.setTimeout(() => {
       soundEngine.unlock();
       stateRef.current.isPlaying = false;
       setStartRequested(true);
-    }, 1200);
+    }, droneShowcaseDelayMs);
     return () => window.clearTimeout(timer);
-  }, [experience, raceGateReady, startRequested]);
+  }, [raceGateReady, startRequested, experience, onlineSession]);
 
   // DATACAR V9.6: cápsulas educativas durante la carrera. Máximo una cada
   // 5,2 segundos, calculadas desde el auto real de esta partida, no desde
@@ -783,15 +1206,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     })();
 
     const scene = new THREE.Scene();
-    // Atmósfera de tarde clara para mostrar la pista y materiales en lugar de negro vacío.
-    scene.background = new THREE.Color('#8498a8');
-    scene.fog = new THREE.FogExp2('#8498a8', 0.0019);
 
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 500;
 
-    // FOV vertical calibrado (48° desktop, 58° TikTok 9:16)
-    const camera = new THREE.PerspectiveCamera(compact ? 58 : 48, width / height, 0.2, 900);
+    // FOV vertical calibrado y plano lejano extendido (1250m) para vista aérea tipo Dron
+    const camera = new THREE.PerspectiveCamera(compact ? 58 : 48, width / height, 0.2, 1250);
     camera.position.set(0, 3.2, -10.5);
 
     const renderer = new THREE.WebGLRenderer({
@@ -799,17 +1219,19 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
-    // El GLB segmentado aporta ~1,4 millones de tris por auto. Limitar DPR
-    // recorta carga de fragmentos y estabiliza FPS en PCs y modo TikTok.
-    const maxDpr = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, compact ? 1.0 : 1.3);
+    const maxDpr = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, compact ? 1.15 : 1.5);
     let renderDpr = maxDpr;
     renderer.setPixelRatio(renderDpr);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
-    // Las sombras de contacto ya están dibujadas bajo cada auto. Evitar
-    // renderizar tres carrocerías de alta densidad a un segundo shadow pass.
-    renderer.shadowMap.enabled = false;
+    renderer.toneMappingExposure = 1.08;
+
+    // Domo atmosférico hiperrealista (Rayleigh/Mie + nubes fBm) + mapa IBL exterior PMREM
+    // que da reflejos reales de cielo, sol y horizonte sobre la laca automotriz, vidrios y agua.
+    const hyperrealEnv = createHyperrealSkyAndIBL(renderer, scene);
+    const vehicleEnvTexture = hyperrealEnv.envMap;
+
+    renderer.shadowMap.enabled = !isSoftwareGl;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     container.innerHTML = '';
@@ -917,6 +1339,25 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       if ((experience !== 'race' && experience !== 'legacy') || isEditing(event.target) || event.altKey || event.ctrlKey || event.metaKey) return;
       const bounds = container.getBoundingClientRect();
       if (bounds.bottom < 0 || bounds.top > window.innerHeight) return;
+      if (event.code === 'KeyC') {
+        event.preventDefault();
+        soundEngine.unlock();
+        soundEngine.playSeatbeltClick();
+        physicsRef.current?.setSeatbeltBuckled(true);
+        setSeatbeltBuckled(true);
+        return;
+      }
+      const turnAction = mapKeyCodeToTurnSignalAction(event.code);
+      if (turnAction && experience === 'race') {
+        event.preventDefault();
+        const nextMode = applyTurnSignalAction(turnSignalRef.current.mode, turnAction);
+        const nowSec = performance.now() / 1000;
+        turnSignalRef.current = { mode: nextMode, activatedAtSec: nowSec };
+        setTurnSignalMode(nextMode);
+        const immediate = evaluateTurnSignalBlink(nextMode, nowSec, nowSec);
+        setTurnSignalBlinkHud({ leftLit: immediate.leftLit, rightLit: immediate.rightLit });
+        return;
+      }
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space'].includes(event.code)) {
         event.preventDefault();
         if (event.code === 'ArrowLeft') keyboardControlsRef.current.left = true;
@@ -949,41 +1390,68 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     window.addEventListener('keyup', keyUp);
     window.addEventListener('blur', releaseKeys);
 
-    // 2. Iluminación automotriz equilibrada
-    const hemiLight = new THREE.HemisphereLight('#dbeafe', '#5f655e', 1.15);
+    // 2. Iluminación exterior hiperrealista (contraste cálido solar vs relleno celeste hemisférico)
+    const sunnyAtm = getHyperrealAtmosphere('sunny');
+    const ambientLight = new THREE.AmbientLight('#dbeafe', sunnyAtm.ambientIntensity);
+    scene.add(ambientLight);
+
+    const hemiLight = new THREE.HemisphereLight(
+      sunnyAtm.hemiSkyHex,
+      sunnyAtm.hemiGroundHex,
+      sunnyAtm.hemiIntensity,
+    );
     scene.add(hemiLight);
 
-    const keyLight = new THREE.DirectionalLight('#ffffff', 2.1);
-    keyLight.position.set(25, 40, -15);
-    keyLight.castShadow = false;
+    const sunDirVec = new THREE.Vector3(sunnyAtm.sunDir[0], sunnyAtm.sunDir[1], sunnyAtm.sunDir[2]);
+    const keyLight = new THREE.DirectionalLight(sunnyAtm.sunLightHex, sunnyAtm.sunIntensity);
+    keyLight.position.copy(sunDirVec).multiplyScalar(55);
+    keyLight.castShadow = !isSoftwareGl;
+    if (!isSoftwareGl) {
+      keyLight.shadow.mapSize.set(1024, 1024);
+      keyLight.shadow.camera.near = 2;
+      keyLight.shadow.camera.far = 135;
+      keyLight.shadow.camera.left = -26;
+      keyLight.shadow.camera.right = 26;
+      keyLight.shadow.camera.top = 26;
+      keyLight.shadow.camera.bottom = -26;
+      keyLight.shadow.bias = -0.0005;
+      keyLight.shadow.normalBias = 0.02;
+    }
     scene.add(keyLight);
+    scene.add(keyLight.target);
 
-    const fillLight = new THREE.DirectionalLight('#94a3b8', 0.9);
-    fillLight.position.set(-25, 25, 20);
+    const fillLight = new THREE.DirectionalLight('#7dd3fc', 0.62);
+    fillLight.position.set(-28, 22, 24);
     scene.add(fillLight);
 
-    // 3. Trazado de asfalto tridimensional con carriles y bordillos
+    // 3. Trazado de asfalto tridimensional con carriles amplios en ambos sentidos (21m en modo carrera urbana)
     const trackLength = Math.max(track.distanceMeters + 120, 550);
-    const roadWidth = 14.0;
+    const roadWidth = experience === 'race' ? URBAN_ROAD_WIDTH : 14.0;
     const trackGroup = new THREE.Group();
 
-    // Superficie de asfalto con textura repetida
+    // Superficie de asfalto PBR con agregado mineral, micro-relieve y mapa de rugosidad de huella de neumáticos
     const roadCenterZ = trackLength / 2 - 20;
     const roadGeo = roadPath.isCurved
       ? makeCurvedAsphalt(roadPath, roadWidth, trackLength, [])
       : createDepressedRoadGeometry(roadWidth, trackLength, roadCenterZ, []);
     const roadTex = createAsphaltTexture();
+    const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy?.() || 4);
+    roadTex.anisotropy = maxAniso;
     roadTex.repeat.set(1, Math.round(trackLength / 18));
     const asphaltRelief = createAsphaltMicroRelief();
     asphaltRelief.repeat.copy(roadTex.repeat);
+    const asphaltRoughness = createAsphaltRoughnessTexture();
+    asphaltRoughness.repeat.copy(roadTex.repeat);
     const roadMat = new THREE.MeshStandardMaterial({
       map: roadTex,
       bumpMap: asphaltRelief,
-      bumpScale: .014,
+      bumpScale: 0.016,
+      roughnessMap: asphaltRoughness,
       color: track.routeHazardProfile === 'flood' ? '#8ea8b9'
-        : track.routeHazardProfile === 'cobbles' ? '#a6a3a7' : '#ffffff',
-      roughness: track.routeHazardProfile === 'flood' ? 0.48 : 0.85,
-      metalness: track.routeHazardProfile === 'flood' ? 0.2 : 0.1,
+        : track.routeHazardProfile === 'cobbles' ? '#b3b0b5' : '#ffffff',
+      roughness: track.routeHazardProfile === 'flood' ? 0.36 : 0.86,
+      metalness: track.routeHazardProfile === 'flood' ? 0.22 : 0.08,
+      envMapIntensity: 0.95,
     });
     const road = new THREE.Mesh(roadGeo, roadMat);
     if (!roadPath.isCurved) {
@@ -1027,8 +1495,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     const finishTex = createCheckeredFinishTexture();
     const finishLineMat = new THREE.MeshBasicMaterial({ map: finishTex });
     const finishLine = new THREE.Mesh(finishLineGeo, finishLineMat);
-    finishLine.rotation.x = -Math.PI / 2;
     const finalRoadPoint = roadPath.world(track.distanceMeters, 0);
+    finishLine.rotation.set(-Math.PI / 2, 0, -finalRoadPoint.yaw);
     finishLine.position.set(finalRoadPoint.x, 0.02, finalRoadPoint.z);
     trackGroup.add(finishLine);
 
@@ -1114,9 +1582,16 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       trackGroup.add(signGroup);
     });
 
-    // Señalización, veredas, árboles y fachadas urbanas de bajo coste GPU.
-    const urbanEnvironment = createUrbanTrackScenery(roadWidth, trackLength, track.routeHazardProfile, Boolean(track.cityCircuitId));
+    // Señalización, veredas, plazas de pasto, peatones 3D, Río Paraguay, Paseo La Galería y skyline de múltiples alturas.
+    const urbanEnvironment = createUrbanTrackScenery(
+      roadWidth,
+      trackLength,
+      track.routeHazardProfile,
+      Boolean(track.cityCircuitId),
+      track.cityCircuitId,
+    );
     bendRoadsideGroup(urbanEnvironment, roadPath);
+    urbanEnvironment.userData.initPedestrians?.(roadPath);
     trackGroup.add(urbanEnvironment);
     // V9.3: viaductos elevados ficticios, con publicidad aplicada a los parapetos.
     // Los apoyos están fuera de la calzada y no alteran la física.
@@ -1125,7 +1600,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       bendRoadsideGroup(viaducts, roadPath);
       trackGroup.add(viaducts);
     }
-    if (track.cityCircuitId) {
+    const isSpeedProRace = experience === 'race' && raceMode === 'speed_pro';
+    if (track.cityCircuitId && !isSpeedProRace) {
       const { speedBumps } = getAsuncionStreetDetails(track.routeHazardProfile, track.distanceMeters);
       const raisedBumps = createSpeedBumps3D(roadWidth, speedBumps);
       bendRoadsideGroup(raisedBumps, roadPath);
@@ -1136,13 +1612,63 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     const initialRoadColor = roadMat.color.clone();
     let lastWeatherApplied: WeatherMode | null = null;
 
-    // 3B. Modo de carrera interactiva: obstáculos con representación y colisión real.
+    // 3B. Modo de carrera interactiva: Fase 1 (ciudad con semáforos y peatones) o Fase 2 (velocidad pura sin obstáculos + IA élite).
+    const effectiveHazardsEnabled = hazardsEnabled && !isSpeedProRace;
     const racePhysics = interactiveMode
-      ? new InteractiveRacePhysics(vehicles, track, stateRef.current.selectedVehicleId, hazardsEnabled)
+      ? new InteractiveRacePhysics(vehicles, track, stateRef.current.selectedVehicleId, effectiveHazardsEnabled, {
+          urbanTrafficRules: experience === 'race' && !isSpeedProRace,
+          speedRaceMode: isSpeedProRace,
+          playerPayloadKg,
+        })
       : null;
     physicsRef.current = racePhysics;
     racePhysics?.setWeather(weatherModeRef.current);
     setHazardCount(racePhysics?.hazards.length ?? 0);
+    const urbanTrafficVisuals = racePhysics?.urbanRulesEnabled
+      ? createUrbanTrafficVisuals3D({
+          roadPath,
+          roadWidth,
+          trackDistanceMeters: track.distanceMeters,
+          laps: Math.max(1, track.laps ?? 1),
+          lights: racePhysics.trafficLights,
+          speedZones: racePhysics.speedZones,
+          oncomingCount: racePhysics.oncomingCars.length,
+          envMap: vehicleEnvTexture,
+        })
+      : null;
+    if (urbanTrafficVisuals) {
+      scene.add(urbanTrafficVisuals.group);
+      scene.add(urbanTrafficVisuals.splashGroup);
+    }
+    const streetCrossings = track.cityCircuitId
+      ? getAsuncionStreetDetails(track.routeHazardProfile, track.distanceMeters).crossings.map(c => c.z)
+      : [];
+    const centralMedianVisuals = createCentralMedianVisuals3D({
+      roadPath,
+      roadWidthM: roadWidth,
+      trackDistanceMeters: track.distanceMeters,
+      cityCircuitId: track.cityCircuitId,
+      routeHazardProfile: track.routeHazardProfile,
+      isDragStrip: !track.cityCircuitId || isSpeedProRace,
+      lights: racePhysics?.trafficLights ?? [],
+      crossingZs: streetCrossings,
+      hazardCenters: (racePhysics?.hazards ?? []).map(h => ({ x: h.x, z: h.z, radiusM: h.radius })),
+    });
+    scene.add(centralMedianVisuals.group);
+
+    let forwardMotorcycles: ForwardMotorcycleActor[] =
+      experience === 'race' && !isSpeedProRace && Boolean(track.cityCircuitId)
+        ? createForwardMotorcyclePool(track)
+        : [];
+    const forwardMotorcyclesVisuals = createForwardMotorcyclesVisuals3D({
+      roadPath,
+      actors: forwardMotorcycles,
+    });
+    scene.add(forwardMotorcyclesVisuals.group);
+
+    const digitalRearviewMirror =
+      experience === 'race' ? createDigitalRearviewMirror({ isSoftwareGl }) : null;
+
     const hazardsGroup = new THREE.Group();
     hazardsGroup.name = 'obstaculos_fisicos';
     trackGroup.add(hazardsGroup);
@@ -1203,7 +1729,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       if (!activePhysics || !hazardsEnabled) return;
       const player = activePhysics.getCar(stateRef.current.selectedVehicleId);
       const ahead = (player?.z || 0) + Math.max(35, (player?.speed || 12) * 1.6);
-      const x = player ? Math.max(-4.8, Math.min(4.8, player.x + (kind === 'pothole' ? 0 : 2.6))) : 0;
+      const maxEditX = activePhysics.urbanRulesEnabled ? -1.2 : 4.8;
+      const minEditX = activePhysics.urbanRulesEnabled ? -(activePhysics.roadHalfWidth - 1.5) : -4.8;
+      const x = player ? Math.max(minEditX, Math.min(maxEditX, player.x + (kind === 'pothole' ? 0 : -2.4))) : -4.2;
       placeHazardAtRef.current?.(kind, x, ahead);
     };
 
@@ -1250,12 +1778,25 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           console.error(err);
           setGlbLoadError(`No se pudo cargar el modelo 3D de ${vehicle.name}`);
           setIsGlbLoading(false);
-        }
+        },
+        vehicleEnvTexture
       );
       entity.setNameplateVisible(stateRef.current.showVehicleLabels);
       scene.add(entity.group);
       vehicleEntities.push(entity);
     });
+
+    // Entidades 3D en tiempo real para rivales humanos conectados en línea por WebSocket
+    const onlinePeerEntities = new Map<
+      string,
+      {
+        entity: VehicleEntityRunner;
+        smoothX: number;
+        smoothZ: number;
+        smoothYaw: number;
+      }
+    >();
+    let arrestTriggered = false;
 
     // Director TV: cobertura de varias cámaras con corte frontal de llegada.
     let directorShot: DirectorShot | null = null;
@@ -1263,7 +1804,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     let lastAutoMode = stateRef.current.cameraMode;
 
     // Loop de animación y sincronización física-visual ultrafluida
-    let animationFrameId: number;
+    let animationFrameId = 0;
+    let softwareGlTimerId = 0;
     let sceneReadyReported = false;
     let lastTime = performance.now();
     let lastUiSyncTime = performance.now();
@@ -1299,12 +1841,23 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       lastImpacts.clear();
       lastBumps.clear();
       skidMarks.instanceMatrix.needsUpdate = true;
+      if (forwardMotorcycles.length > 0) {
+        const freshMotos = createForwardMotorcyclePool(track);
+        for (let i = 0; i < Math.min(forwardMotorcycles.length, freshMotos.length); i++) {
+          Object.assign(forwardMotorcycles[i], freshMotos[i]);
+        }
+        forwardMotorcyclesVisuals.update(forwardMotorcycles);
+      }
     };
+
+    let ambientCityTimeSec = 0;
+    let droneFlyoverSec = 0;
 
     const tick = (now: number) => {
       // Evitar deltas negativos y saltos tras cambiar de pestaña/GPU stall.
       const dt = Math.min(Math.max((now - lastTime) / 1000, 0), 0.05);
       lastTime = now;
+      ambientCityTimeSec += dt;
 
       // Cálculo de métricas de rendimiento (GPU / Engine)
       frameCount++;
@@ -1412,19 +1965,65 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             soundEngine.playSuspensionHit(.28 + ownSuspension.impact * .72);
             lastRoadImpactAudioAt = livePhysics.time;
           }
+          if (livePhysics.lastWetSplash && livePhysics.lastWetSplash.seq !== lastSplashSeqRef.current) {
+            const splash = livePhysics.lastWetSplash;
+            lastSplashSeqRef.current = splash.seq;
+            const wp = roadPath.world(splash.z, splash.x);
+            urbanTrafficVisuals?.triggerSplash(wp.x, wp.z, splash.intensity);
+            if (splash.carId === selectedVehicleId) {
+              soundEngine.playWaterSplash(splash.intensity);
+              setSplashHudActive(true);
+              if (splashTimeoutRef.current !== null) clearTimeout(splashTimeoutRef.current);
+              splashTimeoutRef.current = setTimeout(() => setSplashHudActive(false), 780);
+            }
+          }
           stateRef.current.currentTimeSec = livePhysics.time;
+
+          // Emitir telemetría local a 20 Hz si estamos en carrera multijugador en línea
+          if (onlineSession && experience === 'race') {
+            const ownLive = livePhysics.getCar(selectedVehicleId);
+            if (ownLive) {
+              multiplayerClient.sendLocalCarState({
+                x: ownLive.x,
+                z: ownLive.z,
+                yaw: ownLive.yaw,
+                speed: ownLive.speed,
+                steer: ownLive.steer,
+                braking: ownLive.braking,
+              });
+            }
+          }
+
+          // Sanción inmediata: atropello a peatón en franja peatonal -> detención policial y 2 minutos de cárcel
+          if (livePhysics.pedestrianArrest && !arrestTriggered) {
+            arrestTriggered = true;
+            stateRef.current.isPlaying = false;
+            stateRef.current.hasFinished = true;
+            setIsPlaying(false);
+            setHasFinished(true);
+            soundEngine.stopAll(0.05);
+            soundEngine.playPoliceSiren();
+            triggerPedestrianArrest(track.name);
+            if (onlineSession) {
+              multiplayerClient.reportFinish(livePhysics.time, true);
+            }
+            onPedestrianArrest?.(livePhysics.pedestrianArrest);
+          }
         } else {
           stateRef.current.currentTimeSec += dt * playbackSpeed;
         }
         const raceDone = livePhysics ? (experience === 'race' ? livePhysics.playerFinished : livePhysics.finished) :
           stateRef.current.currentTimeSec >= maxRaceTimeSec + 0.5;
-        if (raceDone && !stateRef.current.hasFinished) {
+        if (raceDone && !stateRef.current.hasFinished && !arrestTriggered) {
           if (!livePhysics) stateRef.current.currentTimeSec = maxRaceTimeSec;
           stateRef.current.isPlaying = false;
           stateRef.current.hasFinished = true;
           setIsPlaying(false);
           setHasFinished(true);
           if (livePhysics) finalResultsRef.current = livePhysics.makeResults(simulationResults);
+          if (onlineSession) {
+            multiplayerClient.reportFinish(livePhysics?.time ?? stateRef.current.currentTimeSec, false);
+          }
           if (experience === 'race') {
             finishCinematicStartedAt = now;
             const finishedEntity = vehicleEntities.find(e => e.vehicle.id === stateRef.current.selectedVehicleId);
@@ -1461,9 +2060,77 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               state.lastDistance=player.z;
               if(state.seconds>=6){setStuckInPothole(true);setIsPlaying(false);stateRef.current.isPlaying=false;}
             }
+            if (player && experience === 'race') {
+              const openedNow = reportSimulationFrame({
+                isRaceActive: experience === 'race',
+                isPaused: !stateRef.current.isPlaying || mobileMenuOpenRef.current,
+                isLoading: isPreloadingRef.current,
+                isCountdown: stateRef.current.countdown !== null,
+                isFinished: Boolean(livePhysics.playerFinished || stateRef.current.hasFinished),
+                isDocumentHidden: typeof document !== 'undefined' ? document.hidden : false,
+                hasMovementIntent: Boolean(steeringKeysRef.current.throttle || steeringKeysRef.current.reverse),
+                positionX: player.x,
+                positionZ: player.z,
+                speedKmh: Math.abs(player.speed) * 3.6,
+                dtSeconds: uiDeltaSeconds,
+              });
+              if (openedNow) {
+                setIsPlaying(false);
+                stateRef.current.isPlaying = false;
+              }
+              const adasTargets = [
+                ...livePhysics.cars
+                  .filter(c => c.id !== selectedVehicleId)
+                  .map(c => ({
+                    id: c.id,
+                    kind: 'vehicle' as const,
+                    x: c.x,
+                    z: c.z,
+                    longitudinalSpeedMps: c.speed,
+                    lengthM: (c.vehicle.dimensions?.lengthMm || 4300) / 1000,
+                    widthM: (c.vehicle.dimensions?.widthMm || 1800) / 1000,
+                  })),
+                ...forwardMotorcycles.map(m => ({
+                  id: m.id,
+                  kind: 'motorcycle' as const,
+                  x: m.x,
+                  z: m.z,
+                  longitudinalSpeedMps: m.speedMps,
+                  lengthM: m.lengthM,
+                  widthM: m.widthM,
+                })),
+              ];
+              setAdasReadout(
+                evaluateAdasHudReadout({
+                  vehicle: player.vehicle,
+                  playerX: player.x,
+                  playerZ: player.z,
+                  playerSpeedKmh: Math.abs(player.speed) * 3.6,
+                  solverAebActive: player.aebActive,
+                  solverFcwWarning: player.fcwWarning,
+                  targets: adasTargets,
+                }),
+              );
+            }
             setPotholeWarning(player && !livePhysics.playerFinished
               ? findUpcomingPothole(livePhysics.hazards, player, player.vehicle.dimensions.widthMm / 1000)
               : null);
+            if (livePhysics.urbanRulesEnabled && player && !livePhysics.playerFinished) {
+              setSeatbeltBuckled(livePhysics.seatbeltBuckled);
+              setActiveSpeedZone(livePhysics.getActiveSpeedZone(player.z));
+              setUpcomingTrafficLight(livePhysics.getUpcomingTrafficLight(player.z, 135));
+              setBlindSpotState(livePhysics.getBlindSpotState(selectedVehicleId));
+              const notice = livePhysics.lastTrafficNotice;
+              if (notice && notice.seq !== lastNoticeSeqRef.current) {
+                lastNoticeSeqRef.current = notice.seq;
+                setTrafficNotice(notice);
+                if (notice.kind === 'penalty' || notice.kind === 'warning') {
+                  soundEngine.playTrafficWarningTone(notice.kind === 'penalty');
+                }
+              } else if (notice && livePhysics.time - notice.createdAtSec > 4.2) {
+                setTrafficNotice(prev => (prev?.seq === notice.seq ? null : prev));
+              }
+            }
             const snapshot: typeof liveVehicleStates = {};
             for (const car of livePhysics.cars) {
               const kmh = Math.abs(car.speed) * 3.6;
@@ -1507,21 +2174,46 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               lastBumps.set(car.id, car.pothole);
             }
             setLiveVehicleStates(snapshot);
+            if (onlineSession) {
+              setOnlinePeersHud(
+                Array.from(multiplayerClient.peers.values()).map((p) => ({
+                  id: `online_${p.clientId}`,
+                  pilotName: p.pilotName,
+                  distance: p.z,
+                  lateralX: p.x,
+                })),
+              );
+            }
           }
           lastUiSyncTime = now;
         }
-        vehicles.forEach(v => {
-          const liveCar = livePhysics?.getCar(v.id);
-          const st = liveCar ? {
-            rpm: Math.round(liveCar.engineRpm),
-            speedKmh: Math.abs(liveCar.speed) * 3.6, isBraking: liveCar.braking,
-            brakeIntensity: liveCar.brakeIntensity, absActive: liveCar.absActive, brakeSlip: liveCar.brakeSlip,
-          } : getInterpolatedVehicleState(v.id, stateRef.current.currentTimeSec);
-          soundEngine.updateTelemetry(v, st.rpm, st.speedKmh, st.isBraking, v.id === selectedVehicleId,
-            liveCar?.slip ?? 0, v.id === selectedVehicleId && steeringKeysRef.current.throttle ? 1 : 0,
-            st.brakeIntensity, st.absActive, st.brakeSlip);
-        });
-      } else if (!stateRef.current.hasFinished) {
+        if (!stateRef.current.hasFinished && !arrestTriggered) {
+          vehicles.forEach(v => {
+            const liveCar = livePhysics?.getCar(v.id);
+            const st = liveCar ? {
+              rpm: Math.round(liveCar.engineRpm),
+              speedKmh: Math.abs(liveCar.speed) * 3.6, isBraking: liveCar.braking,
+              brakeIntensity: liveCar.brakeIntensity, absActive: liveCar.absActive, brakeSlip: liveCar.brakeSlip,
+            } : getInterpolatedVehicleState(v.id, stateRef.current.currentTimeSec);
+            soundEngine.updateTelemetry(v, st.rpm, st.speedKmh, st.isBraking, v.id === selectedVehicleId,
+              liveCar?.slip ?? 0, v.id === selectedVehicleId && steeringKeysRef.current.throttle ? 1 : 0,
+              st.brakeIntensity, st.absActive, st.brakeSlip);
+          });
+        }
+      } else if (!stateRef.current.hasFinished && !arrestTriggered) {
+        // Antes de largar (durante el vuelo de cámara Dron sobre la ciudad), el tránsito 3D
+        // de mano contraria circula normalmente respetando semáforos sin alterar la carrera.
+        if (livePhysics?.urbanRulesEnabled && experience === 'race') {
+          stepOncomingTraffic(
+            livePhysics.oncomingCars,
+            livePhysics.trafficLights,
+            livePhysics.speedZones,
+            ambientCityTimeSec,
+            dt,
+            0,
+            track.distanceMeters,
+          );
+        }
         vehicles.forEach(v => soundEngine.updateTelemetry(v, 900, 0, false, false));
       }
 
@@ -1575,6 +2267,16 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         entity.setNameplateVisible(stateRef.current.showVehicleLabels);
         entity.setHeadlights(stateRef.current.headlightsOn,
           entity.vehicle.id === stateRef.current.selectedVehicleId);
+        if (entity.vehicle.id === stateRef.current.selectedVehicleId) {
+          const sigBlink = evaluateTurnSignalBlink(
+            turnSignalRef.current.mode,
+            now / 1000,
+            turnSignalRef.current.activatedAtSec,
+          );
+          entity.setTurnSignals?.(sigBlink.leftLit, sigBlink.rightLit);
+        } else {
+          entity.setTurnSignals?.(false, false);
+        }
         if (state.distance < minZ) minZ = state.distance;
         if (state.distance > maxZ) {
           maxZ = state.distance;
@@ -1584,6 +2286,71 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         sumZ += state.distance;
         sumX += entity.group.position.x;
       });
+
+      // Actualizar rivales humanos en línea (WebSocket 20 Hz + extrapolación suave en 3D)
+      if (onlineSession && experience === 'race') {
+        for (const [peerId, peer] of multiplayerClient.peers.entries()) {
+          let record = onlinePeerEntities.get(peerId);
+          if (!record) {
+            const peerCarSpec =
+              PRESET_VEHICLES.find((v) => v.id === peer.vehicleId) ||
+              vehicles[0] ||
+              PRESET_VEHICLES[0];
+            const peerEntity = createVehicleEntity(
+              peerCarSpec,
+              0,
+              1,
+              undefined,
+              undefined,
+              vehicleEnvTexture,
+              `ONLINE · ${peer.pilotName}`,
+            );
+            peerEntity.setHeadlights(true, false);
+            peerEntity.setNameplateVisible(true);
+            scene.add(peerEntity.group);
+            record = {
+              entity: peerEntity,
+              smoothX: peer.x,
+              smoothZ: peer.z,
+              smoothYaw: peer.yaw,
+            };
+            onlinePeerEntities.set(peerId, record);
+          }
+          const ageSec = Math.min(0.25, Math.max(0, (performance.now() - peer.updatedAtMs) / 1000));
+          const predictedZ = peer.finished ? peer.z : peer.z + peer.speed * ageSec;
+          record.smoothX = THREE.MathUtils.damp(record.smoothX, peer.x, 14, dt);
+          record.smoothZ = THREE.MathUtils.damp(record.smoothZ, predictedZ, 14, dt);
+          record.smoothYaw = THREE.MathUtils.damp(record.smoothYaw, peer.yaw, 14, dt);
+          record.entity.updateState(
+            record.smoothZ,
+            Math.abs(peer.speed) * 3.6,
+            0,
+            peer.braking,
+            camera.position,
+            false,
+            -peer.steer,
+            dt,
+            {
+              x: record.smoothX,
+              z: record.smoothZ,
+              yaw: record.smoothYaw,
+              slip: 0,
+              bump: 0,
+            },
+          );
+          const peerGlobal = roadPath.world(record.smoothZ, record.smoothX);
+          record.entity.group.position.x = peerGlobal.x;
+          record.entity.group.position.z = peerGlobal.z;
+          record.entity.group.rotation.y += peerGlobal.yaw;
+        }
+        for (const [peerId, record] of onlinePeerEntities.entries()) {
+          if (!multiplayerClient.peers.has(peerId)) {
+            scene.remove(record.entity.group);
+            record.entity.dispose();
+            onlinePeerEntities.delete(peerId);
+          }
+        }
+      }
 
       // Travelling de llegada: el vehículo avanza despacio después de cruzar meta,
       // sin reescribir física ni telemetría. La cámara frontal lo sigue.
@@ -1610,14 +2377,27 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       const selectedEntity = vehicleEntities.find(e => e.vehicle.id === selectedVehicleId);
       const selectedX = selectedEntity?.group.position.x ?? avgX;
 
-      // DIRECTOR CINEMATOGRÁFICO: planos de salida, persecución,
-      // laterales cruzados, helicóptero y frontal fija de llegada.
+      // DIRECTOR CINEMATOGRÁFICO: cámara aérea tipo Dron previa a iniciar + planos de carrera y llegada.
       const finishDist = track.distanceMeters;
       const automaticDirector = cameraMode === 'automatica';
       if (automaticDirector) directorShot = chooseDirectorShot(leaderDist, finishDist);
-      // La toma frontal de META es un cierre del juego, NO Director TV en vivo.
       const isFinishCinematic = experience === 'race' && stateRef.current.hasFinished;
-      const effectiveShot = isFinishCinematic ? 'frontal_meta' : (automaticDirector ? directorShot! : cameraMode);
+      const isPreStartDrone =
+        experience === 'race' &&
+        !stateRef.current.hasFinished &&
+        (!isPlaying || countdown !== null);
+      if (isPreStartDrone) {
+        droneFlyoverSec += dt;
+      } else {
+        droneFlyoverSec = 0;
+      }
+      const effectiveShot = isFinishCinematic
+        ? 'frontal_meta'
+        : isPreStartDrone
+          ? 'dron_prestart'
+          : automaticDirector
+            ? directorShot!
+            : cameraMode;
       if (lastAutoMode !== cameraMode) {
         previousEffectiveShot = null;
         lastAutoMode = cameraMode;
@@ -1627,19 +2407,96 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
       let targetSmoothRate = 10;
       let wantedFov = compact ? 58 : 48;
-      const broadcastSide = roadWidth * 0.5 + (compact ? 4.5 : 6);
       const selectedZ = selectedEntity?.group.position.z ?? centerZ;
+      const selectedTrackS = livePhysics?.getCar(selectedVehicleId)?.z ?? centerZ;
       const currentWeather = weatherModeRef.current;
-      weatherVisuals.update(currentWeather, dt, selectedX, selectedZ);
+      const stormStep = weatherVisuals.update(currentWeather, dt, selectedX, selectedZ);
+      hyperrealEnv.update(currentWeather, camera.position, ambientCityTimeSec, stormStep.flashIntensity);
+      if (stormStep.triggeredStrike && !stateRef.current.hasFinished) {
+        soundEngine.playThunder(stormStep.triggeredStrike.proximity01);
+      }
+      const atm = getHyperrealAtmosphere(currentWeather);
       if (currentWeather !== lastWeatherApplied) {
         lastWeatherApplied = currentWeather;
+        sunDirVec.set(atm.sunDir[0], atm.sunDir[1], atm.sunDir[2]);
+        keyLight.color.set(atm.sunLightHex);
+        keyLight.intensity = atm.sunIntensity;
+        hemiLight.color.set(atm.hemiSkyHex);
+        hemiLight.groundColor.set(atm.hemiGroundHex);
+        hemiLight.intensity = atm.hemiIntensity;
+        ambientLight.intensity = atm.ambientIntensity;
+        fillLight.intensity = currentWeather === 'storm' || currentWeather === 'flood' ? 0.34 : 0.52;
+        renderer.toneMappingExposure = atm.exposure;
+
         const wet = WEATHER_CONFIG[currentWeather].roadWetness;
-        roadMat.roughness = THREE.MathUtils.lerp(.87, .42, wet);
-        roadMat.metalness = THREE.MathUtils.lerp(.04, .15, wet);
-        roadMat.color.copy(initialRoadColor).lerp(new THREE.Color('#556575'), wet * .57);
-        keyLight.intensity = currentWeather === 'storm' || currentWeather === 'flood' ? 1.25 : 2.1;
-        hemiLight.intensity = currentWeather === 'storm' || currentWeather === 'flood' ? .82 : 1.15;
+        roadMat.roughness = THREE.MathUtils.lerp(0.86, 0.24, wet);
+        roadMat.metalness = THREE.MathUtils.lerp(0.08, 0.26, wet);
+        roadMat.envMapIntensity = THREE.MathUtils.lerp(0.95, 1.55, wet);
+        roadMat.color.copy(initialRoadColor).lerp(new THREE.Color('#5a6b7c'), wet * 0.48);
         roadMat.needsUpdate = true;
+      }
+      if (currentWeather === 'storm') {
+        const flash = stormStep.flashIntensity;
+        keyLight.intensity = atm.sunIntensity + flash * 2.85;
+        hemiLight.intensity = atm.hemiIntensity + flash * 1.15;
+        renderer.toneMappingExposure = atm.exposure + flash * 0.24;
+      }
+      // Seguir al vehículo protagonista con el frustum solar para sombras nítidas todo el recorrido
+      keyLight.target.position.set(selectedX, 0, selectedZ);
+      keyLight.position.set(
+        selectedX + sunDirVec.x * 55,
+        sunDirVec.y * 55,
+        selectedZ + sunDirVec.z * 55,
+      );
+      urbanEnvironment.userData.updateScenery?.(ambientCityTimeSec, selectedTrackS, roadPath);
+      const activeUrbanPhysics = interactiveMode ? physicsRef.current : null;
+      const isAerialDroneShot = effectiveShot === 'dron' || effectiveShot === 'dron_prestart';
+      urbanTrafficVisuals?.update(
+        isPlaying ? (activeUrbanPhysics?.time ?? stateRef.current.currentTimeSec) : ambientCityTimeSec,
+        dt,
+        activeUrbanPhysics?.oncomingCars ?? [],
+        selectedTrackS,
+        isAerialDroneShot,
+      );
+      if (forwardMotorcycles.length > 0 && activeUrbanPhysics) {
+        const ownMotoRef = activeUrbanPhysics.getCar(selectedVehicleId);
+        if (isPlaying && countdown === null && !stateRef.current.hasFinished) {
+          stepForwardMotorcycles({
+            motorcycles: forwardMotorcycles,
+            lights: activeUrbanPhysics.trafficLights,
+            speedZones: activeUrbanPhysics.speedZones,
+            forwardCars: activeUrbanPhysics.cars
+              .filter(c => c.id !== selectedVehicleId)
+              .map(c => ({
+                id: c.id,
+                x: c.x,
+                z: c.z,
+                speedMps: c.speed,
+                lengthM: (c.vehicle.dimensions?.lengthMm || 4300) / 1000,
+                widthM: (c.vehicle.dimensions?.widthMm || 1800) / 1000,
+              })),
+            playerX: ownMotoRef?.x ?? -4.2,
+            playerZ: ownMotoRef?.z ?? 0,
+            playerSpeedMps: Math.max(0, ownMotoRef?.speed ?? 0),
+            timeSec: activeUrbanPhysics.time,
+            dt: dt * playbackSpeed,
+            trackDistanceM: track.distanceMeters,
+          });
+        } else if (!stateRef.current.hasFinished) {
+          stepForwardMotorcycles({
+            motorcycles: forwardMotorcycles,
+            lights: activeUrbanPhysics.trafficLights,
+            speedZones: activeUrbanPhysics.speedZones,
+            forwardCars: [],
+            playerX: ownMotoRef?.x ?? -4.2,
+            playerZ: ownMotoRef?.z ?? 0,
+            playerSpeedMps: 0,
+            timeSec: ambientCityTimeSec,
+            dt,
+            trackDistanceM: track.distanceMeters,
+          });
+        }
+        forwardMotorcyclesVisuals.update(forwardMotorcycles);
       }
 
       switch (effectiveShot) {
@@ -1737,15 +2594,19 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           const rightZ = -Math.sin(yaw);
           const forwardX = Math.sin(yaw);
           const forwardZ = Math.cos(yaw);
-          const sideDistance = compact ? 8.2 : 9.4;
+          const nearStartGantry = Math.abs(selectedZ) < 6 && Math.abs(selectedX) < 12;
+          const sideDistance = nearStartGantry ? (compact ? 6.8 : 7.6) : (compact ? 8.2 : 9.4);
           targetSmoothRate = 9.2;
           wantedFov = compact ? 51 : 46;
+          // Si el auto está en la grilla de largada, colocar la cámara TV delante del pórtico
+          // de salida (z=0) en ángulo 3/4 lateral-frontal sin que la columna oculte los autos.
+          const forwardLead = nearStartGantry ? 3.8 : -2.2;
           _desiredCamPos.set(
-            selectedX + side * rightX * sideDistance - forwardX * 2.2,
-            compact ? 2.55 : 2.75,
-            selectedZ + side * rightZ * sideDistance - forwardZ * 2.2,
+            selectedX + side * rightX * sideDistance + forwardX * forwardLead,
+            compact ? 2.45 : 2.65,
+            selectedZ + side * rightZ * sideDistance + forwardZ * forwardLead,
           );
-          _camTarget.set(selectedX + forwardX * 0.7, 1.35, selectedZ + forwardZ * 0.7);
+          _camTarget.set(selectedX + forwardX * 0.5, 1.18, selectedZ + forwardZ * 0.5);
           break;
         }
         case 'cenital':
@@ -1770,6 +2631,46 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             0.9,
             selectedZ + forwardZ * ahead,
           );
+          break;
+        }
+        case 'dron_prestart': {
+          // Cámara de dirección tipo DRON antes de largar: sobrevuela Asunción mostrando
+          // skyline de distintas alturas, plazas de pasto, peatones, tránsito 3D y el Río Paraguay,
+          // y en el último segundo ("1") desciende con suavidad detrás del SUV del jugador.
+          if (countdown === 1) {
+            const carYaw = selectedEntity?.group.rotation.y ?? roadPath.at(0).yaw;
+            const fx = Math.sin(carYaw);
+            const fz = Math.cos(carYaw);
+            targetSmoothRate = 9.5;
+            wantedFov = compact ? 61 : 57;
+            _desiredCamPos.set(selectedX - fx * 7.4 - 1.2, 3.4, selectedZ - fz * 7.4);
+            _camTarget.set(selectedX + fx * 9, 1.35, selectedZ + fz * 9);
+          } else {
+            const sweepPhase = Math.min(1, droneFlyoverSec / 3.8);
+            const camS = THREE.MathUtils.lerp(132, 64, sweepPhase);
+            const camLat = THREE.MathUtils.lerp(-38, -22, sweepPhase) + Math.sin(droneFlyoverSec * 0.55) * 4.5;
+            const camAlt = THREE.MathUtils.lerp(52, 35, sweepPhase);
+            const droneWorld = roadPath.world(camS, camLat);
+            const lookS = THREE.MathUtils.lerp(62, 24, sweepPhase);
+            // Apuntar ligeramente hacia +X para encuadrar avenida doble mano + skyline + Río Paraguay
+            const lookLat = THREE.MathUtils.lerp(24, 6, sweepPhase);
+            const lookWorld = roadPath.world(lookS, lookLat);
+            targetSmoothRate = droneFlyoverSec < 0.12 ? 20 : 2.4;
+            wantedFov = compact ? 62 : 54;
+            _desiredCamPos.set(droneWorld.x, camAlt, droneWorld.z);
+            _camTarget.set(lookWorld.x, THREE.MathUtils.lerp(5.5, 2.2, sweepPhase), lookWorld.z);
+          }
+          break;
+        }
+        case 'dron': {
+          // Cámara aérea tipo Dron durante la carrera: gran plano elevado mostrando ciudad, parques y Río Paraguay
+          const sNow = livePhysics?.getCar(selectedVehicleId)?.z ?? centerZ;
+          const droneCam = roadPath.world(sNow - 24, -20);
+          const droneLook = roadPath.world(sNow + 36, 12);
+          targetSmoothRate = 5.8;
+          wantedFov = compact ? 60 : 52;
+          _desiredCamPos.set(droneCam.x, compact ? 34 : 38, droneCam.z);
+          _camTarget.set(droneLook.x, 2.4, droneLook.z);
           break;
         }
         case 'libre': {
@@ -1821,7 +2722,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       // Director TV opera en posiciones globales. Sus planos procedentes del
       // antiguo eje Z se reorientan sobre la tangente del circuito curvo.
       // Arcade, tercera persona y libre ya utilizan la posición mundial del GLB.
-      if (roadPath.isCurved && !(isFinishCinematic && effectiveShot === 'frontal_meta') && !['arcade', 'trasera', 'libre', 'lateral', 'lateral_izquierda', 'lateral_derecha', 'cenital', 'cenital_dinamica'].includes(effectiveShot)) {
+      if (roadPath.isCurved && !(isFinishCinematic && effectiveShot === 'frontal_meta') && !['arcade', 'trasera', 'libre', 'lateral', 'lateral_izquierda', 'lateral_derecha', 'cenital', 'cenital_dinamica', 'dron', 'dron_prestart'].includes(effectiveShot)) {
         const frameX = roadPath.at(centerZ).x;
         const cameraAt = roadPath.world(_desiredCamPos.z, _desiredCamPos.x - frameX);
         const targetAt = roadPath.world(_camTarget.z, _camTarget.x - frameX);
@@ -1842,9 +2743,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         _camTarget.set(selectedX + fx * 5, 1.2, selectedZ + fz * 5);
       }
 
-      // Cortes de televisión auténticos. El damping entre cámaras opuestas
-      // cruzaba la pista y daba la impresión de saltos y colisiones.
-      const cut = previousEffectiveShot !== effectiveShot;
+      // Cortes de televisión auténticos, salvo la transición fluida del Dron previo hacia cámara Arcade al largar.
+      const smoothDroneHandoff = previousEffectiveShot === 'dron_prestart' && effectiveShot === 'arcade';
+      const cut = previousEffectiveShot !== effectiveShot && !smoothDroneHandoff;
       if (cut) {
         camera.position.copy(_desiredCamPos);
         _smoothedCamTarget.copy(_camTarget);
@@ -1852,9 +2753,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         camera.fov = wantedFov;
         camera.updateProjectionMatrix();
         previousEffectiveShot = effectiveShot;
-      } else if (Math.abs(camera.fov - wantedFov) > 0.02) {
-        camera.fov = THREE.MathUtils.damp(camera.fov, wantedFov, 5, dt);
-        camera.updateProjectionMatrix();
+      } else {
+        if (smoothDroneHandoff && (camera.position.y > 7.5 || camera.position.z > selectedZ + 1.5)) {
+          const carYaw = selectedEntity?.group.rotation.y ?? 0;
+          const fx = Math.sin(carYaw);
+          const fz = Math.cos(carYaw);
+          camera.position.set(selectedX - fx * 8.2, 3.1, selectedZ - fz * 8.2);
+          _smoothedCamTarget.copy(_camTarget);
+          cameraTargetInitialized = true;
+        }
+        previousEffectiveShot = effectiveShot;
+        if (Math.abs(camera.fov - wantedFov) > 0.02) {
+          camera.fov = THREE.MathUtils.damp(camera.fov, wantedFov, 5, dt);
+          camera.updateProjectionMatrix();
+        }
       }
 
       // AMORTIGUACIÓN ESTABLE E INDEPENDIENTE DE FPS: factor = 1 - exp(-lambda * dt)
@@ -1874,9 +2786,69 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       }
       camera.lookAt(_smoothedCamTarget);
 
+      if (
+        digitalRearviewMirror &&
+        selectedEntity &&
+        showRearviewMirrorRef.current &&
+        !stateRef.current.hasFinished &&
+        !isPreloadingRef.current
+      ) {
+        const prevPlayerVis = selectedEntity.group.visible;
+        digitalRearviewMirror.renderFrame({
+          renderer,
+          scene,
+          targetCanvas: rearviewCanvasRef.current,
+          leftCanvas: leftMirrorCanvasRef.current,
+          rightCanvas: rightMirrorCanvasRef.current,
+          showSideMirrors: showSideMirrorsRef.current,
+          vehicleWorldX: selectedEntity.group.position.x,
+          vehicleWorldY: selectedEntity.group.position.y,
+          vehicleWorldZ: selectedEntity.group.position.z,
+          vehicleYawRad: selectedEntity.group.rotation.y,
+          elapsedSec: ambientCityTimeSec,
+          enabled: showRearviewMirrorRef.current,
+          beforeRender: () => {
+            selectedEntity.group.visible = false;
+          },
+          afterRender: () => {
+            selectedEntity.group.visible = prevPlayerVis;
+          },
+        });
+      }
+
       renderer.render(scene, camera);
       if (!sceneReadyReported) { sceneReadyReported = true; setVisualReady(true); }
-      animationFrameId = requestAnimationFrame(tick);
+      if (isSoftwareGl) {
+        afterDraw(() => {
+          if (!sceneDisposed) animationFrameId = requestAnimationFrame(tick);
+        });
+      } else {
+        animationFrameId = requestAnimationFrame(tick);
+      }
+    };
+
+    const afterDraw = (cb: () => void) => {
+      const gl = renderer.getContext() as WebGL2RenderingContext;
+      if (!gl || typeof gl.fenceSync !== 'function') {
+        softwareGlTimerId = window.setTimeout(cb, 80);
+        return;
+      }
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      const poll = () => {
+        if (sceneDisposed) {
+          if (sync) gl.deleteSync(sync);
+          return;
+        }
+        const state = sync && gl.getSyncParameter(sync, gl.SYNC_STATUS);
+        if (state === gl.UNSIGNALED) {
+          softwareGlTimerId = window.setTimeout(poll, 5);
+        } else {
+          if (sync) gl.deleteSync(sync);
+          softwareGlTimerId = window.setTimeout(cb, 80);
+        }
+      };
+      softwareGlTimerId = window.setTimeout(poll, 5);
     };
 
     animationFrameId = requestAnimationFrame(tick);
@@ -1900,6 +2872,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
     return () => {
       sceneDisposed = true;
       cancelAnimationFrame(animationFrameId);
+      clearTimeout(softwareGlTimerId);
+      soundEngine.stopAll(0.03);
       window.removeEventListener('resize', handleResize);
       viewportResizeObserver?.disconnect();
       renderer.domElement.removeEventListener('pointerdown', pointerDown);
@@ -1920,6 +2894,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       placeHazardAtRef.current = null;
       resetVisualRaceRef.current = null;
       vehicleEntities.forEach((ent) => ent.dispose());
+      onlinePeerEntities.forEach((rec) => {
+        scene.remove(rec.entity.group);
+        rec.entity.dispose();
+      });
+      onlinePeerEntities.clear();
       skidGeometry.dispose();
       skidMaterial.dispose();
       hazardGeometry.dispose();
@@ -1929,6 +2908,14 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       potholeVisualKit.dispose();
       urbanEnvironment.userData.disposeTextureMaps?.();
       weatherVisuals.dispose();
+      if (splashTimeoutRef.current !== null) {
+        clearTimeout(splashTimeoutRef.current);
+        splashTimeoutRef.current = null;
+      }
+      urbanTrafficVisuals?.dispose();
+      centralMedianVisuals.dispose();
+      forwardMotorcyclesVisuals.dispose();
+      digitalRearviewMirror?.dispose();
       roadTex.dispose();
       kerbTex.dispose();
       trackGroup.traverse((obj) => {
@@ -1946,9 +2933,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         }
       });
       asphaltRelief.dispose();
+      asphaltRoughness.dispose();
+      hyperrealEnv.dispose();
       renderer.dispose();
     };
-  }, [track.id, vehicles, compact, track.distanceMeters, interactiveMode, hazardsEnabled, experience, replayHazards, roadPath]);
+  }, [track.id, vehicles, compact, track.distanceMeters, interactiveMode, hazardsEnabled, experience, replayHazards, roadPath, raceMode, onlineSession, playerPayloadKg]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (interactiveMode) return; // No se puede retroceder una simulación física acumulativa.
@@ -1967,6 +2956,46 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       : getInterpolatedVehicleState(selectedVehicle.id, currentTimeSec)
     : null;
 
+  const cycleCameraMode = () => {
+    const modes: CameraViewMode[] = ['arcade', 'trasera', 'lateral', 'cenital', 'dron', 'libre'];
+    const currentIndex = modes.indexOf(cameraMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    setCameraMode(nextMode);
+    stateRef.current.cameraMode = nextMode;
+  };
+
+  const totalCars = vehicles.length || 8;
+  const totalLaps = Math.max(1, track.laps ?? 1);
+
+  const playerRank = useMemo(() => {
+    if (!selectedVehicle || !liveVehicleStates[selectedVehicle.id]) return 2;
+    const playerDist = liveVehicleStates[selectedVehicle.id].distance;
+    let ahead = 0;
+    for (const [id, st] of Object.entries(liveVehicleStates)) {
+      if (id !== selectedVehicle.id && st.distance > playerDist) {
+        ahead++;
+      }
+    }
+    return 1 + ahead;
+  }, [selectedVehicle, liveVehicleStates]);
+
+  const currentLap = useMemo(() => {
+    if (!selectedVehicle || !liveVehicleStates[selectedVehicle.id] || !track) return 1;
+    const dist = liveVehicleStates[selectedVehicle.id].distance;
+    const lapDist = Math.max(1, track.distanceMeters / totalLaps);
+    return Math.min(totalLaps, Math.max(1, Math.floor(dist / lapDist) + 1));
+  }, [selectedVehicle, liveVehicleStates, track, totalLaps]);
+
+  const dynamicDrivingFeedback = useMemo(() => {
+    if (raceInsight?.message) return raceInsight.message;
+    if (!selectedVehicleState) return '¡Buen ritmo! Mantén la velocidad.';
+    if (selectedVehicleState.speedKmh > 140) return '¡Velocidad punta alcanzada! Sostené el trazado.';
+    if (touchPressed.throttle || steeringKeysRef.current.throttle) return '¡Aceleración a pleno! Controlá la salida.';
+    if (touchPressed.brake || steeringKeysRef.current.brake) return 'Frenado medido. Preparate para la curva.';
+    if (touchPressed.left || touchPressed.right || steeringKeysRef.current.left || steeringKeysRef.current.right) return 'Viraje preciso. Mantén la línea ideal.';
+    return '¡Buen ritmo! Mantén la velocidad.';
+  }, [raceInsight, selectedVehicleState, touchPressed]);
+
   return (
     <div className={`relative bg-[#0a0f1d] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col select-none ${experience === 'race' ? 'dc-mobile-race' : ''}`}>
       {experience === 'race' && <button type="button" onClick={enableLandscape} className="dc-landscape-toggle" title="Pantalla completa horizontal"><Maximize2 size={16}/> <span>Modo horizontal</span></button>}
@@ -1984,10 +3013,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               </>
             )}
             <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-400/30 px-2 py-0.5 rounded font-bold">
-              3D GLB · Vehículos
-            </span>
-            <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-400/30 px-2 py-0.5 rounded">
-              Modelos 3D provisionales para Kicks y Carens
+              3D OEM &amp; GLB · Hiperrealista
             </span>
           </div>
           <p className="text-[11px] text-slate-400 font-mono mt-0.5">{track.subtitle}</p>
@@ -2102,11 +3128,16 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
       {/* Main 3D Viewport with 100% Unobstructed Center */}
       <div className="dc-race-viewport relative w-full overflow-hidden bg-[#0a0f1d]" style={{ height: compact ? '350px' : experience === 'race' ? 'min(72vh, 720px)' : '520px', minHeight: compact ? undefined : experience === 'race' ? '520px' : undefined }}>
-        {experience === 'race' && <div className="dc-portrait-prompt">
+        {experience === 'race' && !portraitPromptDismissed && <div className="dc-portrait-prompt">
           <Smartphone size={42} aria-hidden="true" />
-          <strong>Girá tu celular para correr</strong>
-          <span>DATACAR ARENA se juega en horizontal con controles táctiles.</span>
-          <button type="button" onClick={enableLandscape}><Maximize2 size={16}/> Intentar pantalla completa</button>
+          <strong>Girá tu celular o jugá en vertical</strong>
+          <span>Podés correr en pantalla completa horizontal o continuar directamente en vertical con controles adaptados.</span>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button type="button" onClick={enableLandscape}><Maximize2 size={16}/> Intentar pantalla completa</button>
+            <button type="button" onClick={() => setPortraitPromptDismissed(true)} className="!bg-slate-800 border border-cyan-400/50 text-cyan-200">
+              Continuar en vertical
+            </button>
+          </div>
         </div>}
         <div ref={mountRef} className={`w-full h-full block touch-none ${placementKind ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
         {experience === 'race' && <div className="dc-mobile-game-top" aria-label="Barra de juego">
@@ -2116,79 +3147,627 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           <button onClick={() => { setIsPlaying(false); stateRef.current.isPlaying = false; setMobileMenuOpen(true); }} aria-label="Pausar y abrir menú"><Pause size={19}/></button>
         </div>}
         {experience === 'race' && mobileCameraOpen && <div className="dc-mobile-camera-menu">
-          {([['arcade','Arcade'],['trasera','Mi auto'],['lateral','Lateral'],['cenital','Cenital'],['libre','Libre']] as const).map(([mode,label]) => <button key={mode} onClick={() => { setCameraMode(mode); setMobileCameraOpen(false); }}>{label}</button>)}
+          {([['arcade','Arcade'],['trasera','Mi auto'],['lateral','Lateral'],['cenital','Cenital'],['dron','Dron'],['libre','Libre']] as const).map(([mode,label]) => <button key={mode} onClick={() => { setCameraMode(mode); setMobileCameraOpen(false); }}>{label}</button>)}
         </div>}
         {experience === 'race' && mobileMenuOpen && <div className="dc-mobile-pause-screen">
           <h2>PAUSA</h2><p>DATACAR ARENA</p>
           <button className="dc-mobile-resume" onClick={() => { soundEngine.unlock(); if(startRequested){setIsPlaying(true);stateRef.current.isPlaying=true;} setMobileMenuOpen(false); }}><Play size={18}/> CONTINUAR</button>
           <button onClick={toggleMute}>{isMuted ? 'Activar sonido' : 'Silenciar sonido'}</button>
           <button onClick={() => setHeadlightsOn(v => !v)}>{headlightsOn ? 'Apagar faros' : 'Encender faros'}</button>
+          <button onClick={() => setShowRearviewMirror(v => !v)}>{showRearviewMirror ? 'Ocultar espejos' : 'Mostrar espejos'}</button>
+          <button onClick={() => setShowSideMirrors(v => !v)}>{showSideMirrors ? 'Ocultar espejos laterales' : 'Mostrar espejos laterales'}</button>
           <button onClick={()=>{setMobileMenuOpen(false);setShowRaceInformation(true);}}>DATOS EN CARRERA / INFORMACIÓN</button>
-          {onExitRace && <button onClick={onExitRace}>ABANDONAR CARRERA</button>}
+          {onExitRace && <button onClick={() => { soundEngine.stopAll(0.05); onExitRace(); }}>ABANDONAR CARRERA</button>}
           <label>CLIMA <select value={weatherMode} onChange={e => setWeatherMode(e.target.value as WeatherMode)}>{WEATHER_OPTIONS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}</select></label>
         </div>}
 
         {showRaceInformation && <div className="dc11-race-info-dialog" role="dialog" aria-label="Datos y telemetría educativa"><div><header><h2>DATACAR · DATOS EN CARRERA</h2><button onClick={()=>{setShowRaceInformation(false);setMobileMenuOpen(true);}}>CERRAR</button></header>{raceInsight?<><h3>{raceInsight.title}</h3><p>{raceInsight.message}</p></>:<p>La información educativa aparece conforme a los eventos de conducción y a las fichas de los vehículos.</p>}<p>Ficha técnica + telemetría virtual. No constituye una prueba oficial.</p><h3>MI AUTO</h3><p>{selectedVehicle?.brand} {selectedVehicle?.name}</p>{selectedVehicleState&&<p>{selectedVehicleState.speedKmh.toFixed(1)} km/h · {selectedVehicleState.rpm} RPM · {selectedVehicleState.accelG.toFixed(2)} G · {selectedVehicleState.distance.toFixed(1)} metros</p>}</div></div>}
-        {experience === 'race' && stuckInPothole && <div className="dc12-stuck-modal" role="dialog" aria-modal="true" aria-label="Auto atrapado en bache"><div><h2>VEHÍCULO ATASCADO</h2><p>Caíste en un bache y el vehículo no logra salir. Podés reiniciar la carrera o volver a elegir auto y circuito.</p><button onClick={()=>{
-          // El reinicio tiene que crear una sesión NUEVA. Cambiar solo el
-          // temporizador deja el motor y la posición dentro del bache.
-          soundEngine.stopAll();
-          stateRef.current.isPlaying = false;
-          if (onRestartRace) {
-            onRestartRace(); // Mobile y desktop desmontan la escena anterior.
-          } else {
-            // Respaldo para integraciones que todavía no pasan el callback.
-            const rebuilt = new InteractiveRacePhysics(vehicles, track, stateRef.current.selectedVehicleId, hazardsEnabled);
-            physicsRef.current = rebuilt;
-            rebuilt.setWeather(weatherModeRef.current);
-            raceHazardsSnapshotRef.current = rebuilt.hazards.map(h => ({...h}));
-            resetVisualRaceRef.current?.();
-            stuckRef.current = {seconds:0,lastDistance:0};
+        {/* Detector modular de VEHÍCULO ATASCADO (3 segundos consecutivos con opción de reiniciar o seguir intentando) */}
+        <VehicleStuckModal
+          open={experience === 'race' && (isStuckModalOpen || stuckInPothole)}
+          onRestartRace={() => {
+            soundEngine.stopAll();
+            stateRef.current.isPlaying = false;
+            resetStuckDetection();
             setStuckInPothole(false);
-            setCurrentTimeSec(0);
-            stateRef.current.currentTimeSec = 0;
-            setLiveVehicleStates({});
-            setStartRequested(experience !== 'race');
-            setRestartSequence(n=>n+1);
-          }
-        }}>REINICIAR CARRERA</button><button onClick={()=>{setStuckInPothole(false);onExitRace?.();}}>SALIR DE LA CARRERA</button></div></div>}
-        {experience === 'race' && !startRequested && <div className="dc11-start-gate" role="status" aria-live="polite">
-          <div className="dc11-start-card"><span>DATACAR ARENA · GRILLA DE SALIDA</span>
-            <h2>{glbLoadError ? 'ERROR DE CARGA' : raceGateReady ? 'PREPARATE PARA LA LARGADA' : 'PREPARANDO PISTA Y AUTOS…'}</h2>
-            <p>{raceStartupMessage({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: Boolean(glbLoadError)})}</p>
-            {glbLoadError && <button type="button" onClick={() => onRestartRace?.()} className="mt-3 rounded-lg bg-sky-400 px-4 py-2 font-bold text-slate-950">REINTENTAR CARGA</button>}
+            if (onRestartRace) {
+              onRestartRace?.();
+            } else {
+              const speedPro = experience === 'race' && raceMode === 'speed_pro';
+              const rebuilt = new InteractiveRacePhysics(vehicles, track, stateRef.current.selectedVehicleId, hazardsEnabled && !speedPro, {
+                urbanTrafficRules: experience === 'race' && !speedPro,
+                speedRaceMode: speedPro,
+                playerPayloadKg,
+              });
+              physicsRef.current = rebuilt;
+              rebuilt.setWeather(weatherModeRef.current);
+              raceHazardsSnapshotRef.current = rebuilt.hazards.map(h => ({...h}));
+              resetVisualRaceRef.current?.();
+              stuckRef.current = {seconds:0,lastDistance:0};
+              setCurrentTimeSec(0);
+              stateRef.current.currentTimeSec = 0;
+              setLiveVehicleStates({});
+              setStartRequested(experience !== 'race');
+              setRestartSequence(n=>n+1);
+            }
+          }}
+          onKeepTrying={() => {
+            soundEngine.unlock();
+            handleKeepTrying();
+            stuckRef.current = { seconds: 0, lastDistance: stuckRef.current.lastDistance };
+            setStuckInPothole(false);
+            if (startRequested && !hasFinished) {
+              setIsPlaying(true);
+              stateRef.current.isPlaying = true;
+            }
+          }}
+        />
+        {experience === 'race' && !startRequested && (
+          <div
+            className="absolute inset-x-0 bottom-44 lg:bottom-[132px] z-30 flex justify-center pointer-events-auto px-4"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="rounded-2xl border border-cyan-400/45 bg-slate-950/80 px-5 py-3 text-center shadow-2xl">
+              <div className="text-[10px] font-mono font-black uppercase tracking-[0.22em] text-cyan-300">
+                VISTA AÉREA DRON · CIUDAD DE ASUNCIÓN Y RÍO PARAGUAY
+              </div>
+              <h2 className="mt-1 font-display text-lg sm:text-xl font-black italic tracking-wide text-white">
+                {glbLoadError
+                  ? 'ERROR DE CARGA'
+                  : raceGateReady
+                    ? 'SOBREVOLANDO CIRCUITO · PREPARATE PARA LARGAR'
+                    : 'PREPARANDO CIUDAD, TRÁNSITO 3D Y AUTOS…'}
+              </h2>
+              {glbLoadError && (
+                <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                  <button type="button" onClick={() => onRestartRace?.()} className="rounded-lg bg-slate-800 border border-slate-600 px-4 py-2 font-bold text-white hover:bg-slate-700">REINTENTAR CARGA</button>
+                  <button type="button" onClick={() => { setGlbLoadError(null); setLoadedVehicleModels(requiredVehicleModels); }} className="rounded-lg bg-amber-400 px-4 py-2 font-bold text-slate-950 hover:bg-amber-300">LARGAR CON RESCATE 3D</button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>}
-        {experience === 'race' && !hasFinished && <div className="dc-mobile-controls" aria-label="Controles táctiles de conducción">
-          <div className="dc-touch-steering">
-            {touchButton('left', 'Izquierda', <ArrowLeft size={26} strokeWidth={3}/>)}
-            {touchButton('right', 'Derecha', <ArrowRight size={26} strokeWidth={3}/>)}
+        )}
+        {experience === 'race' && !hasFinished && (
+          <div className="dc-mobile-controls dc-mockup5-controls lg:hidden" aria-label="Controles táctiles de conducción">
+            {/* Lado izquierdo: Botones biselados de dirección < y > en color cian brillante para el pulgar izquierdo */}
+            <div className="dc-touch-steering">
+              {touchButton(
+                'left',
+                'Izquierda',
+                <div className="skew-x-[12deg] flex items-center justify-center pointer-events-none">
+                  <ChevronLeft size={34} strokeWidth={3} className="text-white drop-shadow-[0_0_8px_#00e5ff]" />
+                </div>,
+                'dc-touch-rhomboid dc-touch-left'
+              )}
+              {touchButton(
+                'right',
+                'Derecha',
+                <div className="skew-x-[12deg] flex items-center justify-center pointer-events-none">
+                  <ChevronRight size={34} strokeWidth={3} className="text-white drop-shadow-[0_0_8px_#00e5ff]" />
+                </div>,
+                'dc-touch-rhomboid dc-touch-right'
+              )}
+            </div>
+
+            {/* Lado derecho: Botón vertical alargado dorado con doble chevron >> para ACELERAR. Al lado, botón de FRENO (!) y botón de REVERSA R \/ */}
+            <div className="dc-touch-pedals">
+              {/* Botón de freno y botón de reversa apilados */}
+              <div className="flex flex-col gap-2">
+                {touchButton(
+                  'brake',
+                  'Freno',
+                  <div className="flex flex-col items-center justify-center pointer-events-none">
+                    <div className="flex items-center gap-0.5 text-white font-mono font-black text-sm tracking-tighter">
+                      <span>(</span>
+                      <AlertCircle size={14} className="text-amber-300" />
+                      <span>)</span>
+                    </div>
+                    <div className="mt-1 flex gap-1 opacity-60">
+                      <div className="w-1.5 h-0.5 bg-white -skew-x-[30deg]" />
+                      <div className="w-1.5 h-0.5 bg-white -skew-x-[30deg]" />
+                      <div className="w-1.5 h-0.5 bg-white -skew-x-[30deg]" />
+                    </div>
+                  </div>,
+                  'dc-touch-brake dc-touch-brake-pedal'
+                )}
+                {touchButton(
+                  'reverse',
+                  'Frenar / reversa',
+                  <div className="flex flex-col items-center justify-center pointer-events-none">
+                    <span className="font-display font-black text-sm text-white tracking-wider leading-none">R</span>
+                    <ChevronsDown size={14} className="text-cyan-300 -mt-0.5" />
+                  </div>,
+                  'dc-touch-reverse dc-touch-reverse-pedal'
+                )}
+              </div>
+
+              {/* Botón vertical alargado dorado >> para ACELERAR */}
+              {touchButton(
+                'throttle',
+                'Acelerar',
+                <div className="flex flex-col items-center justify-between h-full py-2.5 pointer-events-none">
+                  <ChevronsUp size={34} strokeWidth={3} className="text-[#ffb800] drop-shadow-[0_0_10px_#ffb800]" />
+                  <div className="flex flex-col gap-1 items-center opacity-70">
+                    <div className="w-6 h-0.5 bg-[#ffb800] -skew-x-[30deg]" />
+                    <div className="w-6 h-0.5 bg-[#ffb800] -skew-x-[30deg]" />
+                    <div className="w-6 h-0.5 bg-[#ffb800] -skew-x-[30deg]" />
+                  </div>
+                </div>,
+                'dc-touch-throttle dc-touch-gold-throttle'
+              )}
+            </div>
           </div>
-          <div className="dc-touch-pedals">
-            {touchButton('reverse', 'Frenar / reversa', <ArrowDown size={24} strokeWidth={3}/>, 'dc-touch-reverse')}
-            {touchButton('brake', 'Freno', <CircleStop size={23} strokeWidth={2.5}/>, 'dc-touch-brake')}
-            {touchButton('throttle', 'Acelerar', <ArrowUp size={28} strokeWidth={3}/>, 'dc-touch-throttle')}
-          </div>
-        </div>}
+        )}
+
+        {/* 1. ESQUINA SUPERIOR IZQUIERDA: Minimapa circular con borde cian brillante y píldora inferior POS / VUELTA */}
         {experience === 'race' && !hasFinished && selectedVehicle && liveVehicleStates[selectedVehicle.id] && (
-          <RaceMiniMap path={roadPath} player={liveVehicleStates[selectedVehicle.id]}
-            opponents={Object.entries(liveVehicleStates).map(([id, st]) => ({ id, distance: st.distance, lateralX: st.lateralX }))}
-            playerId={selectedVehicle.id} />
+          <RaceMiniMap
+            path={roadPath}
+            player={liveVehicleStates[selectedVehicle.id]}
+            opponents={[
+              ...Object.entries(liveVehicleStates).map(([id, st]) => ({ id, distance: st.distance, lateralX: st.lateralX })),
+              ...onlinePeersHud.map((p) => ({ id: p.id, distance: p.distance, lateralX: p.lateralX })),
+            ]}
+            playerId={selectedVehicle.id}
+            playerRank={playerRank}
+            totalCars={totalCars + onlinePeersHud.length}
+            currentLap={currentLap}
+            totalLaps={totalLaps}
+          />
         )}
-        {experience === 'race' && !hasFinished && selectedVehicle && (
-          <div className="absolute top-4 right-4 z-20 pointer-events-none flex flex-col items-end gap-1 font-mono text-[10px] font-bold">
-            {liveVehicleStates[selectedVehicle.id]?.fcwWarning && !liveVehicleStates[selectedVehicle.id]?.aebActive && <span className="rounded-md border border-amber-400 bg-amber-500/20 px-2 py-1 text-amber-100">ALERTA DE COLISIÓN</span>}
-            {liveVehicleStates[selectedVehicle.id]?.laneDepartureWarning && <span className="rounded-md border border-amber-400 bg-amber-500/20 px-2 py-1 text-amber-100">ALERTA DE CARRIL</span>}
-            {liveVehicleStates[selectedVehicle.id]?.aebActive && <span className="rounded-md border border-red-400 bg-red-500/20 px-2 py-1 text-red-200">FRENADO AUTOMÁTICO</span>}
+
+        {/* 2. CENTRO SUPERIOR: Cronómetro + Meta Oro + Retrovisor automotriz realista + Espejos laterales */}
+        {experience === 'race' && !hasFinished && (() => {
+          const circuitTarget = track?.cityCircuitId
+            ? getCircuitTargetTime(
+                track.cityCircuitId,
+                raceMode === 'speed_pro' ? 'speed_pro' : 'city_trial',
+                totalLaps,
+                track.distanceMeters,
+              )
+            : null;
+          return (
+            <>
+              <div className="dc-mockup5-center-header dc-v5-top-center absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center select-none">
+                {/* Barra superior compacta: circuito + cronómetro + Meta Oro + botones de espejos */}
+                <div className="dc-v5-clock-bar flex items-center justify-center gap-1.5 px-2.5 py-1 bg-[#030914]/92 border border-cyan-400/40 rounded-xl shadow-[0_0_14px_rgba(0,229,255,0.22)] text-white pointer-events-auto max-w-full">
+                  <div className="dc-v5-track-label hidden 2xl:flex items-center gap-1 font-bold text-slate-100 text-[10px] tracking-wide truncate max-w-[135px]">
+                    <MapPin size={11} className="text-[#00e5ff] shrink-0" />
+                    <span className="truncate">{track?.name ?? 'Circuito Asunción'}</span>
+                  </div>
+                  <span className="hidden 2xl:inline text-cyan-400/45">|</span>
+                  <div className="flex items-center gap-1 font-mono font-black text-cyan-300 text-[11px] tracking-wider tabular-nums shrink-0">
+                    <Timer size={11} className="text-[#00e5ff] shrink-0" />
+                    <span>{formatRaceStopwatch(currentTimeSec)}</span>
+                  </div>
+                  {raceMode === 'practice_free' ? (
+                    <span className="hidden sm:inline-flex items-center rounded border border-sky-400/45 bg-sky-950/80 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-200">
+                      PRUEBA SIN PUNTOS
+                    </span>
+                  ) : circuitTarget ? (
+                    <span className="hidden sm:inline-flex items-center rounded border border-amber-400/45 bg-amber-950/75 px-1.5 py-0.5 text-[9px] font-mono font-black text-amber-200 tabular-nums">
+                      Meta {formatTargetMinutesSec(circuitTarget.targetSec)}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setShowRearviewMirror(v => !v)}
+                    aria-pressed={showRearviewMirror}
+                    aria-label={showRearviewMirror ? 'Ocultar espejos retrovisores' : 'Mostrar espejos retrovisores'}
+                    className={`ml-1 rounded-lg border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer shrink-0 min-h-[26px] ${
+                      showRearviewMirror
+                        ? 'border-cyan-400/60 bg-cyan-950/80 text-cyan-200'
+                        : 'border-slate-700 bg-slate-900/90 text-slate-400'
+                    }`}
+                  >
+                    {showRearviewMirror ? 'ESPEJOS ON' : 'ESPEJOS OFF'}
+                  </button>
+                  {showRearviewMirror && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSideMirrors(v => !v)}
+                      aria-pressed={showSideMirrors}
+                      aria-label={showSideMirrors ? 'Ocultar espejos laterales' : 'Mostrar espejos laterales'}
+                      title="Espejos laterales izquierdo y derecho"
+                      className={`hidden sm:inline-flex items-center rounded-lg border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer shrink-0 min-h-[26px] ${
+                        showSideMirrors
+                          ? 'border-cyan-400/45 bg-slate-900/90 text-cyan-300'
+                          : 'border-slate-700 bg-slate-950/90 text-slate-500'
+                      }`}
+                    >
+                      LAT
+                    </button>
+                  )}
+                </div>
+
+                {/* Espejo retrovisor interior realista con soporte superior y carcasa trapezoidal (sin etiqueta superpuesta) */}
+                {showRearviewMirror && (
+                  <div className="dc-v5-rearview-wrap mt-1 flex flex-col items-center pointer-events-none">
+                    <div className="dc-v5-rearview-stem" aria-hidden="true" />
+                    <div
+                      className="dc-v5-rearview-housing relative flex items-center justify-center overflow-hidden"
+                      aria-label="Espejo retrovisor interior en tiempo real"
+                    >
+                      <canvas
+                        ref={rearviewCanvasRef}
+                        data-testid="digital-rearview-mirror"
+                        width={192}
+                        height={60}
+                        className="dc-v5-rearview-canvas block w-full h-full object-cover"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-2 top-1.5 text-[9px] font-black transition-opacity ${
+                          turnSignalBlinkHud.leftLit ? 'text-amber-400 opacity-100 drop-shadow-[0_0_6px_#f59e0b]' : 'text-slate-500 opacity-30'
+                        }`}
+                      >
+                        ◀
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={`absolute right-2 top-1.5 text-[9px] font-black transition-opacity ${
+                          turnSignalBlinkHud.rightLit ? 'text-amber-400 opacity-100 drop-shadow-[0_0_6px_#f59e0b]' : 'text-slate-500 opacity-30'
+                        }`}
+                      >
+                        ▶
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {(raceMode === 'speed_pro' || onlineSession) && (
+                  <div className="mt-1 hidden sm:flex flex-wrap items-center justify-center gap-1">
+                    {raceMode === 'speed_pro' && (
+                      <span className="rounded-md border border-amber-400/70 bg-amber-950/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200 shadow">
+                        FASE 2 · VELOCIDAD PURA
+                      </span>
+                    )}
+                    {onlineSession && (
+                      <span className="rounded-md border border-cyan-400/70 bg-cyan-950/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-cyan-200 shadow">
+                        EN LÍNEA · {onlinePeersHud.length + 1} PILOTOS
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Espejos retrovisores laterales izquierdo y derecho (cámaras secundarias reales) */}
+              {showRearviewMirror && showSideMirrors && (
+                <>
+                  <div
+                    className={`dc-v5-sidemirror dc-v5-sidemirror-left pointer-events-none select-none ${
+                      blindSpotState.leftAlert ? 'dc-v5-sidemirror-alert' : ''
+                    }`}
+                    aria-label="Espejo lateral izquierdo en tiempo real"
+                  >
+                    <canvas
+                      ref={leftMirrorCanvasRef}
+                      data-testid="left-side-mirror"
+                      width={96}
+                      height={58}
+                      className="block w-full h-full object-cover"
+                    />
+                    <span className="dc-v5-sidemirror-tag">IZQ</span>
+                    {blindSpotState.equipped && (
+                      <span
+                        aria-hidden="true"
+                        className={`dc-v5-sidemirror-dot ${blindSpotState.leftAlert ? 'active' : ''}`}
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    className={`dc-v5-sidemirror dc-v5-sidemirror-right pointer-events-none select-none ${
+                      blindSpotState.rightAlert ? 'dc-v5-sidemirror-alert' : ''
+                    }`}
+                    aria-label="Espejo lateral derecho en tiempo real"
+                  >
+                    <canvas
+                      ref={rightMirrorCanvasRef}
+                      data-testid="right-side-mirror"
+                      width={96}
+                      height={58}
+                      className="block w-full h-full object-cover"
+                    />
+                    <span className="dc-v5-sidemirror-tag">DER</span>
+                    {blindSpotState.equipped && (
+                      <span
+                        aria-hidden="true"
+                        className={`dc-v5-sidemirror-dot ${blindSpotState.rightAlert ? 'active' : ''}`}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          );
+        })()}
+
+        {/* 2A. BANDA VIAL Y ADAS COHERENTE (Debajo del espejo / en fila dedicada mobile sin pisar minimapa ni velocímetro) */}
+        {experience === 'race' && !hasFinished && (
+          <div className="dc-v5-road-rules-strip absolute z-30 pointer-events-none flex flex-col items-center gap-1 select-none">
+            <div className="flex flex-wrap items-center justify-center gap-1 pointer-events-auto">
+              {/* Tarjeta reglamentaria Velocidad MÁXIMA y MÍNIMA */}
+              {activeSpeedZone && (() => {
+                const curSpeed = selectedVehicleState?.speedKmh ?? 0;
+                const overMax = curSpeed > activeSpeedZone.maxKmh + 5;
+                const underMin = curSpeed > 4 && curSpeed < activeSpeedZone.minKmh - 4 && (!upcomingTrafficLight || upcomingTrafficLight.phase === 'green');
+                return (
+                  <div
+                    className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 bg-[#06101d]/95 shadow ${
+                      overMax
+                        ? 'border-rose-400 ring-1 ring-rose-500/60'
+                        : underMin
+                          ? 'border-amber-400/80'
+                          : 'border-slate-700/90'
+                    }`}
+                    aria-label={`Límite máximo ${activeSpeedZone.maxKmh} y mínimo ${activeSpeedZone.minKmh} kilómetros por hora`}
+                  >
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border-2 border-rose-500 bg-white text-[9px] font-black text-slate-950 tabular-nums leading-none">
+                      {activeSpeedZone.maxKmh}
+                    </span>
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/85 bg-sky-600 text-[9px] font-black text-white tabular-nums leading-none">
+                      {activeSpeedZone.minKmh}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              {/* Indicador de Semáforo Próximo */}
+              {upcomingTrafficLight && upcomingTrafficLight.distanceToStopM >= -2 && (
+                <div
+                  className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 bg-[#06101d]/95 shadow text-[9px] font-black uppercase tracking-wide ${
+                    upcomingTrafficLight.phase === 'red'
+                      ? 'border-rose-500/90 text-rose-200'
+                      : upcomingTrafficLight.phase === 'yellow'
+                        ? 'border-amber-400/90 text-amber-200'
+                        : 'border-emerald-500/70 text-emerald-200'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-0.5 rounded bg-slate-950 px-1 py-0.5 border border-slate-800">
+                    <span className={`h-1.5 w-1.5 rounded-full ${upcomingTrafficLight.phase === 'red' ? 'bg-rose-500' : 'bg-rose-950'}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${upcomingTrafficLight.phase === 'yellow' ? 'bg-amber-400' : 'bg-amber-950'}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${upcomingTrafficLight.phase === 'green' ? 'bg-emerald-400' : 'bg-emerald-950'}`} />
+                  </span>
+                  <span className="tabular-nums">{Math.max(0, Math.round(upcomingTrafficLight.distanceToStopM))}m</span>
+                  <span>
+                    {upcomingTrafficLight.phase === 'red'
+                      ? 'ROJO'
+                      : upcomingTrafficLight.phase === 'yellow'
+                        ? 'ÁMBAR'
+                        : 'VERDE'}
+                  </span>
+                </div>
+              )}
+
+              {/* Botón interactivo de Cinturón de Seguridad [C] */}
+              <button
+                type="button"
+                onClick={buckleSeatbelt}
+                aria-pressed={seatbeltBuckled}
+                title="Abrochar cinturón de seguridad (Tecla C)"
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 min-h-[28px] text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer ${
+                  seatbeltBuckled
+                    ? 'border-emerald-500/65 bg-emerald-950/90 text-emerald-200'
+                    : 'border-amber-400 bg-amber-950/95 text-amber-200'
+                }`}
+              >
+                <span>{seatbeltBuckled ? '✓ CINTURÓN' : '🔒 CINTURÓN [C]'}</span>
+              </button>
+
+              {/* Lectura ADAS auditada (OEM verificado vs No disponible vs Asistencia simulada del juego) */}
+              {adasReadout && (
+                <div
+                  data-testid="adas-hud-badge"
+                  aria-live="polite"
+                  className={`pointer-events-none inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[9px] font-mono font-bold shadow ${
+                    adasReadout.colorTone === 'red'
+                      ? 'border-rose-400 bg-rose-950/95 text-rose-100'
+                      : adasReadout.colorTone === 'amber'
+                        ? 'border-amber-400 bg-amber-950/95 text-amber-100'
+                        : adasReadout.colorTone === 'cyan'
+                          ? 'border-cyan-400/50 bg-slate-950/90 text-cyan-200'
+                          : 'border-slate-700/80 bg-slate-950/85 text-slate-400'
+                  }`}
+                >
+                  <span className="font-black uppercase tracking-wider">{adasReadout.badgeLabel}</span>
+                  {(adasReadout.level === 'detection' ||
+                    adasReadout.level === 'caution' ||
+                    adasReadout.level === 'collision_warning' ||
+                    adasReadout.level === 'aeb_active') && (
+                    <span className="hidden sm:inline text-[9px] opacity-90">· {adasReadout.detailLabel}</span>
+                  )}
+                </div>
+              )}
+
+              {selectedVehicle && liveVehicleStates[selectedVehicle.id]?.laneDepartureWarning && (
+                <span className="pointer-events-none rounded-lg border border-amber-400 bg-amber-950/90 px-2 py-0.5 text-[9px] font-mono font-bold text-amber-200">
+                  LDW CARRIL
+                </span>
+              )}
+            </div>
+
+            {/* Banner de aviso / penalización vial en vivo */}
+            {trafficNotice && (
+              <div
+                role="status"
+                className={`rounded-lg border px-2.5 py-0.5 text-center shadow-lg pointer-events-none max-w-[92vw] ${
+                  trafficNotice.kind === 'penalty'
+                    ? 'border-rose-400 bg-rose-950/95 text-rose-100'
+                    : trafficNotice.kind === 'ok'
+                      ? 'border-emerald-400 bg-emerald-950/95 text-emerald-100'
+                      : 'border-amber-400 bg-amber-950/95 text-amber-100'
+                }`}
+              >
+                <div className="text-[10px] font-black uppercase tracking-wide">
+                  {trafficNotice.title} · <span className="font-medium opacity-90">{trafficNotice.subtitle}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* 2B. SENSORES ADAS DE PUNTO CIEGO LATERAL (IZQUIERDA / DERECHA — solo modelos con ADAS verificado) */}
+        {experience === 'race' && !hasFinished && selectedVehicle && hasVerifiedBlindSpotAdas(selectedVehicle) && (
+          <>
+            <div
+              aria-live="polite"
+              className={`dc-v5-bsd-pill dc-v5-bsd-left pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-opacity duration-150 ${
+                blindSpotState.leftAlert
+                  ? 'border-amber-300 bg-amber-950/95 text-amber-200 opacity-100 shadow-[0_0_16px_rgba(251,191,36,0.55)]'
+                  : 'border-cyan-500/25 bg-[#050f1d]/75 text-slate-400 opacity-50'
+              }`}
+            >
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${
+                  blindSpotState.leftAlert ? 'bg-amber-400 animate-ping' : 'bg-slate-600'
+                }`}
+              />
+              <div className="leading-tight">
+                <div className="text-[8px] font-black uppercase tracking-wider">◀ BSD</div>
+                <div className="text-[9px] font-mono font-bold tabular-nums">
+                  {blindSpotState.leftAlert ? `${blindSpotState.leftDistanceM ?? ''}m` : 'LIBRE'}
+                </div>
+              </div>
+            </div>
+
+            <div
+              aria-live="polite"
+              className={`dc-v5-bsd-pill dc-v5-bsd-right pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-opacity duration-150 ${
+                blindSpotState.rightAlert
+                  ? 'border-amber-300 bg-amber-950/95 text-amber-200 opacity-100 shadow-[0_0_16px_rgba(251,191,36,0.55)]'
+                  : 'border-cyan-500/25 bg-[#050f1d]/75 text-slate-400 opacity-50'
+              }`}
+            >
+              <div className="leading-tight text-right">
+                <div className="text-[8px] font-black uppercase tracking-wider">BSD ▶</div>
+                <div className="text-[9px] font-mono font-bold tabular-nums">
+                  {blindSpotState.rightAlert ? `${blindSpotState.rightDistanceM ?? ''}m` : 'LIBRE'}
+                </div>
+              </div>
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${
+                  blindSpotState.rightAlert ? 'bg-amber-400 animate-ping' : 'bg-slate-600'
+                }`}
+              />
+            </div>
+          </>
+        )}
+
+        {/* 2C. EFECTO VISUAL DE SALPICADURA DE AGUA EN PARABRISAS AL CAER EN BACHE MOJADO */}
+        {experience === 'race' && !hasFinished && splashHudActive && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 z-20 flex items-end justify-center pb-24 bg-[radial-gradient(ellipse_at_25%_95%,rgba(125,211,252,0.34),transparent_48%),radial-gradient(ellipse_at_75%_95%,rgba(125,211,252,0.34),transparent_48%)]"
+          >
+            <span className="rounded-lg border border-sky-300/60 bg-sky-950/90 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-sky-200">
+              💦 Salpicadura en calzada mojada
+            </span>
+          </div>
+        )}
+
+        {/* 4B. COMANDO COMPACTO DE SEÑALEROS / INTERMITENTES Y BALIZAS (§9 — visual + interactivo, cero colisión) */}
+        {experience === 'race' && !hasFinished && (
+          <div
+            role="group"
+            aria-label="Señaleros e intermitentes"
+            data-testid="turn-signals-pod"
+            className="dc-v5-turn-signals-pod absolute left-1/2 -translate-x-1/2 z-35 flex items-center gap-1 rounded-xl border border-cyan-400/35 bg-[#040c1a]/92 px-1.5 py-1 shadow-[0_6px_20px_rgba(0,0,0,0.75)] backdrop-blur-md pointer-events-auto select-none"
+          >
+            <button
+              type="button"
+              onClick={() => triggerTurnSignalAction('toggle_left')}
+              aria-label="Señalero izquierdo"
+              aria-pressed={turnSignalMode === 'left'}
+              title="Señalero izquierdo (Tecla Q)"
+              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+                turnSignalMode === 'left'
+                  ? turnSignalBlinkHud.leftLit
+                    ? 'border-amber-300 bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.85)]'
+                    : 'border-amber-500/70 bg-amber-950/90 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-400/50'
+              }`}
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerTurnSignalAction('toggle_hazards')}
+              aria-label="Balizas de emergencia"
+              aria-pressed={turnSignalMode === 'hazards'}
+              title="Balizas / 4 luces (Tecla B)"
+              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+                turnSignalMode === 'hazards'
+                  ? turnSignalBlinkHud.leftLit
+                    ? 'border-rose-300 bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.85)]'
+                    : 'border-rose-500/70 bg-rose-950/90 text-rose-300'
+                  : 'border-slate-700 bg-slate-900/90 text-rose-300 hover:border-rose-400/50'
+              }`}
+            >
+              ⚠
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerTurnSignalAction('toggle_right')}
+              aria-label="Señalero derecho"
+              aria-pressed={turnSignalMode === 'right'}
+              title="Señalero derecho (Tecla E)"
+              className={`min-w-[38px] min-h-[34px] px-2 rounded-lg border text-xs font-black transition-colors cursor-pointer flex items-center justify-center ${
+                turnSignalMode === 'right'
+                  ? turnSignalBlinkHud.rightLit
+                    ? 'border-amber-300 bg-amber-500 text-slate-950 shadow-[0_0_12px_rgba(245,158,11,0.85)]'
+                    : 'border-amber-500/70 bg-amber-950/90 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/90 text-slate-200 hover:border-amber-400/50'
+              }`}
+            >
+              ▶
+            </button>
+            {turnSignalMode !== 'off' && (
+              <button
+                type="button"
+                onClick={() => triggerTurnSignalAction('turn_off')}
+                aria-label="Apagar señaleros"
+                title="Apagar señaleros (Tecla X)"
+                className="min-w-[34px] min-h-[34px] px-1.5 rounded-lg border border-slate-600 bg-slate-800/95 text-[11px] font-black text-slate-200 hover:bg-slate-700 cursor-pointer flex items-center justify-center"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 5. CENTRO INFERIOR: Píldora flotante translúcida de Driving IQ con feedback dinámico */}
+        {experience === 'race' && !hasFinished && (
+          <div className="dc-mockup5-driving-iq absolute left-1/2 -translate-x-1/2 z-25 pointer-events-none select-none max-w-[min(380px,calc(100vw-620px))]">
+            <div className="flex items-center gap-2 px-3.5 py-1 bg-[#030914]/90 backdrop-blur-md border border-[#00e5ff]/45 rounded-xl shadow-[0_0_14px_rgba(0,229,255,0.28)] text-white w-full overflow-hidden">
+              <Gauge size={14} className="text-[#00e5ff] shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-100 tracking-wide truncate">
+                {dynamicDrivingFeedback}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 3. ESQUINA SUPERIOR DERECHA: Botones de cámara y pausa en cristal oscuro + Tacómetro/Velocímetro digital arcade */}
         {experience === 'race' && !hasFinished && selectedVehicle && selectedVehicleState && (
           <>
-            <div className="dc11-mobile-speed" aria-label="Velocidad y revoluciones actuales">
-              <span>VELOCIDAD</span><div><strong>{Math.round(selectedVehicleState.speedKmh)}</strong><small>KM/H</small></div>
-              <footer><b>{selectedVehicleState.gear===0?'R':`${selectedVehicleState.gear}ª`}</b><b>{selectedVehicleState.rpm} RPM</b><button onClick={()=>setShowDetailedHud(true)} aria-label="Ver telemetría completa">DATOS +</button></footer>
+            <div className="dc-mobile-speed-wrapper lg:hidden">
+              <Mockup5SpeedCluster
+                speedKmh={selectedVehicleState.speedKmh}
+                rpm={selectedVehicleState.rpm}
+                gear={selectedVehicleState.gear}
+                onCycleCamera={cycleCameraMode}
+                onPause={() => {
+                  soundEngine.unlock();
+                  setMobileMenuOpen(true);
+                  setIsPlaying(false);
+                  stateRef.current.isPlaying = false;
+                }}
+                onOpenDetailed={() => setShowDetailedHud(true)}
+              />
             </div>
-            <div className="dc11-desktop-hud"><ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState}/></div>
+            <div className="dc11-desktop-hud hidden lg:block"><ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState}/></div>
             {showDetailedHud && <div className="dc11-hud-backdrop" role="dialog" aria-label="Telemetría extendida">
               <button className="dc11-hud-close" onClick={()=>setShowDetailedHud(false)}><X size={17}/> VOLVER A CARRERA</button>
               <div className="dc11-hud-gauge"><ArcadeRaceHud vehicle={selectedVehicle} state={selectedVehicleState}/></div>
@@ -2197,7 +3776,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </>
         )}
         {experience === 'race' && !hasFinished && countdown === null && raceInsight && (
-          <div key={raceInsight.id} className={`dc100-race-insight absolute top-[96px] left-3 z-20 pointer-events-none w-[min(320px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg ${
+          <div key={raceInsight.id} className={`dc100-race-insight absolute top-[260px] left-3 z-20 pointer-events-none w-[min(290px,calc(100%-24px))] rounded-xl border border-l-[3px] px-3 py-2.5 shadow-xl backdrop-blur-lg hidden md:block select-none ${
             raceInsight.kind === 'warning'
               ? 'border-amber-500/45 border-l-amber-400 bg-slate-950/85'
               : raceInsight.kind === 'event'
@@ -2210,18 +3789,32 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             <div className="mt-1.5 text-[9px] text-slate-500">Ficha técnica + telemetría virtual · no ensayo oficial</div>
           </div>
         )}
+
+        {/* ALERTA CENTRAL DE BACHE EN CALZADA (HUD Arcade Central) */}
         {experience === 'race' && !hasFinished && potholeWarning && (
-          <div className="absolute bottom-[224px] left-4 z-20 pointer-events-none rounded-lg border border-amber-400/35 bg-slate-950/80 px-3 py-2 shadow-lg backdrop-blur-sm" aria-label="Advertencia de calzada dañada">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-amber-300">
-              <ShieldAlert className="h-4 w-4" /> Bache en tu trayectoria
-            </div>
-            <div className="mt-0.5 font-mono text-[12px] font-bold text-white tabular-nums">
-              {Math.round(potholeWarning.distanceM)} m <span className="ml-2 text-[10px] font-normal text-slate-400">Reducí velocidad o esquivalo</span>
+          <div
+            className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center select-none"
+            role="alert"
+            aria-label="Advertencia de bache en la calzada"
+          >
+            <div className="flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/90 via-red-950/95 to-amber-950/90 border-2 border-amber-400 shadow-[0_0_28px_rgba(245,158,11,0.7),inset_0_0_12px_rgba(239,68,68,0.35)] backdrop-blur-md animate-pulse">
+              <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6 text-amber-300 shrink-0 drop-shadow-[0_0_8px_#f59e0b] animate-bounce" />
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-black italic text-xs sm:text-sm tracking-wider text-amber-200 uppercase drop-shadow-[0_0_6px_rgba(245,158,11,0.8)]">
+                    ¡BACHE EN CALZADA A {Math.round(potholeWarning.distanceM)}m!
+                  </span>
+                </div>
+                <span className="text-[10px] sm:text-[11px] font-mono font-bold text-slate-200 tracking-wide">
+                  Reducí velocidad o esquivalo por los lados
+                </span>
+              </div>
             </div>
           </div>
         )}
-        <div className={`absolute ${experience === 'race' ? 'bottom-3 left-[210px] max-w-[32%]' : 'bottom-3 left-3'} z-20 pointer-events-none px-3 py-1.5 text-[10px] text-slate-200 font-mono bg-slate-950/80 border border-slate-600/40 rounded-lg backdrop-blur-sm flex gap-3 flex-wrap`}>
-          <span>{experience === 'race' ? '↑ Acelerar · ↓ Frenar / Reversa · Espacio Freno · ← → Dirección · Cámara detrás de TU auto' : experience === 'replay' ? 'Director TV · repetición real' : 'Comparación automática'}</span><span>Arrastrá: cámara libre</span><span>Dos dedos: girar / zoom</span>
+
+        <div className={`dc-v5-kbd-hint absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-3 py-1 text-[10px] text-slate-300 font-mono bg-slate-950/85 border border-slate-700/60 rounded-xl backdrop-blur-md shadow-lg hidden lg:flex items-center gap-2.5 whitespace-nowrap select-none max-w-[min(560px,calc(100vw-700px))] overflow-hidden`}>
+          <span className="truncate">{experience === 'race' ? '↑/W Acelerar · ↓/S Reversa · Espacio Freno · ←→ Giro · Q/E/B/X Señaleros' : experience === 'replay' ? 'Director TV · repetición real' : 'Comparación automática'}</span>
         </div>
 
         {/* Floating Diagnostics Panel (Toggleable) */}
@@ -2241,28 +3834,28 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </div>
         )}
 
-        {/* Cinematic Countdown Overlay */}
+        {/* Cinematic Countdown Overlay (transparente para lucir el vuelo de cámara Dron sobre la ciudad) */}
         {(countdown !== null || goFlash) && (
-          <div className="absolute inset-0 z-30 bg-black/80 flex flex-col items-center justify-center animate-fadeIn pointer-events-none">
-            <span className="text-xs font-mono font-bold text-sky-400 uppercase tracking-widest mb-1">
-              GRILLA DE SALIDA · DATACAR ARENA
+          <div className="absolute inset-0 z-30 bg-[radial-gradient(circle_at_center,transparent_55%,rgba(2,6,23,0.42)_100%)] flex flex-col items-center justify-center animate-fadeIn pointer-events-none">
+            <span className="rounded-full border border-cyan-400/45 bg-slate-950/80 px-3.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest mb-2 shadow-lg">
+              {goFlash ? 'LARGADA OFICIAL · DATACAR ARENA' : 'CÁMARA DRON · SOBREVOLANDO ASUNCIÓN'}
             </span>
-            <div className="text-8xl font-black font-display text-white tracking-wider animate-bounce">
-              {goFlash ? <span className="text-emerald-400">¡YA!</span> : countdown}
+            <div className="text-8xl sm:text-9xl font-black font-display text-white tracking-wider drop-shadow-[0_8px_28px_rgba(2,6,23,0.95)] animate-bounce">
+              {goFlash ? <span className="text-emerald-400 drop-shadow-[0_0_26px_rgba(52,211,153,0.85)]">¡YA!</span> : countdown}
             </div>
-            <span className="text-xs font-mono text-slate-400 mt-2">
-              {track.name}
+            <span className="rounded-lg bg-slate-950/75 px-3 py-0.5 text-xs font-mono text-slate-200 mt-2 border border-slate-700/60">
+              {track.name} · Doble mano 3D
             </span>
           </div>
         )}
 
         {/* Floating Mini Camera Selector (Top Right of Canvas) */}
-        <div className="dc100-race-camera-desktop absolute top-3 right-3 z-20 flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-800/80 shadow-xl flex-wrap">
+        <div className="dc100-race-camera-desktop absolute top-3 right-3 z-20 hidden lg:flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-800/80 shadow-xl select-none">
           {experience === 'race' && <button
             onClick={() => setCameraMode('arcade')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${cameraMode === 'arcade' ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'}`}
             title="Cámara arcade baja y dinámica, sigue a tu auto">
-            <Video className="w-3.5 h-3.5" /><span>Arcade NFS</span>
+            <Video className="w-3.5 h-3.5" /><span>Arcade</span>
           </button>}
           <button
             onClick={() => setCameraMode('trasera')}
@@ -2274,7 +3867,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             title="Cámara de conducción: tercera persona detrás del vehículo seleccionado"
           >
             <Video className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">{experience === 'race' ? 'Mi auto · 3ª persona' : 'Persecución'}</span>
+            <span>{experience === 'race' ? 'Mi auto' : 'Persecución'}</span>
           </button>
 
           <button
@@ -2287,7 +3880,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             title="Cámara 2: Lateral Transmisión Deportiva (Trackside TV)"
           >
             <Tv className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">TV Lateral</span>
+            <span>TV</span>
           </button>
 
           <button
@@ -2300,7 +3893,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             title="Cámara 3: Cenital 3D (Overhead perspective)"
           >
             <Compass className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Cenital 3D</span>
+            <span>Cenital</span>
+          </button>
+
+          <button
+            onClick={() => { setCameraMode('dron'); stateRef.current.cameraMode = 'dron'; }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${
+              cameraMode === 'dron'
+                ? 'bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+            title="Cámara Dron: vista aérea de la ciudad de Asunción, edificios, parques y Río Paraguay"
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Dron</span>
           </button>
 
           <button
@@ -2313,7 +3919,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             title="Cámara libre: arrastrar con mouse/mousepad, zoom con dos dedos"
           >
             <MousePointer2 className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Libre</span>
+            <span>Libre</span>
           </button>
 
           {experience === 'replay' && (<>
@@ -2346,32 +3952,116 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </>)}
         </div>
 
-        {/* Loading Indicator for 3D GLB Model */}
-        {isGlbLoading && (
-          <div className="absolute top-14 left-3 z-30 flex items-center gap-2 bg-slate-950/90 backdrop-blur-md border border-sky-500/40 px-3 py-1.5 rounded-xl shadow-xl font-mono text-xs text-sky-400 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
-            <span>Cargando Tracker 3D segmentada (39,5 MB)...</span>
-          </div>
-        )}
-        {glbLoadError && (
-          <div className="absolute top-14 left-3 z-30 flex items-center gap-2 bg-red-950/90 backdrop-blur-md border border-red-500/40 px-3 py-1.5 rounded-xl shadow-xl font-mono text-xs text-red-400">
-            <span>⚠️ {glbLoadError}</span>
+        {/* Full-screen Arcade Preloader Gate */}
+        {isPreloading && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#050914]/95 backdrop-blur-xl px-4 py-6 select-none transition-all duration-300">
+            <div className="w-full max-w-xl mx-auto flex flex-col items-center text-center">
+              {/* Badge */}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 font-mono text-xs uppercase tracking-widest mb-3">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>DATACAR ARENA · PREPARANDO PARRILLA</span>
+              </div>
+
+              {/* Title & Track */}
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase mb-1">
+                {track.name}
+              </h2>
+              <p className="text-xs sm:text-sm font-mono text-slate-400 mb-6">
+                {track.distanceMeters} METROS · {track.subtitle}
+              </p>
+
+              {/* Competitors List */}
+              <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {vehicles.map((v, i) => {
+                  const isPlayer = v.id === (playerVehicleId || vehicles[0]?.id);
+                  const isModelReady = i < loadedVehicleModels;
+                  return (
+                    <div
+                      key={v.id}
+                      className={`relative rounded-xl border p-3 flex flex-col items-center text-center transition-all ${
+                        isPlayer
+                          ? 'border-amber-400/60 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
+                          : 'border-slate-800 bg-slate-900/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white/20" style={{ backgroundColor: v.color }} />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">
+                          {isPlayer ? 'TU AUTO' : `RIVAL ${i}`}
+                        </span>
+                      </div>
+                      <div className="text-sm font-black text-white uppercase tracking-tight">
+                        {v.brand} {v.name}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                        {formatOfficialPower(v)} · {formatOfficialTorque(v)}
+                      </div>
+                      <div className="mt-3 flex items-center gap-1 text-[10px] font-bold font-mono">
+                        {isModelReady ? (
+                          <span className="text-emerald-400 flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                            ✓ LISTO EN PISTA
+                          </span>
+                        ) : (
+                          <span className="text-sky-400 flex items-center gap-1 bg-sky-500/10 border border-sky-500/30 px-2 py-0.5 rounded-md animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
+                            CARGANDO 3D...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full max-w-md bg-slate-900/80 rounded-full h-2.5 border border-slate-700/60 overflow-hidden mb-2">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-500 via-sky-400 to-amber-400 transition-all duration-300 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.8)]"
+                  style={{
+                    width: `${
+                      requiredVehicleModels > 0
+                        ? Math.min(100, Math.round((loadedVehicleModels / requiredVehicleModels) * 100))
+                        : 100
+                    }%`,
+                  }}
+                />
+              </div>
+
+              {/* Status Message */}
+              <div className="text-xs font-mono text-slate-400">
+                {loadedVehicleModels >= requiredVehicleModels
+                  ? '¡Vehículos en pista! Iniciando largada...'
+                  : `Cargando y calibrando modelos 3D (${loadedVehicleModels}/${requiredVehicleModels})...`}
+              </div>
+
+              {glbLoadError && (
+                <div className="mt-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-lg">
+                  {glbLoadError} (utilizando auto-fallback)
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Live Race Positions Pill (Top Left of Canvas) */}
-        <div className="dc100-race-ranking absolute top-3 left-3 z-20 flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none">
+        {/* Live Race Positions Pill (Cleanly stacked below Minimap on desktop) */}
+        <div className="dc100-race-ranking absolute top-[186px] left-3 z-20 hidden md:flex flex-col gap-1 bg-slate-950/85 backdrop-blur-md p-2 rounded-xl border border-slate-800/80 shadow-xl font-mono text-[11px] pointer-events-none select-none max-w-[280px]">
           {vehicles.map((v) => {
             const st = interactiveMode && liveVehicleStates[v.id]
               ? liveVehicleStates[v.id]
               : getInterpolatedVehicleState(v.id, currentTimeSec);
             return (
               <div key={v.id} className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: v.color }} />
+                <span className="w-2.5 h-2.5 rounded-full ring-1 ring-white/30" style={{ backgroundColor: v.color }} />
                 <span className="text-white font-bold">{v.name.slice(0, 10)}</span>
-                <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/25 text-sky-300 border border-sky-400/40 font-bold">
-                  3D GLB
-                </span>
+                {v.id === (playerVehicleId || vehicles[0]?.id) ? (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-300 border border-amber-400/40 font-black">
+                    TU AUTO
+                  </span>
+                ) : (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/25 text-sky-300 border border-sky-400/40 font-bold">
+                    {v.id === 'toyota-corolla-cross-seg-2027' || v.id === 'chevrolet-tracker-lite' ? '3D GLB' : '3D OEM'}
+                  </span>
+                )}
                 <span className="text-sky-400 tabular-nums">{st.speedKmh.toFixed(0)} km/h</span>
                 <span className="text-slate-400 tabular-nums">{st.distance.toFixed(0)}m</span>
               </div>
@@ -2420,12 +4110,19 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                     if (interactiveMode) {
                       // Recrear el motor dentro del loop; conservar las posiciones de los obstáculos.
                       physicsRef.current = new InteractiveRacePhysics(vehicles, track,
-                        stateRef.current.selectedVehicleId, false);
+                        stateRef.current.selectedVehicleId, false, {
+                          urbanTrafficRules: experience === 'race' && raceMode !== 'speed_pro',
+                          speedRaceMode: experience === 'race' && raceMode === 'speed_pro',
+                          playerPayloadKg,
+                        });
                       const rebuilt = physicsRef.current;
+                      rebuilt.setWeather(weatherModeRef.current);
                       rebuilt.restoreHazards(raceHazardsSnapshotRef.current);
                       finalResultsRef.current = null;
                       setRaceEvent('');
                       setRaceInsight(null);
+                      setSeatbeltBuckled(false);
+                      setTrafficNotice(null);
                       setLiveVehicleStates({});
                       resetVisualRaceRef.current?.();
                     }
@@ -2482,7 +4179,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                 <input
                   type="range"
                   min="0"
-                  max={interactiveMode ? (track.cityCircuitId ? 420 : 180) : maxRaceTimeSec}
+                  max={interactiveMode ? (track.cityCircuitId ? 420 : 180) * Math.max(1, track.laps ?? 1) : maxRaceTimeSec}
                   step="0.01"
                   disabled={interactiveMode}
                   value={currentTimeSec}
@@ -2529,7 +4226,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               </>}
               {experience === 'legacy' && track.distanceMeters > 3500 && <span className="text-[10px] text-amber-300">Modo interactivo disponible en pistas de hasta 3.500 m.</span>}
               <span className="w-full text-[11px] text-sky-200">
-                {experience === 'race' ? '↑ / W: avanzar · ↓ / S: frenar y retroceder · Espacio: freno · ← →: dirección · mousepad: cámara' : experience === 'replay' ? 'Grabación real de tu carrera · Director TV automático · controles de reproducción disponibles' : 'Comparación automática a partir de las fichas técnicas.'}
+                {experience === 'race' ? '↑ / W: avanzar · ↓ / S: frenar y retroceder · Espacio: freno · ← →: dirección · Q / E / B / X: señaleros y balizas · C: cinturón' : experience === 'replay' ? 'Grabación real de tu carrera · Director TV automático · controles de reproducción disponibles' : 'Comparación automática a partir de las fichas técnicas.'}
               </span>
               {interactiveMode && raceEvent && <span className="w-full text-[11px] text-amber-300 font-semibold">{raceEvent}</span>}
             </div>
