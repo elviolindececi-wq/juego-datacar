@@ -123,6 +123,8 @@ import {
 import { useVehicleStuckDetection } from '../utils/useVehicleStuckDetection';
 import { VehicleStuckModal } from './VehicleStuckModal';
 import { formatTargetMinutesSec, getCircuitTargetTime } from '../utils/circuitTargetTimes';
+import { AsuncionPursuitModal } from './AsuncionPursuitModal';
+import { shouldShowAsuncionPursuitBriefing } from '../utils/asuncionPursuitLore';
 
 export type CameraViewMode = 'arcade' | 'trasera' | 'lateral' | 'cenital' | 'dron' | 'frontal_meta' | 'automatica' | 'libre';
 
@@ -767,7 +769,27 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const insightSequenceRef = useRef(0);
   const lastUrgentInsightAtRef = useRef(0);
   const [restartSequence, setRestartSequence] = useState(0);
+  const skipBriefingParam = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('skipBriefing') === '1';
+  }, []);
+  const requiresMissionBriefing = shouldShowAsuncionPursuitBriefing({
+    experience,
+    raceMode,
+    onlineSession,
+    skipBriefing: skipBriefingParam,
+  });
+  const [missionAccepted, setMissionAccepted] = useState<boolean>(() => !requiresMissionBriefing);
   const [startRequested, setStartRequested] = useState(experience !== 'race');
+  const lastMissionTrackKeyRef = useRef(`${track.id}:${experience}:${raceMode}:${Boolean(onlineSession)}`);
+  useEffect(() => {
+    const nextKey = `${track.id}:${experience}:${raceMode}:${Boolean(onlineSession)}`;
+    if (lastMissionTrackKeyRef.current !== nextKey) {
+      lastMissionTrackKeyRef.current = nextKey;
+      setMissionAccepted(!requiresMissionBriefing);
+      setStartRequested(experience !== 'race');
+    }
+  }, [track.id, experience, raceMode, onlineSession, requiresMissionBriefing]);
   const [visualReady, setVisualReady] = useState(false);
   const [showDetailedHud,setShowDetailedHud] = useState(false);
   const [showRaceInformation,setShowRaceInformation] = useState(false);
@@ -1219,6 +1241,13 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         window.clearTimeout(safetyFallback);
       };
     }
+    if (requiresMissionBriefing) {
+      if (!missionAccepted) return;
+      soundEngine.unlock();
+      stateRef.current.isPlaying = false;
+      setStartRequested(true);
+      return;
+    }
     const droneShowcaseDelayMs = experience === 'race' ? 1650 : 450;
     const timer = window.setTimeout(() => {
       soundEngine.unlock();
@@ -1226,7 +1255,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       setStartRequested(true);
     }, droneShowcaseDelayMs);
     return () => window.clearTimeout(timer);
-  }, [raceGateReady, startRequested, experience, onlineSession]);
+  }, [raceGateReady, startRequested, experience, onlineSession, requiresMissionBriefing, missionAccepted]);
 
   // DATACAR V9.6: cápsulas educativas durante la carrera. Máximo una cada
   // 5,2 segundos, calculadas desde el auto real de esta partida, no desde
@@ -1553,10 +1582,12 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       ? makeCurvedAsphalt(roadPath, roadWidth, trackLength, [])
       : createDepressedRoadGeometry(roadWidth, trackLength, roadCenterZ, []);
     const roadTex = createAsphaltTexture(track.routeHazardProfile);
-    const maxAniso = Math.min(
-      perfProfile.maxAnisotropy,
-      renderer.capabilities.getMaxAnisotropy?.() || perfProfile.maxAnisotropy,
-    );
+    const maxAniso = isSoftwareGl
+      ? 1
+      : Math.max(
+          perfProfile.maxAnisotropy,
+          renderer.capabilities.getMaxAnisotropy?.() || 16,
+        );
     roadTex.anisotropy = maxAniso;
     roadTex.repeat.set(1, Math.max(8, Math.round(trackLength / 14)));
     const asphaltRelief = createAsphaltMicroRelief();
@@ -1744,6 +1775,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
       track.routeHazardProfile,
       Boolean(track.cityCircuitId),
       track.cityCircuitId,
+      maxAniso,
     );
     bendRoadsideGroup(urbanEnvironment, roadPath);
     urbanEnvironment.userData.initPedestrians?.(roadPath);
@@ -2698,12 +2730,6 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         sunDirVec.y * 115,
         shadowFocusZ + sunDirVec.z * 115,
       );
-      urbanEnvironment.userData.updateScenery?.(
-        ambientCityTimeSec,
-        selectedTrackS,
-        roadPath,
-        atm.sunDir,
-      );
       const activeUrbanPhysics = interactiveMode ? physicsRef.current : null;
       const isAerialDroneShot = effectiveShot === 'dron' || effectiveShot === 'dron_prestart';
       const wantedFar = isAerialDroneShot ? perfProfile.droneCameraFar : perfProfile.gameplayCameraFar;
@@ -3067,6 +3093,13 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         _smoothedCamTarget.z = THREE.MathUtils.damp(_smoothedCamTarget.z, _camTarget.z, 9, dt);
       }
       camera.lookAt(_smoothedCamTarget);
+      urbanEnvironment.userData.updateScenery?.(
+        ambientCityTimeSec,
+        selectedTrackS,
+        roadPath,
+        atm.sunDir,
+        camera.position,
+      );
       hyperrealEnv.update(currentWeather, camera.position, ambientCityTimeSec, stormStep.flashIntensity);
 
       // Luz de apoyo solar alineada detrás de la cámara activa para que la parte trasera
@@ -3537,7 +3570,46 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
             }
           }}
         />
-        {experience === 'race' && !startRequested && (
+        <AsuncionPursuitModal
+          open={experience === 'race' && requiresMissionBriefing && !missionAccepted && !startRequested}
+          trackName={track.name}
+          trackDistanceMeters={track.distanceMeters}
+          laps={Math.max(1, track.laps ?? 1)}
+          vehicleName={
+            selectedVehicle
+              ? `${selectedVehicle.brand} ${selectedVehicle.name}`
+              : vehicles[0]
+                ? `${vehicles[0].brand} ${vehicles[0].name}`
+                : 'Unidad Datacar'
+          }
+          raceMode={raceMode}
+          targetTimeLabel={(() => {
+            if (!track?.cityCircuitId || raceMode === 'practice_free') return undefined;
+            const tgt = getCircuitTargetTime(
+              track.cityCircuitId,
+              raceMode === 'speed_pro' ? 'speed_pro' : 'city_trial',
+              Math.max(1, track.laps ?? 1),
+              track.distanceMeters,
+            );
+            return tgt ? `≤ ${formatTargetMinutesSec(tgt.targetSec)}` : undefined;
+          })()}
+          sceneReady={raceGateReady}
+          glbLoadError={glbLoadError}
+          onAcceptMission={() => {
+            soundEngine.unlock();
+            setMissionAccepted(true);
+            if (raceGateReady) {
+              stateRef.current.isPlaying = false;
+              setStartRequested(true);
+            }
+          }}
+          onRetryLoad={onRestartRace ? () => onRestartRace() : undefined}
+          onFallback3D={() => {
+            setGlbLoadError(null);
+            setLoadedVehicleModels(requiredVehicleModels);
+          }}
+        />
+        {experience === 'race' && !startRequested && (!requiresMissionBriefing || missionAccepted) && (
           <div
             className="absolute inset-x-0 bottom-44 lg:bottom-[132px] z-30 flex justify-center pointer-events-auto px-4"
             role="status"
@@ -4012,7 +4084,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
         )}
 
         {/* 4B. COMANDO DE CONDUCCIÓN SEGURA: SEÑALEROS / BALIZAS + CINTURÓN DE SEGURIDAD VISIBLE */}
-        {experience === 'race' && !hasFinished && (
+        {experience === 'race' && !hasFinished && (!requiresMissionBriefing || missionAccepted) && (
           <div
             role="group"
             aria-label="Señaleros y cinturón de seguridad"

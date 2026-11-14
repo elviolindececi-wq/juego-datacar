@@ -12,9 +12,15 @@ export interface PhotorealEnvironmentController {
   textures: THREE.Texture[];
   trunkMaterial: THREE.MeshStandardMaterial;
   foliageMaterial: THREE.MeshStandardMaterial;
+  foliageCutoutMaterial: THREE.MeshStandardMaterial;
   palmTrunkMaterial: THREE.MeshStandardMaterial;
   palmLeafMaterial: THREE.MeshStandardMaterial;
   hedgeMaterial: THREE.MeshStandardMaterial;
+  utilityWoodPoleMaterial: THREE.MeshStandardMaterial;
+  rustedUtilityMetalMaterial: THREE.MeshStandardMaterial;
+  ceramicInsulatorMaterial: THREE.MeshPhysicalMaterial;
+  guardrailMetalMaterial: THREE.MeshStandardMaterial;
+  retainingWallMaterial: THREE.MeshStandardMaterial;
   groundGrassMaterial: THREE.MeshStandardMaterial;
   lushGrassMaterial: THREE.MeshStandardMaterial;
   distantBankGrassMaterial: THREE.MeshStandardMaterial;
@@ -25,6 +31,7 @@ export interface PhotorealEnvironmentController {
   towerMaterials: THREE.MeshPhysicalMaterial[];
   windowPaneMaterial: THREE.MeshPhysicalMaterial;
   reflectiveMaterials: Array<THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial>;
+  applyMaxAnisotropy: (anisotropy: number) => void;
   update: (timeSec: number, sunDir?: readonly [number, number, number]) => void;
   dispose: () => void;
 }
@@ -33,6 +40,7 @@ export interface PhotorealEnvironmentOptions {
   historical?: boolean;
   wet?: boolean;
   halfRoadWidth?: number;
+  maxAnisotropy?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +297,285 @@ export function generateFoliageCanopyPbrMaps(size = 256): {
   return {
     albedo: buildRgbaAlbedoTexture(rgba, size, 4),
     normal: buildNormalTextureFromHeightField(height, size, 2.75),
+    roughness: buildGrayscaleDataTexture(rough, size),
+  };
+}
+
+/**
+ * Genera mapas PBR (albedo RGBA con máscara alfa botánica precisa, normal y rugosidad)
+ * para ramas foliares con alpha-clipping (alphaTest) que preservan SSS y viento de vértices.
+ */
+export function generateFoliageCutoutPbrMaps(size = 256): {
+  albedo: THREE.DataTexture;
+  normal: THREE.DataTexture;
+  roughness: THREE.DataTexture;
+} {
+  const height = new Float32Array(size * size);
+  const rough = new Float32Array(size * size);
+  const rgba = new Uint8Array(size * size * 4);
+
+  // Racimo botánico de 15 hojas lanceoladas/aserradas irradiando desde el pecíolo/rama central
+  const leaves: Array<{
+    cx: number;
+    cy: number;
+    angle: number;
+    rx: number;
+    ry: number;
+    tint: number;
+  }> = [
+    { cx: 0.50, cy: 0.50, angle: 0.0, rx: 0.17, ry: 0.28, tint: 1.04 },
+    { cx: 0.34, cy: 0.38, angle: -0.62, rx: 0.14, ry: 0.25, tint: 0.96 },
+    { cx: 0.66, cy: 0.38, angle: 0.62, rx: 0.14, ry: 0.25, tint: 1.02 },
+    { cx: 0.27, cy: 0.57, angle: -1.08, rx: 0.13, ry: 0.24, tint: 0.91 },
+    { cx: 0.73, cy: 0.57, angle: 1.08, rx: 0.13, ry: 0.24, tint: 0.94 },
+    { cx: 0.38, cy: 0.70, angle: -0.45, rx: 0.14, ry: 0.23, tint: 1.06 },
+    { cx: 0.62, cy: 0.70, angle: 0.45, rx: 0.14, ry: 0.23, tint: 1.01 },
+    { cx: 0.50, cy: 0.76, angle: 0.05, rx: 0.13, ry: 0.21, tint: 1.08 },
+    { cx: 0.50, cy: 0.26, angle: -0.06, rx: 0.14, ry: 0.21, tint: 0.89 },
+    { cx: 0.23, cy: 0.36, angle: -0.88, rx: 0.11, ry: 0.19, tint: 0.95 },
+    { cx: 0.77, cy: 0.36, angle: 0.88, rx: 0.11, ry: 0.19, tint: 0.98 },
+    { cx: 0.22, cy: 0.71, angle: -0.78, rx: 0.11, ry: 0.18, tint: 1.03 },
+    { cx: 0.78, cy: 0.71, angle: 0.78, rx: 0.11, ry: 0.18, tint: 1.00 },
+    { cx: 0.42, cy: 0.48, angle: -0.28, rx: 0.15, ry: 0.24, tint: 0.93 },
+    { cx: 0.58, cy: 0.48, angle: 0.28, rx: 0.15, ry: 0.24, tint: 0.97 },
+  ];
+
+  const precomputedLeaves = leaves.map((lf) => ({
+    ...lf,
+    ca: Math.cos(lf.angle),
+    sa: Math.sin(lf.angle),
+  }));
+
+  for (let y = 0; y < size; y++) {
+    const v = (y + 0.5) / size;
+    const twigCenter = 0.5 + Math.sin(v * 5.2) * 0.018;
+    const twigHalfWidth = 0.014 * (1.0 - v * 0.55);
+    const inTwigV = v > 0.08 && v < 0.76;
+
+    for (let x = 0; x < size; x++) {
+      const u = (x + 0.5) / size;
+      const idx = y * size + x;
+      const onTwig = inTwigV && Math.abs(u - twigCenter) < twigHalfWidth;
+
+      let bestCoverage = 0;
+      let bestRib = 0;
+      let bestTint = 1.0;
+
+      for (let i = 0; i < precomputedLeaves.length; i++) {
+        const lf = precomputedLeaves[i];
+        const dx = u - lf.cx;
+        const dy = v - lf.cy;
+        if (Math.abs(dx) > 0.34 || Math.abs(dy) > 0.34) continue;
+        const lx = (dx * lf.ca + dy * lf.sa) / lf.rx;
+        const ly = (-dx * lf.sa + dy * lf.ca) / lf.ry;
+        if (Math.abs(lx) > 1.25 || Math.abs(ly) > 1.25) continue;
+
+        // Silueta lanceolada puntiaguda con borde finamente aserrado
+        const taper = Math.max(0.12, 1.0 - Math.abs(ly) * 0.68 - Math.max(0, ly) * 0.22);
+        const serration = Math.sin((ly + 1.0) * 26.0) * 0.065;
+        const normDist = Math.hypot(lx / (taper + serration), ly);
+        const cov = Math.max(0, Math.min(1, (1.02 - normDist) * 4.6));
+        if (cov > bestCoverage) {
+          bestCoverage = cov;
+          const midrib = Math.max(0, 1.0 - Math.abs(lx) * 5.5);
+          const sideVeins = Math.abs(Math.sin((Math.abs(lx) * 5.5 - ly * 4.2) * Math.PI)) * 0.32;
+          bestRib = Math.min(1, midrib * 0.65 + sideVeins + (1 - normDist) * 0.28);
+          bestTint = lf.tint;
+        }
+      }
+
+      const alphaFloat = onTwig ? 1.0 : bestCoverage;
+      const p = idx * 4;
+      if (alphaFloat <= 0.02) {
+        height[idx] = 0;
+        rough[idx] = 0.84;
+        rgba[p] = 165;
+        rgba[p + 1] = 158;
+        rgba[p + 2] = 132;
+        rgba[p + 3] = 0;
+        continue;
+      }
+
+      const microNoise = tileableValueNoise(u * 1.5, v * 1.5, 48, 48, 1301);
+      const h = onTwig ? 0.85 : Math.max(0, Math.min(1, bestRib * 0.75 + microNoise * 0.25));
+      height[idx] = h;
+      rough[idx] = onTwig ? 0.88 : Math.max(0.48, Math.min(0.90, 0.84 - h * 0.30));
+
+      if (onTwig && bestCoverage < 0.55) {
+        rgba[p] = 112;
+        rgba[p + 1] = 88;
+        rgba[p + 2] = 62;
+        rgba[p + 3] = 255;
+      } else {
+        // Color base cálido-neutro sin halo oscuro (bleed-free) para multiplicar con instanceColor
+        const lum = (196 + h * 54) * bestTint;
+        const warm = (microNoise - 0.5) * 22;
+        rgba[p] = Math.max(0, Math.min(255, Math.round(lum + warm * 0.7)));
+        rgba[p + 1] = Math.max(0, Math.min(255, Math.round(lum + warm * 0.25)));
+        rgba[p + 2] = Math.max(0, Math.min(255, Math.round(lum * 0.85 - warm * 0.35)));
+        rgba[p + 3] = Math.max(0, Math.min(255, Math.round(alphaFloat * 255)));
+      }
+    }
+  }
+
+  const albedo = buildRgbaAlbedoTexture(rgba, size, 8);
+  albedo.wrapS = THREE.ClampToEdgeWrapping;
+  albedo.wrapT = THREE.ClampToEdgeWrapping;
+  const normal = buildNormalTextureFromHeightField(height, size, 2.35);
+  normal.wrapS = THREE.ClampToEdgeWrapping;
+  normal.wrapT = THREE.ClampToEdgeWrapping;
+  const roughness = buildGrayscaleDataTexture(rough, size);
+  roughness.wrapS = THREE.ClampToEdgeWrapping;
+  roughness.wrapT = THREE.ClampToEdgeWrapping;
+
+  return { albedo, normal, roughness };
+}
+
+/**
+ * Mapas PBR para postes eléctricos de madera creosotada envejecida con vetas verticales,
+ * grietas de secado y manchas de óxido de herrajes.
+ */
+export function generateUtilityWoodPolePbrMaps(size = 256): {
+  albedo: THREE.DataTexture;
+  normal: THREE.DataTexture;
+  roughness: THREE.DataTexture;
+} {
+  const height = new Float32Array(size * size);
+  const rough = new Float32Array(size * size);
+  const rgba = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y++) {
+    const v = y / size;
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const grain = tileableFbm(u, v, 28, 4, 1511, 4);
+      const splitCrack = Math.pow(Math.max(0, 1.0 - Math.abs(Math.sin((u * 9.0 + grain * 0.35) * Math.PI)) * 7.5), 2.0);
+      const weatherBand = tileableFbm(u, v, 6, 10, 1553, 3);
+      const rustBleed = Math.max(0, (weatherBand - 0.58) * 2.2);
+
+      const h = Math.max(0, Math.min(1, grain * 0.72 - splitCrack * 0.55 + 0.22));
+      const idx = y * size + x;
+      height[idx] = h;
+      rough[idx] = Math.max(0.68, Math.min(0.98, 0.86 + splitCrack * 0.10 - rustBleed * 0.08));
+
+      const base = 78 + h * 54;
+      const r = base * 1.12 + rustBleed * 46;
+      const g = base * 0.90 + rustBleed * 16;
+      const b = base * 0.72;
+
+      const p = idx * 4;
+      rgba[p] = Math.max(0, Math.min(255, Math.round(r)));
+      rgba[p + 1] = Math.max(0, Math.min(255, Math.round(g)));
+      rgba[p + 2] = Math.max(0, Math.min(255, Math.round(b)));
+      rgba[p + 3] = 255;
+    }
+  }
+
+  return {
+    albedo: buildRgbaAlbedoTexture(rgba, size, 8),
+    normal: buildNormalTextureFromHeightField(height, size, 2.4),
+    roughness: buildGrayscaleDataTexture(rough, size),
+  };
+}
+
+/**
+ * Mapas PBR de acero galvanizado perfilado con pátina vial y vetas de óxido en bordes
+ * para guardarrieles metálicos W-beam.
+ */
+export function generateGuardrailSteelPbrMaps(size = 256): {
+  albedo: THREE.DataTexture;
+  normal: THREE.DataTexture;
+  roughness: THREE.DataTexture;
+} {
+  const height = new Float32Array(size * size);
+  const rough = new Float32Array(size * size);
+  const rgba = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y++) {
+    const v = y / size;
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const spangle = tileableValueNoise(u, v, 36, 36, 1609);
+      const longitudinalBrush = tileableFbm(u, v, 6, 32, 1627, 3);
+      const scrape = Math.pow(Math.max(0, tileableValueNoise(u, v, 10, 48, 1663) - 0.72) * 3.5, 1.5);
+      const rustEdge = Math.max(0, (tileableFbm(u, v, 8, 8, 1699, 3) - 0.64) * 2.6);
+
+      const h = Math.max(0, Math.min(1, 0.5 + (longitudinalBrush - 0.5) * 0.35 + scrape * 0.30 - rustEdge * 0.22));
+      const idx = y * size + x;
+      height[idx] = h;
+      rough[idx] = Math.max(0.24, Math.min(0.88, 0.34 + spangle * 0.16 + rustEdge * 0.38 - scrape * 0.08));
+
+      const zinc = 176 + spangle * 32 + scrape * 26;
+      const r = zinc * (1 - rustEdge * 0.42) + rustEdge * 138;
+      const g = zinc * (1 - rustEdge * 0.55) + rustEdge * 78;
+      const b = (zinc + 6) * (1 - rustEdge * 0.68) + rustEdge * 48;
+
+      const p = idx * 4;
+      rgba[p] = Math.max(0, Math.min(255, Math.round(r)));
+      rgba[p + 1] = Math.max(0, Math.min(255, Math.round(g)));
+      rgba[p + 2] = Math.max(0, Math.min(255, Math.round(b)));
+      rgba[p + 3] = 255;
+    }
+  }
+
+  return {
+    albedo: buildRgbaAlbedoTexture(rgba, size, 8),
+    normal: buildNormalTextureFromHeightField(height, size, 1.85),
+    roughness: buildGrayscaleDataTexture(rough, size),
+  };
+}
+
+/**
+ * Mapas PBR de hormigón encofrado intemperizado con juntas de tablones, perforaciones de tirantes
+ * y escurrimientos de humedad para muros de contención laterales.
+ */
+export function generateRetainingWallPbrMaps(size = 256): {
+  albedo: THREE.DataTexture;
+  normal: THREE.DataTexture;
+  roughness: THREE.DataTexture;
+} {
+  const height = new Float32Array(size * size);
+  const rough = new Float32Array(size * size);
+  const rgba = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y++) {
+    const v = y / size;
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const aggregate = tileableFbm(u, v, 24, 24, 1741, 4);
+      const streak = tileableFbm(u, v, 18, 4, 1777, 3);
+      // Juntas horizontales de tablones de encofrado (6 hiladas) + junta vertical cada medio módulo
+      const boardSeam = Math.exp(-Math.pow(Math.sin(v * 6.0 * Math.PI), 2) * 58.0);
+      const panelJoint = Math.exp(-Math.pow(Math.sin(u * 2.0 * Math.PI), 2) * 90.0);
+      // Hoyuelos circulares de tensores de encofrado
+      const tieU = ((u * 4.0) % 1) - 0.5;
+      const tieV = ((v * 3.0) % 1) - 0.5;
+      const tieHole = Math.max(0, 1.0 - Math.hypot(tieU, tieV) * 11.0);
+
+      const h = Math.max(0, Math.min(1, 0.62 + (aggregate - 0.5) * 0.28 - boardSeam * 0.26 - panelJoint * 0.34 - tieHole * 0.45));
+      const idx = y * size + x;
+      height[idx] = h;
+
+      const dampStreak = Math.max(0, (streak - 0.54) * 1.9) * (1.0 - v * 0.35);
+      rough[idx] = Math.max(0.58, Math.min(0.97, 0.88 - dampStreak * 0.18 + boardSeam * 0.06));
+
+      const conc = (146 + aggregate * 36) * (1.0 - dampStreak * 0.24 - tieHole * 0.38 - panelJoint * 0.18);
+      const mossHint = Math.max(0, (1.0 - v * 2.6)) * aggregate * 22;
+      const r = conc - mossHint * 0.35;
+      const g = conc + mossHint * 0.32;
+      const b = conc * 0.94 - mossHint * 0.45;
+
+      const p = idx * 4;
+      rgba[p] = Math.max(0, Math.min(255, Math.round(r)));
+      rgba[p + 1] = Math.max(0, Math.min(255, Math.round(g)));
+      rgba[p + 2] = Math.max(0, Math.min(255, Math.round(b)));
+      rgba[p + 3] = 255;
+    }
+  }
+
+  return {
+    albedo: buildRgbaAlbedoTexture(rgba, size, 8),
+    normal: buildNormalTextureFromHeightField(height, size, 2.45),
     roughness: buildGrayscaleDataTexture(rough, size),
   };
 }
@@ -1294,6 +1581,7 @@ export function createPhotorealEnvironmentMaterials(
   const historical = Boolean(options.historical);
   const wet = Boolean(options.wet);
   const halfRoadWidth = options.halfRoadWidth ?? 10.5;
+  const maxAnisotropy = Math.max(1, options.maxAnisotropy ?? 16);
 
   const textures: THREE.Texture[] = [];
   const disposableMaterials: THREE.Material[] = [];
@@ -1304,7 +1592,7 @@ export function createPhotorealEnvironmentMaterials(
     uSunDirWorld: { value: new THREE.Vector3(0.56, 0.518, -0.646).normalize() },
   };
 
-  // 1. Corteza y follaje PBR con SSS + animación de viento
+  // 1. Corteza y follaje PBR con SSS + animación de viento + ramas foliares alpha-clipped
   const barkMaps = generateBarkPbrMaps(256);
   barkMaps.albedo.repeat.set(2, 3);
   barkMaps.normal.repeat.set(2, 3);
@@ -1356,6 +1644,110 @@ export function createPhotorealEnvironmentMaterials(
     cacheKey: 'nfsmw_foliage_sss_wind_v2',
   });
   disposableMaterials.push(foliageMaterial);
+
+  // Ramas volumétricas con recorte alfa preciso (alphaTest) manteniendo idéntico shader SSS + viento
+  const foliageCutoutMaps = generateFoliageCutoutPbrMaps(256);
+  textures.push(foliageCutoutMaps.albedo, foliageCutoutMaps.normal, foliageCutoutMaps.roughness);
+
+  const foliageCutoutMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: foliageCutoutMaps.albedo,
+    normalMap: foliageCutoutMaps.normal,
+    normalScale: new THREE.Vector2(1.45, 1.45),
+    roughnessMap: foliageCutoutMaps.roughness,
+    roughness: 0.74,
+    metalness: 0.02,
+    alphaTest: 0.44,
+    side: THREE.DoubleSide,
+    shadowSide: THREE.DoubleSide,
+  });
+  enhanceFoliageMaterialWithSSSAndWind(foliageCutoutMaterial, sharedUniforms, {
+    sssIntensity: 0.92,
+    windAmplitude: 0.09,
+    cacheKey: 'nfsmw_foliage_cutout_sss_wind_v1',
+  });
+  disposableMaterials.push(foliageCutoutMaterial);
+
+  // Infraestructura urbana de alta fidelidad: postes de madera/óxido, aisladores cerámicos, guardarrieles y muros de contención
+  const woodPoleMaps = generateUtilityWoodPolePbrMaps(256);
+  woodPoleMaps.albedo.repeat.set(2, 5);
+  woodPoleMaps.normal.repeat.set(2, 5);
+  woodPoleMaps.roughness.repeat.set(2, 5);
+  textures.push(woodPoleMaps.albedo, woodPoleMaps.normal, woodPoleMaps.roughness);
+
+  const utilityWoodPoleMaterial = new THREE.MeshStandardMaterial({
+    color: '#c8baa8',
+    map: woodPoleMaps.albedo,
+    normalMap: woodPoleMaps.normal,
+    normalScale: new THREE.Vector2(1.3, 1.3),
+    roughnessMap: woodPoleMaps.roughness,
+    roughness: 0.90,
+    metalness: 0.05,
+  });
+  enhanceBarkMaterialWithBaseMoss(utilityWoodPoleMaterial, 'nfsmw_utility_wood_pole_v1');
+  disposableMaterials.push(utilityWoodPoleMaterial);
+
+  const guardrailMaps = generateGuardrailSteelPbrMaps(256);
+  guardrailMaps.albedo.repeat.set(3, 1);
+  guardrailMaps.normal.repeat.set(3, 1);
+  guardrailMaps.roughness.repeat.set(3, 1);
+  textures.push(guardrailMaps.albedo, guardrailMaps.normal, guardrailMaps.roughness);
+
+  const rustedUtilityMetalMaterial = new THREE.MeshStandardMaterial({
+    color: '#7d736b',
+    map: guardrailMaps.albedo,
+    normalMap: guardrailMaps.normal,
+    normalScale: new THREE.Vector2(1.15, 1.15),
+    roughnessMap: guardrailMaps.roughness,
+    roughness: 0.62,
+    metalness: 0.68,
+    envMapIntensity: 1.35,
+  });
+  disposableMaterials.push(rustedUtilityMetalMaterial);
+  reflectiveMaterials.push(rustedUtilityMetalMaterial);
+
+  const ceramicInsulatorMaterial = new THREE.MeshPhysicalMaterial({
+    color: '#d9e2e4',
+    roughness: 0.14,
+    metalness: 0.06,
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+    reflectivity: 0.90,
+    envMapIntensity: 1.75,
+  });
+  disposableMaterials.push(ceramicInsulatorMaterial);
+  reflectiveMaterials.push(ceramicInsulatorMaterial);
+
+  const guardrailMetalMaterial = new THREE.MeshStandardMaterial({
+    color: '#dde3e8',
+    map: guardrailMaps.albedo,
+    normalMap: guardrailMaps.normal,
+    normalScale: new THREE.Vector2(1.25, 1.25),
+    roughnessMap: guardrailMaps.roughness,
+    roughness: 0.42,
+    metalness: 0.78,
+    envMapIntensity: 1.75,
+  });
+  disposableMaterials.push(guardrailMetalMaterial);
+  reflectiveMaterials.push(guardrailMetalMaterial);
+
+  const retainingWallMaps = generateRetainingWallPbrMaps(256);
+  retainingWallMaps.albedo.repeat.set(2, 1);
+  retainingWallMaps.normal.repeat.set(2, 1);
+  retainingWallMaps.roughness.repeat.set(2, 1);
+  textures.push(retainingWallMaps.albedo, retainingWallMaps.normal, retainingWallMaps.roughness);
+
+  const retainingWallMaterial = new THREE.MeshStandardMaterial({
+    color: historical ? '#d2c9b8' : '#d6d4cd',
+    map: retainingWallMaps.albedo,
+    normalMap: retainingWallMaps.normal,
+    normalScale: new THREE.Vector2(1.35, 1.35),
+    roughnessMap: retainingWallMaps.roughness,
+    roughness: 0.88,
+    metalness: 0.06,
+  });
+  enhanceConcreteSurfaceImperfections(retainingWallMaterial, 'nfsmw_retaining_wall_conc_v1');
+  disposableMaterials.push(retainingWallMaterial);
 
   const palmLeafMaterial = new THREE.MeshStandardMaterial({
     color: '#4e6f3a',
@@ -1624,13 +2016,28 @@ export function createPhotorealEnvironmentMaterials(
   disposableMaterials.push(windowPaneMaterial);
   reflectiveMaterials.push(windowPaneMaterial);
 
+  const applyMaxAnisotropy = (aniso: number) => {
+    const clamped = Math.max(1, Math.floor(aniso));
+    for (const tex of textures) {
+      tex.anisotropy = clamped;
+      tex.needsUpdate = true;
+    }
+  };
+  applyMaxAnisotropy(maxAnisotropy);
+
   return {
     textures,
     trunkMaterial,
     foliageMaterial,
+    foliageCutoutMaterial,
     palmTrunkMaterial,
     palmLeafMaterial,
     hedgeMaterial,
+    utilityWoodPoleMaterial,
+    rustedUtilityMetalMaterial,
+    ceramicInsulatorMaterial,
+    guardrailMetalMaterial,
+    retainingWallMaterial,
     groundGrassMaterial,
     lushGrassMaterial,
     distantBankGrassMaterial,
@@ -1641,6 +2048,7 @@ export function createPhotorealEnvironmentMaterials(
     towerMaterials,
     windowPaneMaterial,
     reflectiveMaterials,
+    applyMaxAnisotropy,
     update: (timeSec, sunDir) => {
       sharedUniforms.uEnvTime.value = timeSec;
       if (sunDir) {

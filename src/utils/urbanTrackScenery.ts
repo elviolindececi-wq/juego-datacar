@@ -5,6 +5,10 @@ import {
   createPhotorealEnvironmentMaterials,
   type PhotorealEnvironmentController,
 } from './nfsmwEnvironmentMaterials.ts';
+import {
+  createEnvironmentLodSystem3D,
+  type TreeAnchorSpec,
+} from './environmentLodSystem3D.ts';
 
 interface PedestrianAgent {
   lateral: number;
@@ -31,6 +35,7 @@ export function createUrbanTrackScenery(
   profile: string | undefined,
   isCityCircuit: boolean,
   circuitId?: string,
+  maxAnisotropy = 16,
 ): THREE.Group {
   const group = new THREE.Group();
   group.name = 'asuncion_roadside_environment';
@@ -53,6 +58,7 @@ export function createUrbanTrackScenery(
     historical,
     wet,
     halfRoadWidth: halfRoad,
+    maxAnisotropy,
   });
 
   // 1. SUELO BASE CON CÉSPED FOTORREALISTA (NORMAL MAP, AO DE RAÍZ Y TINTES OTOÑALES SECOS + VERDES APAGADOS)
@@ -680,164 +686,50 @@ export function createUrbanTrackScenery(
   windowMesh.frustumCulled = false;
   group.add(windowMesh);
 
-  // 7. ALUMBRADO PÚBLICO Y CABLEADO URBANO
-  const lampCountPerSide = Math.ceil(end / 54);
-  const totalLamps = lampCountPerSide * 2;
-  const poleGeometry = new THREE.CylinderGeometry(0.065, 0.105, 6.3, 6);
-  const metalMaterial = mat('#59626a', 0.55, 0.35);
-  const lampPosts = new THREE.InstancedMesh(poleGeometry, metalMaterial, totalLamps);
-  const fixture = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(1.2, 0.14, 0.35),
-    mat('#d2d4ce', 0.42),
-    totalLamps,
-  );
-  let lampIdx = 0;
-  for (let p = 0; p < lampCountPerSide; p++) {
-    for (const side of [-1, 1]) {
-      const z = p * 54 - 8;
-      const x = side * (halfRoad + 2.35);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.position.set(x, 3.12, z);
-      dummy.updateMatrix();
-      lampPosts.setMatrixAt(lampIdx, dummy.matrix);
-      dummy.position.set(x - side * 0.48, 6.2, z);
-      dummy.updateMatrix();
-      fixture.setMatrixAt(lampIdx, dummy.matrix);
-      lampIdx++;
-    }
-  }
-  lampPosts.castShadow = true;
-  lampPosts.receiveShadow = true;
-  fixture.castShadow = true;
-  fixture.receiveShadow = true;
-  lampPosts.instanceMatrix.needsUpdate = true;
-  fixture.instanceMatrix.needsUpdate = true;
-  lampPosts.frustumCulled = false;
-  fixture.frustumCulled = false;
-  group.add(lampPosts, fixture);
-
-  const cablePoints: number[] = [];
-  for (const side of [-1, 1]) {
-    const x = side * (halfRoad + 2.55);
-    for (let i = 0; i < lampCountPerSide - 1; i++) {
-      const startZ = i * 54 - 8;
-      const endZ = (i + 1) * 54 - 8;
-      for (let k = 0; k < 5; k++) {
-        const t0 = k / 5;
-        const t1 = (k + 1) / 5;
-        const sag0 = Math.sin(Math.PI * t0) * 0.22;
-        const sag1 = Math.sin(Math.PI * t1) * 0.22;
-        cablePoints.push(
-          x,
-          6.5 - sag0,
-          startZ + (endZ - startZ) * t0,
-          x,
-          6.5 - sag1,
-          startZ + (endZ - startZ) * t1,
-        );
-      }
-    }
-  }
-  const wireGeometry = new THREE.BufferGeometry();
-  wireGeometry.setAttribute('position', new THREE.Float32BufferAttribute(cablePoints, 3));
-  const wires = new THREE.LineSegments(
-    wireGeometry,
-    new THREE.LineBasicMaterial({ color: '#292f32', transparent: true, opacity: 0.78 }),
-  );
-  wires.name = 'cableado_aereo_asuncion';
-  group.add(wires);
-
-  // 8. ARBOLEDA ASUNCENA EN CANTEROS DE PASTO, PLAZAS Y COSTANERA (Lapachos rosados/amarillos, Jacarandás y verdes)
+  // 7 & 8. SISTEMA LOD BASADO EN DISTANCIA + INSTANCEDMESH DE ALTA DENSIDAD (NFSMW 2012):
+  // - Arboleda volumétrica con ramas múltiples y follaje alpha-clipped (preservando SSS + viento)
+  // - Postes eléctricos de madera/hierro oxidado, aisladores cerámicos torneados y transformadores
+  // - Torres reticuladas de alta tensión + líneas catenarias aéreas de media y alta tensión
+  // - Guardarrieles metálicos perfilados W-beam + muros de contención de hormigón intemperizado
+  const metalMaterial = envMaterials.rustedUtilityMetalMaterial;
   const streetTreePairs = Math.floor(end / 38);
   const coastalTreeCount = Math.floor(end / 46);
-  const parkTreeCount = parkZones.length * 5;
-  const maxTrees = streetTreePairs * 2 + coastalTreeCount + parkTreeCount + 12;
+  const treeAnchors: TreeAnchorSpec[] = [];
 
-  const trunks = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.14, 0.23, 2.8, 8),
-    envMaterials.trunkMaterial,
-    maxTrees,
-  );
-  // Copa orgánica facetada de 4 racimos asimétricos por árbol con shader PBR de Subsurface Scattering (SSS) y brisa de vértices
-  const leaves = new THREE.InstancedMesh(
-    new THREE.IcosahedronGeometry(1.12, 0),
-    envMaterials.foliageMaterial,
-    maxTrees * 4,
-  );
-  const foliagePalette = [
-    new THREE.Color('#536938'), // Verde oliva otoñal apagado
-    new THREE.Color('#c88b26'), // Amarillo ocre / dorado de otoño
-    new THREE.Color('#42562f'), // Verde bosque profundo
-    new THREE.Color('#cc671f'), // Naranja otoñal luminoso
-    new THREE.Color('#a84624'), // Cobrizo rojizo cálido
-    new THREE.Color('#ddb034'), // Amarillo ámbar traslúcido al sol
-  ];
-
-  let treeIdx = 0;
-  let leafLobeIdx = 0;
-  const _shadeColor = new THREE.Color();
-  const placeTree = (tx: number, tz: number, scale: number, colorIdx: number) => {
-    if (treeIdx >= maxTrees) return;
+  const pushTreeAnchor = (tx: number, tz: number, scale: number, colorIndex: number) => {
     if (crossings.some((c) => Math.abs(c.z - tz) < 9.5)) return;
-    const baseCol = foliagePalette[colorIdx % foliagePalette.length];
-    dummy.rotation.set(0, (treeIdx * 1.1) % (Math.PI * 2), 0);
-    dummy.position.set(tx, 1.3 * scale, tz);
-    dummy.scale.set(scale, scale, scale);
-    dummy.updateMatrix();
-    trunks.setMatrixAt(treeIdx, dummy.matrix);
-
-    const lobes: Array<[number, number, number, number, number]> = [
-      [0, 3.62 * scale, 0, 1.16, 1.04],
-      [-0.68 * scale, 3.05 * scale, 0.46 * scale, 0.96, 0.86],
-      [0.64 * scale, 3.12 * scale, -0.48 * scale, 0.98, 0.93],
-      [0.14 * scale, 2.95 * scale, 0.62 * scale, 0.88, 0.82],
-    ];
-    for (const [lx, ly, lz, ls, bright] of lobes) {
-      if (leafLobeIdx >= maxTrees * 4) break;
-      dummy.position.set(tx + lx, ly, tz + lz);
-      dummy.rotation.set((leafLobeIdx * 0.7) % 1.4, (leafLobeIdx * 1.3) % 3.1, (leafLobeIdx * 0.5) % 0.9);
-      dummy.scale.set(scale * ls * 1.08, scale * ls * 0.82, scale * ls * 1.04);
-      dummy.updateMatrix();
-      leaves.setMatrixAt(leafLobeIdx, dummy.matrix);
-      _shadeColor.copy(baseCol).multiplyScalar(bright);
-      leaves.setColorAt(leafLobeIdx, _shadeColor);
-      leafLobeIdx++;
-    }
-    treeIdx++;
+    treeAnchors.push({ s: tz, lateral: tx, scale, colorIndex });
   };
 
-  // Árboles en los canteros de pasto junto a las veredas (predominio verde subtropical realista)
   for (let i = 0; i < streetTreePairs; i++) {
     const z = i * 38 + 14;
-    placeTree(-(halfRoad + 1.75), z, 0.94 + (i % 3) * 0.1, (i + 2) % 9 === 0 ? 4 : i % 4);
-    placeTree(halfRoad + 1.75, z + 11, 0.96 + ((i + 1) % 3) * 0.1, (i + 4) % 11 === 0 ? 5 : (i + 1) % 4);
+    pushTreeAnchor(-(halfRoad + 1.75), z, 0.94 + (i % 3) * 0.1, (i + 2) % 9 === 0 ? 4 : i % 4);
+    pushTreeAnchor(halfRoad + 1.75, z + 11, 0.96 + ((i + 1) % 3) * 0.1, (i + 4) % 11 === 0 ? 5 : (i + 1) % 4);
   }
-  // Árboles en las Plazas Verdes
   parkZones.forEach((pz, pIdx) => {
     for (let k = 0; k < 5; k++) {
       const ox = (k % 2 === 0 ? -6.5 : 6.5) + (k === 2 ? 3.2 : 0);
       const oz = (k - 2) * 6.8;
-      placeTree(pz.centerX + ox, pz.centerZ + oz, 1.08 + (k % 2) * 0.16, (pIdx + k) % foliagePalette.length);
+      pushTreeAnchor(pz.centerX + ox, pz.centerZ + oz, 1.08 + (k % 2) * 0.16, (pIdx + k) % 6);
     }
   });
-  // Árboles sobre el Parque Costanera junto al Río Paraguay
   for (let c = 0; c < coastalTreeCount; c++) {
-    placeTree(costaneraPromenadeX - 3.2, c * 46 + 20, 1.06, c % 5 === 0 ? 3 : c % 3);
+    pushTreeAnchor(costaneraPromenadeX - 3.2, c * 46 + 20, 1.06, c % 5 === 0 ? 3 : c % 3);
   }
 
-  trunks.count = treeIdx;
-  leaves.count = leafLobeIdx;
-  trunks.castShadow = true;
-  trunks.receiveShadow = true;
-  leaves.castShadow = true;
-  leaves.receiveShadow = true;
-  trunks.instanceMatrix.needsUpdate = true;
-  leaves.instanceMatrix.needsUpdate = true;
-  if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
-  trunks.frustumCulled = false;
-  leaves.frustumCulled = false;
-  group.add(trunks, leaves);
+  const lodSystem = createEnvironmentLodSystem3D({
+    halfRoadWidth: halfRoad,
+    trackEndMeters: end,
+    spans,
+    crossingsZ: crossings.map((c) => c.z),
+    parkZones,
+    paseoSites,
+    treeAnchors,
+    envMaterials,
+    hasRiverfront,
+  });
+  group.add(lodSystem.group);
+  group.userData.lodSystem = lodSystem;
 
   // 9. PERSONAS 3D EN LAS CALLES (VEREDAS, PLAZAS Y COSTANERA — 5 InstancedMesh compuestos, 0 GC)
   const pedestrians: PedestrianAgent[] = [];
@@ -1054,6 +946,7 @@ export function createUrbanTrackScenery(
     };
 
     group.userData.initPedestrians = (roadPath?: CurvedRoadPath) => {
+      lodSystem.applyRoadPath(roadPath);
       applyPedestrianMatrices(0, 0, roadPath, true);
     };
     group.userData.updateScenery = (
@@ -1061,18 +954,29 @@ export function createUrbanTrackScenery(
       focusZ: number,
       roadPath?: CurvedRoadPath,
       sunDir?: readonly [number, number, number],
+      cameraPos?: { x: number; y: number; z: number },
     ) => {
       envMaterials.update(timeSec, sunDir);
+      if (cameraPos) {
+        lodSystem.update(cameraPos.x, cameraPos.y, cameraPos.z);
+      }
       applyPedestrianMatrices(timeSec, focusZ, roadPath, false);
     };
   } else {
+    group.userData.initPedestrians = (roadPath?: CurvedRoadPath) => {
+      lodSystem.applyRoadPath(roadPath);
+    };
     group.userData.updateScenery = (
       timeSec: number,
       _focusZ: number,
       _roadPath?: CurvedRoadPath,
       sunDir?: readonly [number, number, number],
+      cameraPos?: { x: number; y: number; z: number },
     ) => {
       envMaterials.update(timeSec, sunDir);
+      if (cameraPos) {
+        lodSystem.update(cameraPos.x, cameraPos.y, cameraPos.z);
+      }
     };
   }
 
@@ -1140,6 +1044,17 @@ export function createUrbanTrackScenery(
     group.add(warn);
   }
 
+  const applyAnisoToGenerated = (aniso: number) => {
+    const clamped = Math.max(1, Math.floor(aniso));
+    for (const tex of generatedTextures) {
+      tex.anisotropy = clamped;
+      tex.needsUpdate = true;
+    }
+    envMaterials.applyMaxAnisotropy(clamped);
+  };
+  applyAnisoToGenerated(maxAnisotropy);
+  group.userData.applyMaxAnisotropy = applyAnisoToGenerated;
+
   group.userData.applyDynamicReflectionEnvMap = (probeTex: THREE.Texture) => {
     for (const m of reflectiveProbeMaterials) {
       m.envMap = probeTex;
@@ -1147,6 +1062,7 @@ export function createUrbanTrackScenery(
     }
   };
   group.userData.disposeTextureMaps = () => {
+    lodSystem.dispose();
     generatedTextures.forEach((texture) => texture.dispose());
     envMaterials.dispose();
   };

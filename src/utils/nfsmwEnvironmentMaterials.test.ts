@@ -145,7 +145,7 @@ test('nfsmwEnvironmentMaterials: inyecta shaders GLSL válidos de SSS + viento f
   env.dispose();
 });
 
-test('invariancia estricta: posiciones, escalas, cantidades y siluetas de árboles, césped y edificios permanecen 100% idénticas', () => {
+test('invariancia de edificios/torres y sistema LOD de árboles con shaders SSS + viento intactos', () => {
   const cleanup = installCanvasStubIfNeeded();
   try {
     const roadWidth = 21;
@@ -164,32 +164,23 @@ test('invariancia estricta: posiciones, escalas, cantidades y siluetas de árbol
     const totalBuildings = buildingsA.reduce((acc, m) => acc + m.count, 0);
     assert.ok(totalBuildings > 15, `Edificios existentes poblados sin cambios (${totalBuildings})`);
 
-    // Verificar árboles: troncos (CylinderGeometry 0.14..0.23 x 2.8) y copas de 4 racimos (IcosahedronGeometry 1.12)
-    const instancedMeshes = sceneryA.children.filter((c) => (c as THREE.InstancedMesh).isInstancedMesh) as THREE.InstancedMesh[];
-    const leavesMesh = instancedMeshes.find(
-      (m) => m.geometry.type === 'IcosahedronGeometry' && m.count > 20,
-    );
-    const trunksMesh = instancedMeshes.find(
-      (m) => m.geometry.type === 'CylinderGeometry' && (m.geometry as THREE.CylinderGeometry).parameters.height === 2.8,
-    );
-    assert.ok(trunksMesh && leavesMesh, 'Troncos y copas existentes preservados');
-    assert.equal(leavesMesh.count, trunksMesh.count * 4, 'Exactamente 4 lóbulos de follaje por árbol sin agregar ni quitar mallas');
+    // Verificar árboles volumétricos con LOD e InstancedMesh
+    const lodGroup = sceneryA.children.find((c) => c.name === 'nfsmw2012_instanced_lod_props') as THREE.Group | undefined;
+    assert.ok(lodGroup, 'Grupo de props LOD de alta densidad presente');
+    const diag = sceneryA.userData.lodSystem.getDiagnostics();
+    assert.ok(diag.trees.total > 20, 'Árboles urbanos y costeros poblados mediante InstancedMesh + LOD');
+    assert.equal(diag.trees.lod0 + diag.trees.lod1 + diag.trees.lod2, diag.trees.total);
 
-    // Verificar que updateScenery anima materiales sin mutar matrices de edificios ni árboles
+    // Verificar que updateScenery sin cambio de cámara no muta matrices de edificios
     const sampleBuildingMatBefore = new THREE.Matrix4();
     buildingsA[0].getMatrixAt(0, sampleBuildingMatBefore);
-    const sampleTreeMatBefore = new THREE.Matrix4();
-    trunksMesh.getMatrixAt(0, sampleTreeMatBefore);
 
     sceneryA.userData.updateScenery?.(3.5, 120, undefined, [0.56, 0.518, -0.646]);
 
     const sampleBuildingMatAfter = new THREE.Matrix4();
     buildingsA[0].getMatrixAt(0, sampleBuildingMatAfter);
-    const sampleTreeMatAfter = new THREE.Matrix4();
-    trunksMesh.getMatrixAt(0, sampleTreeMatAfter);
 
     assert.deepEqual(Array.from(sampleBuildingMatBefore.elements), Array.from(sampleBuildingMatAfter.elements));
-    assert.deepEqual(Array.from(sampleTreeMatBefore.elements), Array.from(sampleTreeMatAfter.elements));
 
     sceneryA.userData.disposeTextureMaps?.();
     sceneryB.userData.disposeTextureMaps?.();
