@@ -26,6 +26,7 @@ export interface Race3DPerformanceProfile {
   isMobilePerf: boolean;
   antialias: boolean;
   maxDpr: number;
+  maxAnisotropy: number;
   shadowsEnabled: boolean;
   defaultRearviewMirror: boolean;
   defaultSideMirrors: boolean;
@@ -48,15 +49,21 @@ export function resolveRace3DPerformanceProfile(args: {
 
   return {
     isMobilePerf: args.isMobilePerf,
-    antialias: !lowCostGpu,
-    maxDpr: lowCostGpu ? 1 : Math.min(dpr, args.compact ? 1.15 : 1.5),
+    // En móviles con DPR < 1.5 activamos MSAA; en pantallas Retina (DPR >= 1.5) el DPR 1.75 ya da bordes nítidos sin costo de MSAA
+    antialias: !args.isSoftwareGl && (!args.isMobilePerf || dpr < 1.5),
+    maxDpr: args.isSoftwareGl
+      ? 1
+      : args.isMobilePerf
+        ? Math.min(dpr, 1.75)
+        : Math.min(dpr, args.compact ? 1.25 : 1.75),
+    maxAnisotropy: args.isSoftwareGl ? 1 : args.isMobilePerf ? 4 : 8,
     shadowsEnabled: !lowCostGpu,
     defaultRearviewMirror: !args.isMobilePerf,
     defaultSideMirrors: !args.isMobilePerf && width >= 768,
-    gameplayCameraFar: args.isMobilePerf ? 420 : 1250,
-    droneCameraFar: args.isMobilePerf ? 720 : 1250,
-    skyDomeRadius: args.isMobilePerf ? 360 : 960,
-    fogDensityMultiplier: args.isMobilePerf ? 1.38 : 1,
+    gameplayCameraFar: args.isMobilePerf ? 540 : 1250,
+    droneCameraFar: args.isMobilePerf ? 780 : 1250,
+    skyDomeRadius: args.isMobilePerf ? 460 : 960,
+    fogDensityMultiplier: args.isMobilePerf ? 1.15 : 1,
   };
 }
 
@@ -67,7 +74,8 @@ export function shouldUseLightweightProceduralVehicle(args: {
   playerVehicleId: string;
   isOnlinePeer?: boolean;
 }): boolean {
-  if (!args.isMobilePerf) return false;
+  // En conducción/carrera y replay (tanto en celular como en desktop), SOLO el auto
+  // conducido por el jugador carga el .glb real; todos los demás usan chasis liviano no-GLB.
   if (args.experience !== 'race' && args.experience !== 'replay') return false;
   if (args.isOnlinePeer) return true;
   return args.vehicleId !== args.playerVehicleId;
@@ -76,9 +84,8 @@ export function shouldUseLightweightProceduralVehicle(args: {
 export function filterVehiclesForRacePreload<T extends { id: string }>(
   cars: readonly T[],
   playerVehicleId: string,
-  isMobilePerf: boolean,
+  _isMobilePerf?: boolean,
 ): T[] {
-  if (!isMobilePerf) return [...cars];
   const playerOnly = cars.filter((car) => car.id === playerVehicleId);
   if (playerOnly.length > 0) return playerOnly;
   return cars.length > 0 ? [cars[0]] : [];

@@ -136,6 +136,12 @@ export type RaceMode =
   | 'drag_quarter' 
   | 'drag_half' 
   | 'circuit' 
+  | 'circuit-avelino'
+  | 'circuit-herrera'
+  | 'circuit-jose-felix'
+  | 'circuit-artigas'
+  | 'circuit-oliva'
+  | 'circuit-aviadores'
   | 'brake_slalom' 
   | 'load_hillclimb' 
   | 'endurance' 
@@ -146,6 +152,7 @@ export type RaceMode =
 
 export interface RaceTrackConfig {
   id: RaceMode;
+  trackIndex?: number;
   name: string;
   subtitle: string;
   distanceMeters: number;

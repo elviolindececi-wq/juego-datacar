@@ -9,13 +9,17 @@ import {
   GENERIC_CUSTOM_CAR_GLB_URL,
   getCustomVehicleGlbUrl,
 } from './vehicle3DModelLoader';
-import { createContactShadowTexture } from './race3dTextures';
+import {
+  createContactShadowTexture,
+  createHeadlightBeamTexture,
+} from './race3dTextures';
 import { createVehicleWheelRig, VehicleWheelRig } from './vehicleWheelRig';
 import { VehicleSteeringDynamics } from './vehicleSteeringDynamics';
 import { screenRightSteeringToWorldYaw } from './cinematicDirector';
 import {
   createFaithfulVehicle3D,
   type FaithfulVehicleBuildResult,
+  type VehicleLampAnchors,
 } from './faithfulVehicleChassis3D';
 import { getFaithfulVehicleSpec } from './faithfulVehicleSpecs';
 
@@ -30,6 +34,16 @@ export interface InteractiveVehiclePose {
 
 export interface VehicleEntityOptions {
   preferProceduralModel?: boolean;
+}
+
+export interface VehicleWorldLampState {
+  headLeft: THREE.Vector3;
+  headRight: THREE.Vector3;
+  headDir: THREE.Vector3;
+  headIntensity: number;
+  brakeLeft: THREE.Vector3;
+  brakeRight: THREE.Vector3;
+  brakeIntensity: number;
 }
 
 export interface VehicleEntityRunner {
@@ -52,6 +66,7 @@ export interface VehicleEntityRunner {
   setHeadlights: (enabled: boolean, illuminateTrack: boolean) => void;
   setTurnSignals?: (leftLit: boolean, rightLit: boolean) => void;
   setNameplateVisible: (visible: boolean) => void;
+  getWorldLampState?: (out: VehicleWorldLampState) => boolean;
   // Metros recorridos solo en la toma de llegada; no altera la física.
   advanceFinishWheelRotation?: (additionalMeters: number) => void;
   dispose: () => void;
@@ -176,6 +191,31 @@ function createSoftRoadBeamTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(canvas);
 }
 
+/** Halo de freno rojo difuso HDR para bloom realista en ambas ópticas traseras. */
+function createBrakeGlowTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const gradient = ctx.createRadialGradient(32, 32, 2, 32, 32, 31);
+    gradient.addColorStop(0, 'rgba(255, 76, 64, 0.98)');
+    gradient.addColorStop(0.24, 'rgba(244, 34, 34, 0.65)');
+    gradient.addColorStop(0.62, 'rgba(185, 22, 22, 0.18)');
+    gradient.addColorStop(1, 'rgba(140, 12, 12, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const _calBox3 = new THREE.Box3();
+const _calRaycaster = new THREE.Raycaster();
+const _calOrigin = new THREE.Vector3();
+const _calDir = new THREE.Vector3();
+const _localAnchorScratch = new THREE.Vector3();
+
 /**
  * Entidad 3D con arquitectura desacoplada de transformaciones:
  * - group (VehicleRoot): Control de posición física oficial (X carril, Z avance en pista)
@@ -198,15 +238,45 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
   private shadowMesh: THREE.Mesh;
   private underglowMesh: THREE.Mesh;
   private nameplateSprite: THREE.Sprite;
-  private brakeLight: THREE.PointLight;
-  private config: Vehicle3DConfig;
-  private steeringDynamics = new VehicleSteeringDynamics();
+
+  // Sistema simétrico de faros delanteros (izquierdo +X, derecho -X)
   private headlightGroup = new THREE.Group();
-  private headlightBeam: THREE.SpotLight;
+  private headlightLensMaterial: THREE.MeshBasicMaterial;
+  private headlightLensLeft: THREE.Mesh;
+  private headlightLensRight: THREE.Mesh;
+  private headlightHaloLeft: THREE.Sprite;
+  private headlightHaloRight: THREE.Sprite;
+  private headlightBeamLeft: THREE.SpotLight;
+  private headlightBeamRight: THREE.SpotLight;
   private headlightGlowTexture: THREE.CanvasTexture;
   private headlightGlowMaterial: THREE.SpriteMaterial;
-  private headlightRoadPool: THREE.Mesh;
+  private headlightRoadBeamGroup = new THREE.Group();
+  private headlightRoadPoolLeft: THREE.Mesh;
+  private headlightRoadPoolRight: THREE.Mesh;
   private headlightRoadTexture: THREE.CanvasTexture;
+  private headlightsEnabled = true;
+  private headlightsIlluminateTrack = false;
+
+  // Sistema simétrico dual de luces traseras de freno (izquierda +X, derecha -X)
+  private rearBrakeGroup = new THREE.Group();
+  private brakeLensMaterial: THREE.MeshBasicMaterial;
+  private brakeLensLeft: THREE.Mesh;
+  private brakeLensRight: THREE.Mesh;
+  private brakeHaloLeft: THREE.Sprite;
+  private brakeHaloRight: THREE.Sprite;
+  private brakeLightLeft: THREE.PointLight;
+  private brakeLightRight: THREE.PointLight;
+  private brakeGlowTexture: THREE.CanvasTexture;
+  private brakeGlowMaterial: THREE.SpriteMaterial;
+  private brakeRoadPoolGroup = new THREE.Group();
+  private brakeRoadPoolLeft: THREE.Mesh;
+  private brakeRoadPoolRight: THREE.Mesh;
+  private brakeRoadPoolMaterial: THREE.MeshBasicMaterial;
+  private brakeGlowLevel = 0;
+
+  private lampAnchors: VehicleLampAnchors;
+  private config: Vehicle3DConfig;
+  private steeringDynamics = new VehicleSteeringDynamics();
   private turnSignalLeftGroup = new THREE.Group();
   private turnSignalRightGroup = new THREE.Group();
   private turnSignalLensMaterial: THREE.MeshStandardMaterial;
@@ -287,67 +357,146 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
     this.nameplateSprite.position.set(0, 2.25, 0);
     this.group.add(this.nameplateSprite);
 
-    // 6. Luz de freno roja en las ópticas traseras (sin placas cuadradas pegadas al baúl)
+    // 6. Posiciones iniciales de ópticas calibradas para silueta SUV (y refinadas al montar GLB/OEM)
     const oemSpec = getFaithfulVehicleSpec(vehicle);
     const halfLength = oemSpec.lengthM * 0.5;
     const halfWidth = oemSpec.widthM * 0.44;
-    const frontLampY = Math.max(0.68, oemSpec.heightM * 0.49);
-    const rearLampY = Math.max(0.76, oemSpec.heightM * 0.56);
+    const initFrontX = oemSpec.widthM * 0.345;
+    const initRearX = oemSpec.widthM * 0.352;
+    const frontLampY = Math.max(0.76, oemSpec.heightM * 0.51);
+    const rearLampY = Math.max(0.92, oemSpec.heightM * 0.58);
+    const initFrontZ = halfLength - 0.05;
+    const initRearZ = -(halfLength - 0.04);
 
-    this.brakeLight = new THREE.PointLight('#ef4444', 0, 8);
-    this.brakeLight.position.set(0, rearLampY, -(halfLength + 0.08));
-    this.effectsGroup.add(this.brakeLight);
+    this.lampAnchors = {
+      frontLeft: [initFrontX, frontLampY, initFrontZ],
+      frontRight: [-initFrontX, frontLampY, initFrontZ],
+      rearLeft: [initRearX, rearLampY, initRearZ],
+      rearRight: [-initRearX, rearLampY, initRearZ],
+    };
 
-    // 7. Halos ópticos suaves calibrados a la altura real de los faros de cada modelo
-    this.headlightGroup.name = `faros_${vehicle.id}`;
-    this.headlightGlowTexture = createHeadlightGlowTexture();
-    this.headlightGlowMaterial = new THREE.SpriteMaterial({
-      map: this.headlightGlowTexture,
-      color: '#e0f2fe',
+    // 6A. DOS LUCES DE FRENO ROJAS SIMÉTRICAS (izquierda +X y derecha -X) en el portón trasero
+    this.rearBrakeGroup.name = `frenos_duales_${vehicle.id}`;
+    this.brakeLensMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.55, 0.04, 0.03),
+      transparent: true,
+      opacity: 0.18,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+      side: THREE.DoubleSide,
+    });
+    const brakeLensGeo = new THREE.CapsuleGeometry(0.026, 0.155, 6, 12);
+    brakeLensGeo.rotateZ(Math.PI * 0.5);
+    this.brakeLensLeft = new THREE.Mesh(brakeLensGeo, this.brakeLensMaterial);
+    this.brakeLensRight = new THREE.Mesh(brakeLensGeo.clone(), this.brakeLensMaterial);
+    this.rearBrakeGroup.add(this.brakeLensLeft, this.brakeLensRight);
+
+    this.brakeGlowTexture = createBrakeGlowTexture();
+    this.brakeGlowMaterial = new THREE.SpriteMaterial({
+      map: this.brakeGlowTexture,
+      color: new THREE.Color(7.5, 0.09, 0.04),
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-      opacity: 0.44,
+      opacity: 0.0,
     });
-    const lampOffsetX = oemSpec.widthM * 0.36;
-    for (const x of [-lampOffsetX, lampOffsetX]) {
-      const halo = new THREE.Sprite(this.headlightGlowMaterial);
-      halo.position.set(x, frontLampY, halfLength + 0.04);
-      halo.scale.set(0.42, 0.24, 1);
-      this.headlightGroup.add(halo);
-    }
-    this.headlightBeam = new THREE.SpotLight('#d9e8ff', 14, 28, 0.42, 0.97, 2);
-    this.headlightBeam.name = `haz_faroles_${vehicle.id}`;
-    this.headlightBeam.position.set(0, frontLampY, halfLength - 0.04);
-    this.headlightBeam.target.position.set(0, 0.04, 17);
-    this.headlightBeam.castShadow = false;
-    this.headlightGroup.add(this.headlightBeam, this.headlightBeam.target);
+    this.brakeHaloLeft = new THREE.Sprite(this.brakeGlowMaterial);
+    this.brakeHaloLeft.scale.set(0.66, 0.36, 1);
+    this.brakeHaloRight = new THREE.Sprite(this.brakeGlowMaterial);
+    this.brakeHaloRight.scale.set(0.66, 0.36, 1);
+    this.rearBrakeGroup.add(this.brakeHaloLeft, this.brakeHaloRight);
+
+    this.brakeLightLeft = new THREE.PointLight('#ff1e1e', 0, 9.5, 1.8);
+    this.brakeLightRight = new THREE.PointLight('#ff1e1e', 0, 9.5, 1.8);
+    this.rearBrakeGroup.add(this.brakeLightLeft, this.brakeLightRight);
+    this.effectsGroup.add(this.rearBrakeGroup);
+
+    // Reflexión roja dual proyectada sobre el asfalto detrás de cada luz de freno trasera
+    this.brakeRoadPoolGroup.name = `reflejo_frenos_asfalto_${vehicle.id}`;
+    this.brakeRoadPoolMaterial = new THREE.MeshBasicMaterial({
+      map: this.brakeGlowTexture,
+      color: new THREE.Color(2.8, 0.12, 0.06),
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const brakePoolGeo = new THREE.PlaneGeometry(2.35, 5.2);
+    this.brakeRoadPoolLeft = new THREE.Mesh(brakePoolGeo, this.brakeRoadPoolMaterial);
+    this.brakeRoadPoolLeft.rotation.x = -Math.PI / 2;
+    this.brakeRoadPoolRight = new THREE.Mesh(brakePoolGeo.clone(), this.brakeRoadPoolMaterial);
+    this.brakeRoadPoolRight.rotation.x = -Math.PI / 2;
+    this.brakeRoadPoolGroup.add(this.brakeRoadPoolLeft, this.brakeRoadPoolRight);
+    this.group.add(this.brakeRoadPoolGroup);
+
+    // 7. DOS FAROS DELANTEROS SIMÉTRICOS (izquierdo +X y derecho -X) con bloom HDR y doble haz frontal
+    this.headlightGroup.name = `faros_simetricos_${vehicle.id}`;
+    this.headlightLensMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(2.9, 3.05, 3.45),
+      side: THREE.DoubleSide,
+    });
+    const headLensGeo = new THREE.BoxGeometry(0.22, 0.062, 0.032);
+    this.headlightLensLeft = new THREE.Mesh(headLensGeo, this.headlightLensMaterial);
+    this.headlightLensRight = new THREE.Mesh(headLensGeo.clone(), this.headlightLensMaterial);
+    this.headlightGroup.add(this.headlightLensLeft, this.headlightLensRight);
+
+    this.headlightGlowTexture = createHeadlightGlowTexture();
+    this.headlightGlowMaterial = new THREE.SpriteMaterial({
+      map: this.headlightGlowTexture,
+      color: new THREE.Color(2.5, 2.68, 3.1),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      opacity: 0.76,
+    });
+    this.headlightHaloLeft = new THREE.Sprite(this.headlightGlowMaterial);
+    this.headlightHaloLeft.scale.set(0.50, 0.28, 1);
+    this.headlightHaloRight = new THREE.Sprite(this.headlightGlowMaterial);
+    this.headlightHaloRight.scale.set(0.50, 0.28, 1);
+    this.headlightGroup.add(this.headlightHaloLeft, this.headlightHaloRight);
+
+    this.headlightBeamLeft = new THREE.SpotLight('#e4f0ff', 11, 30, 0.36, 0.92, 1.8);
+    this.headlightBeamLeft.castShadow = false;
+    this.headlightBeamRight = new THREE.SpotLight('#e4f0ff', 11, 30, 0.36, 0.92, 1.8);
+    this.headlightBeamRight.castShadow = false;
+    this.headlightGroup.add(
+      this.headlightBeamLeft,
+      this.headlightBeamLeft.target,
+      this.headlightBeamRight,
+      this.headlightBeamRight.target,
+    );
     this.effectsGroup.add(this.headlightGroup);
 
-    // Un degradado de luz de muy baja opacidad sobre el asfalto elimina
-    // el borde rígido de los círculos blancos, sin pases de render adicionales.
-    this.headlightRoadTexture = createSoftRoadBeamTexture();
-    this.headlightRoadPool = new THREE.Mesh(
-      new THREE.PlaneGeometry(5.0, 13.0),
-      new THREE.MeshBasicMaterial({
-        map: this.headlightRoadTexture,
-        transparent: true,
-        opacity: 0.25,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        blending: THREE.AdditiveBlending,
-        side: THREE.DoubleSide,
-      }),
-    );
-    this.headlightRoadPool.name = `iluminacion_asfalto_${vehicle.id}`;
-    this.headlightRoadPool.rotation.x = -Math.PI / 2;
-    this.headlightRoadPool.position.set(0, 0.033, 8.2);
-    this.group.add(this.headlightRoadPool);
+    // Doble haz proyectado sobre el asfalto (cono izquierdo y cono derecho independientes)
+    this.headlightRoadBeamGroup.name = `iluminacion_dual_asfalto_${vehicle.id}`;
+    this.headlightRoadTexture = createHeadlightBeamTexture();
+    const headBeamMat = new THREE.MeshBasicMaterial({
+      map: this.headlightRoadTexture,
+      color: new THREE.Color(1.25, 1.34, 1.48),
+      transparent: true,
+      opacity: 0.30,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
+    const headBeamGeo = new THREE.PlaneGeometry(2.55, 13.5);
+    this.headlightRoadPoolLeft = new THREE.Mesh(headBeamGeo, headBeamMat);
+    this.headlightRoadPoolLeft.rotation.x = Math.PI / 2;
+    this.headlightRoadPoolRight = new THREE.Mesh(headBeamGeo.clone(), headBeamMat);
+    this.headlightRoadPoolRight.rotation.x = Math.PI / 2;
+    this.headlightRoadBeamGroup.add(this.headlightRoadPoolLeft, this.headlightRoadPoolRight);
+    this.group.add(this.headlightRoadBeamGroup);
+
+    this.applyLampAnchors(this.lampAnchors, false);
     this.setHeadlights(true, false);
 
     // 7b. Señaleros / indicadores de giro ámbar (delanteros y traseros):
-    // En avance hacia +Z, +X corresponde al lado izquierdo del conductor y -X al lado derecho.
     this.turnSignalLensMaterial = new THREE.MeshStandardMaterial({
       color: '#fbbf24',
       emissive: '#f59e0b',
@@ -402,10 +551,63 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
     attachSignalSide(this.turnSignalLeftGroup, halfWidth);
     attachSignalSide(this.turnSignalRightGroup, -halfWidth);
 
-    // 8. Cargar modelo 3D GLB propio del vehículo; si ese modelo aún no posee GLB dedicado,
-    // renderizar su carrocería 3D OEM fiel (geometría, pintura bicolor, parrilla, DRL y 4 ruedas)
-    // en lugar de clonar otro vehículo distinto.
+    // 8. Cargar modelo 3D GLB propio del vehículo; para los rivales CGI emplear SUV PBR procedural realista
     const targetLengthMeters = oemSpec.lengthM;
+
+    const enableVehicleMeshShadows = (root: THREE.Object3D) => {
+      root.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mat = (child as THREE.Mesh).material;
+          const primaryMat = Array.isArray(mat) ? mat[0] : mat;
+          if (primaryMat && primaryMat.blending !== THREE.AdditiveBlending) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        }
+      });
+    };
+
+    const calibrateGlbSuvLampAnchors = (modelRoot: THREE.Object3D): VehicleLampAnchors => {
+      modelRoot.updateMatrixWorld(true);
+      _calBox3.setFromObject(modelRoot);
+      const sizeX = Math.max(1.65, _calBox3.max.x - _calBox3.min.x);
+      const sizeY = Math.max(1.48, _calBox3.max.y - _calBox3.min.y);
+      const minZ = _calBox3.min.z;
+      const maxZ = _calBox3.max.z;
+
+      const fx = sizeX * 0.315;
+      const rx = sizeX * 0.282;
+      const fy = _calBox3.min.y + sizeY * 0.52;
+      const ry = _calBox3.min.y + sizeY * 0.635;
+
+      const probeSurfaceZ = (x: number, y: number, fromFront: boolean, fallbackZ: number): number => {
+        _calOrigin.set(x, y, fromFront ? maxZ + 0.8 : minZ - 0.8);
+        _calDir.set(0, 0, fromFront ? -1 : 1);
+        _calRaycaster.set(_calOrigin, _calDir);
+        const hits = _calRaycaster.intersectObject(modelRoot, true);
+        if (hits.length > 0) {
+          const hitZ = hits[0].point.z;
+          if (fromFront && hitZ > maxZ - sizeX * 0.48) return hitZ + 0.020;
+          if (!fromFront && hitZ < minZ + sizeX * 0.48) return hitZ - 0.024;
+        }
+        return fallbackZ;
+      };
+
+      const fzL = probeSurfaceZ(fx, fy, true, maxZ - 0.07);
+      const fzR = probeSurfaceZ(-fx, fy, true, maxZ - 0.07);
+      const fz = (fzL + fzR) * 0.5;
+
+      const rzL = probeSurfaceZ(rx, ry, false, minZ + 0.04);
+      const rzR = probeSurfaceZ(-rx, ry, false, minZ + 0.04);
+      const rz = Math.min(rzL, rzR);
+
+      return {
+        frontLeft: [fx, fy, fz],
+        frontRight: [-fx, fy, fz],
+        rearLeft: [rx, ry, rz],
+        rearRight: [-rx, ry, rz],
+      };
+    };
 
     const attachModel = (gltf: any, activeConfig: Vehicle3DConfig) => {
       if (this.isDisposed) return;
@@ -414,24 +616,45 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
         gltf,
         this.envMap,
       );
+      enableVehicleMeshShadows(this.modelInstance);
       const calibratedModel = this.modelInstance.children[0] as THREE.Group;
       this.wheelRig = createVehicleWheelRig(calibratedModel, calibratedModel.scale.x);
       this.wheelRig?.setDistanceMeters(this.lastDistanceMeters);
       this.wheelRig?.setSteeringRadians(this.currentSteeringAngle, 1);
       this.effectsGroup.add(this.modelInstance);
+      const calibratedAnchors = calibrateGlbSuvLampAnchors(this.modelInstance);
+      this.applyLampAnchors(calibratedAnchors, false);
       this.isLoaded = true;
       if (onLoaded) onLoaded();
     };
 
     const attachFaithfulOemModel = () => {
       if (this.isDisposed) return;
-      const built = createFaithfulVehicle3D(vehicle, this.envMap);
+      // Si es un rival CGI liviano, aplicar proporciones SUV modernas y colores realistas de tráfico
+      const rivalTrafficPalette = ['#0d1016', '#bcc4ce', '#eef2f7', '#102648', '#2b313a'];
+      const hashIdx =
+        Math.abs(
+          vehicle.id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 7),
+        ) % rivalTrafficPalette.length;
+      const isRivalSuv = Boolean(options?.preferProceduralModel);
+      const built = createFaithfulVehicle3D(
+        vehicle,
+        this.envMap,
+        isRivalSuv
+          ? {
+              trafficSuvMode: true,
+              paintHexOverride: rivalTrafficPalette[hashIdx],
+            }
+          : undefined,
+      );
+      enableVehicleMeshShadows(built.group);
       this.faithfulBuild = built;
       this.modelInstance = built.group;
       this.wheelRig = built.wheelRig;
       this.wheelRig.setDistanceMeters(this.lastDistanceMeters);
       this.wheelRig.setSteeringRadians(this.currentSteeringAngle, 1);
       this.effectsGroup.add(built.group);
+      this.applyLampAnchors(built.lampAnchors, true);
       this.usesProceduralModel = true;
       this.isLoaded = true;
       if (onLoaded) onLoaded();
@@ -538,19 +761,112 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
       );
     }
 
-    // 3. Luces de freno incandescentes al desacelerar
-    this.brakeLight.intensity = THREE.MathUtils.damp(
-      this.brakeLight.intensity, isBraking ? 3.2 : 0,
-      12, Math.max(0, frameDeltaSeconds),
+    // 3. DOS luces de freno traseras simétricas incandescentes HDR al frenar + reflejo rojo en asfalto
+    const dtSafe = Math.max(0, frameDeltaSeconds);
+    this.brakeGlowLevel = THREE.MathUtils.damp(
+      this.brakeGlowLevel,
+      isBraking ? 1.0 : 0.0,
+      isBraking ? 48 : 18,
+      dtSafe,
     );
+
+    const activeRearLights = this.headlightsIlluminateTrack ? 4.2 : 0.0;
+    this.brakeLightLeft.intensity = this.brakeGlowLevel * activeRearLights;
+    this.brakeLightRight.intensity = this.brakeGlowLevel * activeRearLights;
+
+    if (this.brakeGlowLevel > 0.03) {
+      const hdrR = THREE.MathUtils.lerp(0.75, 10.5, this.brakeGlowLevel);
+      const hdrG = THREE.MathUtils.lerp(0.04, 0.08, this.brakeGlowLevel);
+      const hdrB = THREE.MathUtils.lerp(0.03, 0.04, this.brakeGlowLevel);
+      this.brakeLensMaterial.color.setRGB(hdrR, hdrG, hdrB);
+      this.brakeLensMaterial.opacity = THREE.MathUtils.lerp(0.22, 1.0, this.brakeGlowLevel);
+      this.brakeGlowMaterial.opacity = this.brakeGlowLevel * 0.96;
+      this.brakeHaloLeft.visible = true;
+      this.brakeHaloRight.visible = true;
+      this.brakeRoadPoolMaterial.opacity = this.brakeGlowLevel * 0.58;
+      this.brakeRoadPoolGroup.visible = true;
+    } else {
+      this.brakeLensMaterial.color.setRGB(0.55, 0.038, 0.028);
+      this.brakeLensMaterial.opacity = 0.16;
+      this.brakeGlowMaterial.opacity = 0;
+      this.brakeHaloLeft.visible = false;
+      this.brakeHaloRight.visible = false;
+      this.brakeRoadPoolMaterial.opacity = 0;
+      this.brakeRoadPoolGroup.visible = false;
+    }
+
     this.faithfulBuild?.setBrakeLit(isBraking);
+  }
+
+  private applyLampAnchors(anchors: VehicleLampAnchors, hasProceduralLenses: boolean) {
+    this.lampAnchors = anchors;
+    const { frontLeft, frontRight, rearLeft, rearRight } = anchors;
+
+    // Si el modelo procedural ya tiene lentes 3D en esas coordenadas, ocultar las lentes auxiliares superpuestas
+    this.headlightLensLeft.visible = !hasProceduralLenses;
+    this.headlightLensRight.visible = !hasProceduralLenses;
+    this.brakeLensLeft.visible = !hasProceduralLenses;
+    this.brakeLensRight.visible = !hasProceduralLenses;
+
+    this.headlightLensLeft.position.set(frontLeft[0], frontLeft[1], frontLeft[2]);
+    this.headlightLensLeft.rotation.y = -0.14;
+    this.headlightLensRight.position.set(frontRight[0], frontRight[1], frontRight[2]);
+    this.headlightLensRight.rotation.y = 0.14;
+
+    this.headlightHaloLeft.position.set(frontLeft[0], frontLeft[1], frontLeft[2] + 0.035);
+    this.headlightHaloRight.position.set(frontRight[0], frontRight[1], frontRight[2] + 0.035);
+
+    this.headlightBeamLeft.position.set(frontLeft[0], frontLeft[1], frontLeft[2] + 0.02);
+    this.headlightBeamLeft.target.position.set(frontLeft[0] * 1.18, 0.02, frontLeft[2] + 18.5);
+    this.headlightBeamRight.position.set(frontRight[0], frontRight[1], frontRight[2] + 0.02);
+    this.headlightBeamRight.target.position.set(frontRight[0] * 1.18, 0.02, frontRight[2] + 18.5);
+
+    this.headlightRoadPoolLeft.position.set(frontLeft[0] * 1.06, 0.033, frontLeft[2] + 6.9);
+    this.headlightRoadPoolRight.position.set(frontRight[0] * 1.06, 0.033, frontRight[2] + 6.9);
+
+    this.brakeLensLeft.position.set(rearLeft[0], rearLeft[1], rearLeft[2]);
+    this.brakeLensLeft.rotation.y = 0.20;
+    this.brakeLensRight.position.set(rearRight[0], rearRight[1], rearRight[2]);
+    this.brakeLensRight.rotation.y = -0.20;
+
+    this.brakeHaloLeft.position.set(rearLeft[0], rearLeft[1], rearLeft[2] - 0.04);
+    this.brakeHaloRight.position.set(rearRight[0], rearRight[1], rearRight[2] - 0.04);
+
+    this.brakeLightLeft.position.set(rearLeft[0], rearLeft[1], rearLeft[2] - 0.18);
+    this.brakeLightRight.position.set(rearRight[0], rearRight[1], rearRight[2] - 0.18);
+
+    this.brakeRoadPoolLeft.position.set(rearLeft[0] * 1.14, 0.032, rearLeft[2] - 2.45);
+    this.brakeRoadPoolRight.position.set(rearRight[0] * 1.14, 0.032, rearRight[2] - 2.45);
+  }
+
+  public getWorldLampState(out: VehicleWorldLampState): boolean {
+    this.effectsGroup.updateMatrixWorld(true);
+    const { frontLeft, frontRight, rearLeft, rearRight } = this.lampAnchors;
+
+    _localAnchorScratch.set(frontLeft[0], frontLeft[1], frontLeft[2]);
+    out.headLeft.copy(_localAnchorScratch).applyMatrix4(this.effectsGroup.matrixWorld);
+
+    _localAnchorScratch.set(frontRight[0], frontRight[1], frontRight[2]);
+    out.headRight.copy(_localAnchorScratch).applyMatrix4(this.effectsGroup.matrixWorld);
+
+    const sinY = Math.sin(this.group.rotation.y);
+    const cosY = Math.cos(this.group.rotation.y);
+    out.headDir.set(sinY, -0.085, cosY).normalize();
+    out.headIntensity = this.headlightsEnabled ? 1.0 : 0.0;
+
+    _localAnchorScratch.set(rearLeft[0], rearLeft[1], rearLeft[2]);
+    out.brakeLeft.copy(_localAnchorScratch).applyMatrix4(this.effectsGroup.matrixWorld);
+
+    _localAnchorScratch.set(rearRight[0], rearRight[1], rearRight[2]);
+    out.brakeRight.copy(_localAnchorScratch).applyMatrix4(this.effectsGroup.matrixWorld);
+
+    out.brakeIntensity = this.brakeGlowLevel;
+    return true;
   }
 
   /** Mantiene el rodamiento visible durante la toma final de 18 km/h. */
   public advanceFinishWheelRotation(additionalMeters: number) {
     if (!Number.isFinite(additionalMeters) || additionalMeters < 0) return;
-    // updateState() restablece la distancia física cada frame. Aplicamos el
-    // avance cinematográfico después, sin acumularlo dos veces.
     this.wheelRig?.setDistanceMeters(this.lastDistanceMeters + additionalMeters);
   }
 
@@ -559,9 +875,12 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
   }
 
   public setHeadlights(enabled: boolean, illuminateTrack: boolean) {
+    this.headlightsEnabled = enabled;
+    this.headlightsIlluminateTrack = illuminateTrack;
     this.headlightGroup.visible = enabled;
-    this.headlightBeam.visible = enabled && illuminateTrack;
-    this.headlightRoadPool.visible = enabled && illuminateTrack;
+    this.headlightBeamLeft.visible = enabled && illuminateTrack;
+    this.headlightBeamRight.visible = enabled && illuminateTrack;
+    this.headlightRoadBeamGroup.visible = enabled;
   }
 
   public setTurnSignals(leftLit: boolean, rightLit: boolean) {
@@ -574,20 +893,36 @@ export class Vehicle3DGLBEntity implements VehicleEntityRunner {
     this.headlightGroup.traverse(obj => {
       if (obj instanceof THREE.Mesh) obj.geometry.dispose();
     });
+    this.rearBrakeGroup.traverse(obj => {
+      if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+    });
+    this.headlightRoadBeamGroup.traverse(obj => {
+      if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+    });
+    this.brakeRoadPoolGroup.traverse(obj => {
+      if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+    });
     this.turnSignalLeftGroup.traverse(obj => {
       if (obj instanceof THREE.Mesh) obj.geometry.dispose();
     });
     this.turnSignalRightGroup.traverse(obj => {
       if (obj instanceof THREE.Mesh) obj.geometry.dispose();
     });
+    this.headlightLensMaterial.dispose();
     this.headlightGlowMaterial.dispose();
     this.headlightGlowTexture.dispose();
+    (this.headlightRoadPoolLeft.material as THREE.Material).dispose();
+    this.headlightRoadTexture.dispose();
+
+    this.brakeLensMaterial.dispose();
+    this.brakeGlowMaterial.dispose();
+    this.brakeGlowTexture.dispose();
+    this.brakeRoadPoolMaterial.dispose();
+
     this.turnSignalLensMaterial.dispose();
     this.turnSignalGlowMaterial.dispose();
     this.turnSignalGlowTexture.dispose();
-    this.headlightRoadPool.geometry.dispose();
-    (this.headlightRoadPool.material as THREE.Material).dispose();
-    this.headlightRoadTexture.dispose();
+
     this.shadowMesh.geometry.dispose();
     (this.shadowMesh.material as THREE.Material).dispose();
 

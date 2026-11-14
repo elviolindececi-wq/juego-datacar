@@ -12,12 +12,11 @@ import {
   type SpeedLimitZone,
   type TrafficLightNode,
 } from './urbanTrafficRules.ts';
+import type { VehicleWheelRig } from './vehicleWheelRig.ts';
 import {
-  createCalibratedVehicle3DInstance,
-  resolveDedicatedVehicleGLTF,
-} from './vehicle3DModelLoader.ts';
-import { createVehicleWheelRig, type VehicleWheelRig } from './vehicleWheelRig.ts';
-import { createContactShadowTexture } from './race3dTextures.ts';
+  createContactShadowTexture,
+  createHeadlightBeamTexture,
+} from './race3dTextures.ts';
 import { createFaithfulVehicle3D } from './faithfulVehicleChassis3D.ts';
 import { PRESET_VEHICLES } from '../data/presetVehicles.ts';
 
@@ -27,7 +26,7 @@ import { PRESET_VEHICLES } from '../data/presetVehicles.ts';
  * - Pórticos completos de semáforos 3D sobre ambos sentidos y líneas blancas PARE
  * - Carteles viales reglamentarios de Velocidad MÁXIMA (aro rojo) y MÍNIMA (disco azul)
  * - Arcos intermedios de VUELTA (cuando laps > 1)
- * - Vehículos 3D GLB reales en tránsito de mano contraria con ruedas giratorias, faros y freno
+ * - Vehículos CGI livianos (no-GLB) en tránsito de mano contraria con ruedas giratorias, faros y freno
  * - Sistema de salpicadura 3D (Water Splash) sin asignaciones por frame (0 GC)
  */
 
@@ -116,7 +115,7 @@ function createSpeedSignTexture(
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 2;
+  tex.anisotropy = 4;
   return tex;
 }
 
@@ -140,6 +139,7 @@ function createLapBannerTexture(lapNumber: number, totalLaps: number): THREE.Can
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
   return tex;
 }
 
@@ -471,8 +471,8 @@ export function createUrbanTrafficVisuals3D(args: {
     }
   }
 
-  // 5. VEHÍCULOS 3D FIELES EN MANO CONTRARIA (GLB propio o carrocería OEM fiel, con ruedas giratorias y freno)
-  const shadowGeo = trackGeo(new THREE.PlaneGeometry(2.45, 4.9));
+  // 5. SUVs REALISTAS DE TRÁNSITO EN MANO CONTRARIA (proporciones SUV, clearcoat PBR, faros simétricos y doble freno HDR)
+  const shadowGeo = trackGeo(new THREE.PlaneGeometry(2.52, 5.05));
   const contactShadowTex = createContactShadowTexture();
   disposableTexs.push(contactShadowTex);
 
@@ -481,8 +481,8 @@ export function createUrbanTrafficVisuals3D(args: {
   const hCtx = headlampGlowCanvas.getContext('2d');
   if (hCtx) {
     const g = hCtx.createRadialGradient(32, 32, 2, 32, 32, 30);
-    g.addColorStop(0, 'rgba(240, 249, 255, 0.92)');
-    g.addColorStop(0.28, 'rgba(186, 230, 253, 0.42)');
+    g.addColorStop(0, 'rgba(248, 252, 255, 0.98)');
+    g.addColorStop(0.26, 'rgba(205, 234, 255, 0.58)');
     g.addColorStop(1, 'rgba(186, 230, 253, 0)');
     hCtx.fillStyle = g;
     hCtx.fillRect(0, 0, 64, 64);
@@ -494,26 +494,92 @@ export function createUrbanTrafficVisuals3D(args: {
   const headlampGlowMat = trackMat(
     new THREE.SpriteMaterial({
       map: headlampGlowTex,
-      color: '#e0f2fe',
+      color: new THREE.Color(2.4, 2.55, 2.95),
       transparent: true,
-      opacity: 0.56,
+      opacity: 0.78,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
   );
 
+  // Textura y material para el doble haz delantero proyectado sobre el asfalto cercano
+  const oncomingBeamTex = createHeadlightBeamTexture();
+  disposableTexs.push(oncomingBeamTex);
+  const oncomingBeamGeo = trackGeo(new THREE.PlaneGeometry(2.15, 9.8));
+  const oncomingBeamMat = trackMat(
+    new THREE.MeshBasicMaterial({
+      map: oncomingBeamTex,
+      color: new THREE.Color(1.25, 1.32, 1.48),
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    }),
+  );
+
+  // Halo HDR rojo y charco de reflexión roja sobre el asfalto para las DOS luces de freno traseras
+  const brakeGlowCanvas = document.createElement('canvas');
+  brakeGlowCanvas.width = brakeGlowCanvas.height = 64;
+  const bCtx = brakeGlowCanvas.getContext('2d');
+  if (bCtx) {
+    const bg = bCtx.createRadialGradient(32, 32, 2, 32, 32, 30);
+    bg.addColorStop(0, 'rgba(255, 72, 62, 0.98)');
+    bg.addColorStop(0.32, 'rgba(239, 32, 32, 0.62)');
+    bg.addColorStop(1, 'rgba(185, 28, 28, 0)');
+    bCtx.fillStyle = bg;
+    bCtx.fillRect(0, 0, 64, 64);
+  }
+  const brakeGlowTex = new THREE.CanvasTexture(brakeGlowCanvas);
+  brakeGlowTex.colorSpace = THREE.SRGBColorSpace;
+  disposableTexs.push(brakeGlowTex);
+
+  const brakeHaloMat = trackMat(
+    new THREE.SpriteMaterial({
+      map: brakeGlowTex,
+      color: new THREE.Color(3.8, 0.16, 0.10),
+      transparent: true,
+      opacity: 0.88,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+
+  const brakeRoadPoolGeo = trackGeo(new THREE.PlaneGeometry(1.85, 3.6));
+  const brakeRoadPoolMat = trackMat(
+    new THREE.MeshBasicMaterial({
+      map: brakeGlowTex,
+      color: new THREE.Color(1.85, 0.09, 0.06),
+      transparent: true,
+      opacity: 0.36,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    }),
+  );
+
   const tailGlowMatOn = trackMat(
-    new THREE.MeshBasicMaterial({ color: '#ff2b2b', side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(4.5, 0.15, 0.08),
+      side: THREE.DoubleSide,
+    }),
   );
   const tailGlowMatOff = trackMat(
-    new THREE.MeshBasicMaterial({ color: '#7f1d1d', side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0.55, 0.05, 0.04),
+      side: THREE.DoubleSide,
+    }),
   );
-  const tailLampGeo = trackGeo(new THREE.PlaneGeometry(0.24, 0.06));
+  const tailLampGeo = trackGeo(new THREE.PlaneGeometry(0.28, 0.076));
   const shadowMat = trackMat(
     new THREE.MeshBasicMaterial({
       map: contactShadowTex,
       transparent: true,
-      opacity: 0.78,
+      opacity: 0.80,
       depthWrite: false,
     }),
   );
@@ -523,6 +589,10 @@ export function createUrbanTrafficVisuals3D(args: {
     wheelRig: VehicleWheelRig | null;
     tailLeft: THREE.Mesh;
     tailRight: THREE.Mesh;
+    brakeHaloLeft: THREE.Sprite;
+    brakeHaloRight: THREE.Sprite;
+    brakePoolLeft: THREE.Mesh;
+    brakePoolRight: THREE.Mesh;
     setBrakeLit?: (braking: boolean) => void;
     disposeExtra?: () => void;
   }
@@ -534,7 +604,7 @@ export function createUrbanTrafficVisuals3D(args: {
     const presetVehicle =
       PRESET_VEHICLES.find((v) => v.id === spec.modelId) || PRESET_VEHICLES[0];
     const root = new THREE.Group();
-    root.name = `oncoming_3d_slot_${i + 1}_${spec.modelId}`;
+    root.name = `oncoming_suv_slot_${i + 1}_${spec.modelId}`;
 
     // Sombra suave de contacto sobre el asfalto
     const shadow = new THREE.Mesh(shadowGeo, shadowMat);
@@ -542,72 +612,72 @@ export function createUrbanTrafficVisuals3D(args: {
     shadow.position.y = 0.022;
     root.add(shadow);
 
-    // Halos discretos en esquinas de faros y ópticas traseras alineadas a la carrocería real
-    const halfLen = spec.lengthM * 0.5;
-    const lampX = spec.widthM * 0.36;
-    for (const sx of [-1, 1]) {
+    // Chasis SUV moderno con proporciones elevadas, techo extendido, barras de techo y pintura clearcoat realista
+    const faithfulInitial = createFaithfulVehicle3D(presetVehicle, envMap, {
+      trafficSuvMode: true,
+      paintHexOverride: spec.tintHex,
+    });
+    root.add(faithfulInitial.group);
+
+    const { frontLeft, frontRight, rearLeft, rearRight } = faithfulInitial.lampAnchors;
+
+    // DOS faros delanteros simétricos (izquierdo y derecho) con halo HDR + doble proyección en asfalto
+    for (const anchor of [frontLeft, frontRight]) {
       const hlHalo = new THREE.Sprite(headlampGlowMat);
-      hlHalo.position.set(sx * lampX, 0.78, halfLen + 0.03);
-      hlHalo.scale.set(0.38, 0.22, 1);
+      hlHalo.position.set(anchor[0], anchor[1], anchor[2] + 0.035);
+      hlHalo.scale.set(0.48, 0.28, 1);
       root.add(hlHalo);
+
+      const roadCone = new THREE.Mesh(oncomingBeamGeo, oncomingBeamMat);
+      roadCone.rotation.x = Math.PI / 2;
+      roadCone.position.set(anchor[0] * 1.04, 0.034, anchor[2] + 5.1);
+      root.add(roadCone);
     }
 
+    // DOS luces traseras de freno simétricas (izquierda y derecha) alineadas al portón trasero del SUV
     const tailLeft = new THREE.Mesh(tailLampGeo, tailGlowMatOff);
-    tailLeft.position.set(-lampX, 0.88, -halfLen - 0.02);
+    tailLeft.position.set(rearLeft[0], rearLeft[1], rearLeft[2] - 0.015);
     tailLeft.rotation.y = Math.PI;
     const tailRight = new THREE.Mesh(tailLampGeo, tailGlowMatOff);
-    tailRight.position.set(lampX, 0.88, -halfLen - 0.02);
+    tailRight.position.set(rearRight[0], rearRight[1], rearRight[2] - 0.015);
     tailRight.rotation.y = Math.PI;
     root.add(tailLeft, tailRight);
 
-    // Modelo base inmediato fiel al catálogo (garantiza apariencia OEM instantánea desde el frame 0)
-    const faithfulInitial = createFaithfulVehicle3D(presetVehicle, envMap);
-    root.add(faithfulInitial.group);
+    const brakeHaloLeft = new THREE.Sprite(brakeHaloMat);
+    brakeHaloLeft.position.set(rearLeft[0], rearLeft[1], rearLeft[2] - 0.045);
+    brakeHaloLeft.scale.set(0.54, 0.30, 1);
+    brakeHaloLeft.visible = false;
+
+    const brakeHaloRight = new THREE.Sprite(brakeHaloMat);
+    brakeHaloRight.position.set(rearRight[0], rearRight[1], rearRight[2] - 0.045);
+    brakeHaloRight.scale.set(0.54, 0.30, 1);
+    brakeHaloRight.visible = false;
+    root.add(brakeHaloLeft, brakeHaloRight);
+
+    // Reflexión roja dual sobre el asfalto detrás de las 2 ópticas traseras cuando el SUV frena
+    const brakePoolLeft = new THREE.Mesh(brakeRoadPoolGeo, brakeRoadPoolMat);
+    brakePoolLeft.rotation.x = -Math.PI / 2;
+    brakePoolLeft.position.set(rearLeft[0] * 1.08, 0.033, rearLeft[2] - 1.75);
+    brakePoolLeft.visible = false;
+
+    const brakePoolRight = new THREE.Mesh(brakeRoadPoolGeo, brakeRoadPoolMat);
+    brakePoolRight.rotation.x = -Math.PI / 2;
+    brakePoolRight.position.set(rearRight[0] * 1.08, 0.033, rearRight[2] - 1.75);
+    brakePoolRight.visible = false;
+    root.add(brakePoolLeft, brakePoolRight);
 
     const slot: OncomingVisualSlot = {
       root,
       wheelRig: faithfulInitial.wheelRig,
       tailLeft,
       tailRight,
+      brakeHaloLeft,
+      brakeHaloRight,
+      brakePoolLeft,
+      brakePoolRight,
       setBrakeLit: faithfulInitial.setBrakeLit,
       disposeExtra: faithfulInitial.dispose,
     };
-
-    // Si el vehículo posee su propio archivo .glb dedicado en /public/models/, reemplazar por la malla GLB real
-    void resolveDedicatedVehicleGLTF(spec.modelId)
-      .then((resolved) => {
-        if (disposed || !resolved) return;
-        const calibratedConfig = {
-          ...resolved.config,
-          targetLengthMeters: spec.lengthM,
-        };
-        const glbInstance = createCalibratedVehicle3DInstance(
-          calibratedConfig,
-          resolved.gltf,
-          envMap,
-        );
-        const innerModel = glbInstance.children[0] as THREE.Group | undefined;
-
-        glbInstance.traverse((obj) => {
-          if ((obj as THREE.Mesh).isMesh) {
-            obj.castShadow = false;
-            obj.receiveShadow = false;
-          }
-        });
-
-        root.remove(faithfulInitial.group);
-        faithfulInitial.dispose();
-
-        slot.wheelRig = innerModel
-          ? createVehicleWheelRig(innerModel, innerModel.scale.x)
-          : null;
-        slot.setBrakeLit = undefined;
-        slot.disposeExtra = () => glbInstance.userData.disposeMaterials?.();
-        root.add(glbInstance);
-      })
-      .catch(() => {
-        // Conserva el modelo 3D OEM fiel sin interrumpir el tránsito
-      });
 
     root.visible = false;
     group.add(root);
@@ -824,6 +894,10 @@ export function createUrbanTrafficVisuals3D(args: {
       const brakeMat = car.braking ? tailGlowMatOn : tailGlowMatOff;
       vis.tailLeft.material = brakeMat;
       vis.tailRight.material = brakeMat;
+      vis.brakeHaloLeft.visible = car.braking;
+      vis.brakeHaloRight.visible = car.braking;
+      vis.brakePoolLeft.visible = car.braking;
+      vis.brakePoolRight.visible = car.braking;
     }
 
     // Actualizar partículas de agua (salpicadura en bache mojado)

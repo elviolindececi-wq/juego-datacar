@@ -81,7 +81,7 @@ import {
 } from '../../utils/specFidelity';
 
 type Stage='loading'|'home'|'circuits'|'garage'|'briefing'|'race'|'results'|'replay'|'compare'|'compare-results';
-type Props={initialPlayerId?:string;forceArcadeMode?:boolean;onExitArcadeMode?:()=>void};
+type Props={initialPlayerId?:string;initialCircuitId?:string;onCircuitChange?:(circuitId:string)=>void;forceArcadeMode?:boolean;onExitArcadeMode?:()=>void};
 const preview=(car:Vehicle)=>car.imageUrl||getOfficialVehicleImageUrl(car.id);
 
 const getVehicleDesc=(v:Vehicle)=>getVerifiedVehicleSummary(v);
@@ -102,10 +102,10 @@ function SwipeDeck<T extends {id:string}>({items, selectedId, onSelect, renderIt
     const list=scrollRef.current;
     if(!el || !list) return;
     programmaticRef.current=true;
-    list.scrollTo({left:el.offsetLeft-(list.clientWidth-el.clientWidth)/2,behavior});
+    list.scrollTo({left:Math.max(0,el.offsetLeft-(list.clientWidth-el.offsetWidth)/2),behavior});
     window.setTimeout(()=>{programmaticRef.current=false;},behavior==='instant'?50:360);
   },[]);
-  useEffect(()=>{scrollToId(selectedId,'instant');},[scrollToId]);
+  useEffect(()=>{scrollToId(selectedId,'instant');},[selectedId,scrollToId]);
   const idx=Math.max(0,items.findIndex(item=>item.id===selectedId));
   const move=(offset:number)=>{const next=items[Math.min(items.length-1,Math.max(0,idx+offset))];if(next){onSelect(next.id);scrollToId(next.id);}};
   const onScroll=()=>{
@@ -144,7 +144,7 @@ function MobileTelemetryChart({result}:{result:VehicleRaceResult}){
   return <div className="dc11-telemetry-chart"><div className="dc11-chart-options"><strong>TELEMETRÍA VIRTUAL</strong>{([['speedKmh','Velocidad'],['rpm','RPM'],['accelerationG','Aceleración G']] as const).map(([id,label])=><button key={id} className={metric===id?'active':''} onClick={()=>setMetric(id)}>{label}</button>)}</div><svg role="img" aria-label={`Evolución de ${metric} durante la carrera`} viewBox="0 0 500 100" preserveAspectRatio="none"><path d="M 10 12 V 90 H 490" fill="none" stroke="#466478" strokeWidth="1.4"/><polyline points={points} fill="none" stroke="#4cdef6" strokeWidth="2.3" strokeLinejoin="round" strokeLinecap="round"/></svg><div className="dc11-chart-labels"><span>0 s</span><span>Máx. {high.toFixed(metric==='accelerationG'?2:0)}</span><span>{samples[samples.length-1].timeSec.toFixed(1)} s</span></div></div>;
 }
 
-export default function MobileGameExperience({initialPlayerId,forceArcadeMode=false,onExitArcadeMode}:Props){
+export default function MobileGameExperience({initialPlayerId,initialCircuitId,onCircuitChange,forceArcadeMode=false,onExitArcadeMode}:Props){
   const [stage,setStage]=useState<Stage>('loading');
   const [loadPercent,setLoadPercent]=useState(0);
   const [loadLabel,setLoadLabel]=useState('Preparando DATACAR ARENA');
@@ -170,7 +170,18 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
   const [compareFocusId,setCompareFocusId]=useState(PRESET_VEHICLES[0].id);
   const compareTracks=useMemo(()=>PRESET_TRACKS.filter(t=>t.distanceMeters<=3500),[]);
   const [compareTrackIndex,setCompareTrackIndex]=useState(0);
-  const [circuitId,setCircuitId]=useState('oliva');
+  const initialQuery=useMemo(()=>typeof window==='undefined'?new URLSearchParams():new URLSearchParams(window.location.search),[]);
+  const [circuitId,setCircuitIdState]=useState(()=>{
+    const reqC=initialQuery.get('circuit');
+    if(reqC && ASUNCION_CIRCUITS.some(c=>c.id===reqC)) return reqC;
+    if(initialCircuitId && ASUNCION_CIRCUITS.some(c=>c.id===initialCircuitId)) return initialCircuitId;
+    return initialQuery.get('autostart')==='1'?'aviadores':'oliva';
+  });
+  const setCircuitId=useCallback((nextId:string)=>{
+    if(!ASUNCION_CIRCUITS.some(c=>c.id===nextId)) return;
+    setCircuitIdState(nextId);
+    onCircuitChange?.(nextId);
+  },[onCircuitChange]);
   const [raceLaps,setRaceLaps]=useState<number>(2);
   const [raceMode,setRaceMode]=useState<RaceModeId>('city_trial');
   const [onlineSession,setOnlineSession]=useState(false);
@@ -178,7 +189,6 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
   const [speedModeNewlyUnlocked,setSpeedModeNewlyUnlocked]=useState(false);
   const [jailAcknowledged,setJailAcknowledged]=useState(()=>!isPlayerCurrentlyJailed());
   const progression=useCareerProgression();
-  const initialQuery=useMemo(()=>typeof window==='undefined'?new URLSearchParams():new URLSearchParams(window.location.search),[]);
   const [weather,setWeather]=useState<WeatherMode>(()=>{
     const reqW=initialQuery.get('weather') as WeatherMode|null;
     return reqW&&WEATHER_OPTIONS.some(w=>w.id===reqW)?reqW:'sunny';
@@ -240,8 +250,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
   const playerPayloadKg=useMemo(()=>computePayloadKg(payloadSelection,car),[payloadSelection,car]);
   const circuit=ASUNCION_CIRCUITS.find(c=>c.id===circuitId)??ASUNCION_CIRCUITS[0];
   const track=useMemo(()=>toRaceTrack(circuit,raceLaps),[circuit,raceLaps]);
-  const rivalCount=raceMode==='speed_pro'?4:2;
-  const raceCars=useMemo(()=>[car,...allCars.filter(v=>v.id!==car.id).slice(0,rivalCount)],[car,allCars,rivalCount]);
+  const raceCars=useMemo(()=>[car],[car]);
   const baseResults=useMemo(()=>simulateFullRace(raceCars,track),[raceCars,track]);
   const podium=useMemo(()=>results?.slice().sort((a,b)=>a.finishPosition-b.finishPosition)??[],[results]);
   const insights=useMemo(()=>results?rankDrivingIQ(results,baseResults,track.distanceMeters):[],[results,baseResults,track]);
@@ -707,13 +716,13 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
             <div>
               <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] font-black italic uppercase tracking-wider text-[#00E5F5]">
                 <span className="truncate">{item.zone}</span>
-                <span className="text-amber-300 font-mono tabular-nums shrink-0">Meta {formatTargetMinutesSec(cTarget.targetSec)}</span>
+                <span className="text-amber-300 font-mono tabular-nums shrink-0">🎯 Meta {formatTargetMinutesSec(cTarget.targetSec)}</span>
               </div>
               <h2 className="dc-mobile-track-title font-display italic font-black text-white uppercase mt-0.5">{item.name}</h2>
               <p className="dc-mobile-track-hazard italic text-slate-300 mt-0.5">{item.hazardLabel}</p>
             </div>
             <div className="dc99-stats pt-1 border-t border-cyan-500/20 flex items-center justify-between gap-2">
-              <span className="truncate">{item.distanceMeters * raceLaps} m ({raceLaps}V) · Límite {formatTargetMinutesSec(cTarget.maxLimitSec)}</span>
+              <span className="truncate">{item.distanceMeters * raceLaps} m ({raceLaps}V) · Objetivo ≤ {formatTargetMinutesSec(cTarget.maxLimitSec)} sin choques</span>
               <span className={`px-2 py-0.5 rounded font-black uppercase text-[10px] shrink-0 ${active ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-cyan-300 border border-cyan-500/40'}`}>{active ? '✓ Elegido' : 'Elegir →'}</span>
             </div>
           </div>
@@ -916,7 +925,7 @@ export default function MobileGameExperience({initialPlayerId,forceArcadeMode=fa
         </button>
       </div>
     </main>}
-    {stage==='race'&&<main className="dc99-race-stage"><Race3DPerspectiveView key={`mobile-${circuitId}-${playerId}-${raceLaps}-${raceMode}-${onlineSession?'online':'solo'}-${raceSession}`} manualStart experience="race" playerVehicleId={playerId} initialWeather={weather} vehicles={raceCars} track={track} simulationResults={baseResults} raceMode={raceMode} onlineSession={onlineSession} playerPayloadKg={playerPayloadKg} isDatacarMember={isMember} onPedestrianArrest={()=>{if(onlineSession){multiplayerClient.leaveRoom();setOnlineSession(false);}setJailAcknowledged(false);setStage('briefing');}} onExitRace={()=>{if(onlineSession){multiplayerClient.leaveRoom();setOnlineSession(false);}setStage('briefing');}} onRestartRace={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);setStage('briefing');return;}setRaceSession(n=>n+1);setStage('race');}} onFinishRace={(newResults,newHazards,newWeather)=>{setResults(newResults??null);setHazards(newHazards??[]);setCompletedWeather(newWeather??weather);if(newResults){const iqRanks=rankDrivingIQ(newResults,baseResults,track.distanceMeters);const pRes=newResults.find(r=>r.vehicle.id===playerId);const pIq=iqRanks.find(a=>a.vehicleId===playerId);const baseIq1000=pIq?Math.round(pIq.total*10):0;if(raceMode==='city_trial'){const verdict=evaluateCityTrialCompletion({finished:Boolean(pRes&&!pRes.isDnf),isDnf:Boolean(pRes?.isDnf),iqScore1000:baseIq1000,redLightViolations:pIq?.events.redLightViolations??0,pedestrianHit:false,circuitId});setSpeedModeNewlyUnlocked(verdict.newlyUnlocked);}if(raceMode!=='practice_free'&&pRes&&!pRes.isDnf){const targetSpec=getCircuitTargetTime(circuitId,raceMode,raceLaps,track.distanceMeters);const targetEval=evaluateCircuitTimeResult(pRes.finishTimeSec,targetSpec);const finalIq1000=Math.max(0,Math.min(1000,baseIq1000+targetEval.iqBonus));void submitCircuitRun({circuitId,mode:raceMode,laps:raceLaps,pilotName:account?.pilotName||multiplayerClient.getSnapshot().pilotName||'PilotoDC',isDatacarMember:isMember,vehicleId:car.id,vehicleName:`${car.brand} ${car.name}`,finishTimeSec:pRes.finishTimeSec,drivingIq:finalIq1000,occupants:payloadSelection.occupants,payloadKg:playerPayloadKg,medal:targetEval.medal});}}setStage('results');}}/></main>}
+    {stage==='race'&&<main className="dc99-race-stage"><Race3DPerspectiveView key={`mobile-${circuitId}-${playerId}-${raceLaps}-${raceMode}-${onlineSession?'online':'solo'}-${raceSession}`} manualStart experience="race" playerVehicleId={playerId} initialWeather={weather} vehicles={raceCars} track={track} simulationResults={baseResults} raceMode={raceMode} onlineSession={onlineSession} playerPayloadKg={playerPayloadKg} isDatacarMember={isMember} onPedestrianArrest={()=>{if(onlineSession){multiplayerClient.leaveRoom();setOnlineSession(false);}setJailAcknowledged(false);setStage('briefing');}} onExitRace={()=>{if(onlineSession){multiplayerClient.leaveRoom();setOnlineSession(false);}setStage('briefing');}} onRestartRace={()=>{if(isPlayerCurrentlyJailed()){setJailAcknowledged(false);setStage('briefing');return;}setRaceSession(n=>n+1);setStage('race');}} onFinishRace={(newResults,newHazards,newWeather)=>{setResults(newResults??null);setHazards(newHazards??[]);setCompletedWeather(newWeather??weather);if(newResults){const iqRanks=rankDrivingIQ(newResults,baseResults,track.distanceMeters);const pRes=newResults.find(r=>r.vehicle.id===playerId);const pIq=iqRanks.find(a=>a.vehicleId===playerId);const baseIq1000=pIq?Math.round(pIq.total*10):0;if(raceMode==='city_trial'){const verdict=evaluateCityTrialCompletion({finished:Boolean(pRes&&!pRes.isDnf),isDnf:Boolean(pRes?.isDnf),iqScore1000:baseIq1000,redLightViolations:pIq?.events.redLightViolations??0,motorcycleCollisions:pIq?.events.motorcycleCollisions??0,pedestrianHit:false,circuitId});setSpeedModeNewlyUnlocked(verdict.newlyUnlocked);}if(raceMode!=='practice_free'&&pRes&&!pRes.isDnf){const targetSpec=getCircuitTargetTime(circuitId,raceMode,raceLaps,track.distanceMeters);const targetEval=evaluateCircuitTimeResult(pRes.finishTimeSec,targetSpec);const finalIq1000=Math.max(0,Math.min(1000,baseIq1000+targetEval.iqBonus));void submitCircuitRun({circuitId,mode:raceMode,laps:raceLaps,pilotName:account?.pilotName||multiplayerClient.getSnapshot().pilotName||'PilotoDC',isDatacarMember:isMember,vehicleId:car.id,vehicleName:`${car.brand} ${car.name}`,finishTimeSec:pRes.finishTimeSec,drivingIq:finalIq1000,occupants:payloadSelection.occupants,payloadKg:playerPayloadKg,medal:targetEval.medal});}}setStage('results');}}/></main>}
 
     {stage==='results' && (
       <main className="dc-arcade-stage flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 md:p-4" data-extended-label="TODOS LOS DATOS">

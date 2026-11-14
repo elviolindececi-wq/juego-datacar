@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { getAsuncionStreetDetails } from './asuncionStreetData.ts';
 import type { CurvedRoadPath } from './curvedRoadPath.ts';
+import {
+  createPhotorealEnvironmentMaterials,
+  type PhotorealEnvironmentController,
+} from './nfsmwEnvironmentMaterials.ts';
 
 interface PedestrianAgent {
   lateral: number;
@@ -38,40 +42,31 @@ export function createUrbanTrackScenery(
     ? getAsuncionStreetDetails(profile, Math.max(100, trackLength - 120))
     : { crossings: [], speedBumps: [] };
   const crossings = streetDetails.crossings;
-  const historical = profile === 'cobbles' || profile === 'chains';
+  const historical = profile === 'cobbles' || profile === 'chains' || circuitId === 'oliva' || circuitId === 'herrera';
+  const hasRiverfront = circuitId === 'artigas' || circuitId === 'aviadores' || (!circuitId && wet);
 
   const generatedTextures: THREE.Texture[] = [];
   const mat = (color: string, roughness = 0.92, metalness = 0) =>
     new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
-  // 1. SUELO BASE CON TEXTURA ORGÁNICA DE PASTO Y TIERRA URBANA
-  const grassTex = createGrassTurfTexture();
-  grassTex.colorSpace = THREE.SRGBColorSpace;
-  grassTex.wrapS = THREE.RepeatWrapping;
-  grassTex.wrapT = THREE.RepeatWrapping;
-  grassTex.repeat.set(36, Math.max(16, Math.round(end / 14)));
-  generatedTextures.push(grassTex);
-
-  const groundMaterial = new THREE.MeshStandardMaterial({
-    color: historical ? '#d5ddd0' : wet ? '#c0d4c4' : '#edf5e8',
-    map: grassTex,
-    roughness: 0.94,
-    metalness: 0.02,
+  const envMaterials = createPhotorealEnvironmentMaterials({
+    historical,
+    wet,
+    halfRoadWidth: halfRoad,
   });
+
+  // 1. SUELO BASE CON CÉSPED FOTORREALISTA (NORMAL MAP, AO DE RAÍZ Y TINTES OTOÑALES SECOS + VERDES APAGADOS)
+  const groundMaterial = envMaterials.groundGrassMaterial;
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(540, end + 160), groundMaterial);
   ground.rotation.x = -Math.PI / 2;
   ground.position.set(35, -0.32, mid);
+  ground.receiveShadow = true;
   group.add(ground);
 
   // 2. CORDONES, CANTEROS DE PASTO LATERALES Y VEREDAS AMPLIAS CORTADAS EN INTERSECCIONES
-  const sidewalkMaterial = mat(historical ? '#aba89e' : '#a3acb2', 0.88);
-  const curbMaterial = mat('#cfd0ca', 0.82);
-  const lushGrassMat = new THREE.MeshStandardMaterial({
-    color: wet ? '#cbe0ce' : '#ffffff',
-    map: grassTex,
-    roughness: 0.88,
-    metalness: 0.02,
-  });
+  const sidewalkMaterial = envMaterials.sidewalkMaterial;
+  const curbMaterial = envMaterials.curbMaterial;
+  const lushGrassMat = envMaterials.lushGrassMaterial;
 
   const interruptions = crossings
     .map((c) => ({ from: c.z - 6.2, to: c.z + 6.2 }))
@@ -94,25 +89,31 @@ export function createUrbanTrackScenery(
       // Cordón cuneta junto al asfalto
       const curb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, length), curbMaterial);
       curb.position.set(side * (halfRoad + 0.72), 0.01, spanCenterZ);
+      curb.castShadow = true;
+      curb.receiveShadow = true;
       group.add(curb);
 
       // Franja de pasto / cantero verde arbolado entre el cordón y la vereda peatonal
       const grassStrip = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.17, length), lushGrassMat);
       grassStrip.position.set(side * (halfRoad + 1.72), -0.04, spanCenterZ);
+      grassStrip.receiveShadow = true;
       group.add(grassStrip);
 
       // Vereda peatonal amplia de baldosas
       const walk = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.16, length), sidewalkMaterial);
       walk.position.set(side * (halfRoad + 4.2), -0.05, spanCenterZ);
+      walk.receiveShadow = true;
       group.add(walk);
     }
   }
 
   // 3. MARCAS DE CARRIL ADAPTADAS AL ANCHO DE LA AVENIDA (3+3 carriles en avenida de 21 m)
-  const stripeMaterial = new THREE.MeshBasicMaterial({
-    color: '#e8e8df',
+  const stripeMaterial = new THREE.MeshStandardMaterial({
+    color: '#dedad0',
+    roughness: 0.62,
+    metalness: 0.04,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.84,
     depthWrite: false,
   });
   const dashLength = 2.9;
@@ -130,6 +131,7 @@ export function createUrbanTrackScenery(
     dashPerLane * laneOffsets.length,
   );
   dashes.name = 'lane_markings';
+  dashes.receiveShadow = true;
   const dummy = new THREE.Object3D();
   let dashIdx = 0;
   for (let i = 0; i < dashPerLane; i++) {
@@ -155,13 +157,34 @@ export function createUrbanTrackScenery(
       const edgeLine = new THREE.Mesh(new THREE.PlaneGeometry(0.14, length), stripeMaterial);
       edgeLine.rotation.x = -Math.PI / 2;
       edgeLine.position.set(side * (halfRoad - 0.45), 0.027, (span.from + span.to) / 2);
+      edgeLine.receiveShadow = true;
       group.add(edgeLine);
     }
   }
 
-  if (!isCityCircuit) return group;
+  if (!isCityCircuit) {
+    group.userData.updateScenery = (
+      timeSec: number,
+      _focusZ: number,
+      _roadPath?: CurvedRoadPath,
+      sunDir?: readonly [number, number, number],
+    ) => {
+      envMaterials.update(timeSec, sunDir);
+    };
+    group.userData.disposeTextureMaps = () => {
+      generatedTextures.forEach((texture) => texture.dispose());
+      envMaterials.dispose();
+    };
+    return group;
+  }
 
-  // 4. RÍO PARAGUAY, COSTANERA VERDE Y COSTA DEL CHACO AL FONDO (+X, lado Bahía de Asunción)
+  // 4. RÍO PARAGUAY Y COSTANERA EN CIRCUITOS COSTEROS/CORPORATIVOS (+X) O PARQUE URBANO INTERIOR
+  const costaneraGrassX = halfRoad + 44;
+  const costaneraPromenadeX = halfRoad + 53.5;
+  const riverCenterX = halfRoad + 142;
+  const riverWidth = 172;
+  const chacoBankX = halfRoad + 244;
+
   const riverWaterTex = createRiverWaterTexture();
   riverWaterTex.wrapS = THREE.RepeatWrapping;
   riverWaterTex.wrapT = THREE.RepeatWrapping;
@@ -174,46 +197,6 @@ export function createUrbanTrackScenery(
   riverBumpTex.repeat.set(12, Math.max(24, Math.round(end / 20)));
   generatedTextures.push(riverBumpTex);
 
-  const costaneraGrassX = halfRoad + 44;
-  const costaneraPromenadeX = halfRoad + 53.5;
-  const riverCenterX = halfRoad + 142;
-  const riverWidth = 172;
-  const chacoBankX = halfRoad + 244;
-
-  // Parque lineal verde de la Costanera junto al río
-  const costaneraLawn = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 0.22, end + 120),
-    lushGrassMat,
-  );
-  costaneraLawn.position.set(costaneraGrassX, -0.16, mid);
-  costaneraLawn.name = 'parque_costanera_pasto';
-  group.add(costaneraLawn);
-
-  // Paseo peatonal y murallón de piedra de la Costanera de Asunción
-  const promenadeMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(4.6, 0.30, end + 120),
-    mat('#cbd5e1', 0.78),
-  );
-  promenadeMesh.position.set(costaneraPromenadeX, -0.06, mid);
-  group.add(promenadeMesh);
-
-  const seawallMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.1, 0.95, end + 120),
-    mat('#64748b', 0.85),
-  );
-  seawallMesh.position.set(costaneraPromenadeX + 2.5, -0.25, mid);
-  group.add(seawallMesh);
-
-  // Playa de arena húmeda ribereña junto a la bahía
-  const sandBeach = new THREE.Mesh(
-    new THREE.PlaneGeometry(5.5, end + 120),
-    mat('#cbb894', 0.92),
-  );
-  sandBeach.rotation.x = -Math.PI / 2;
-  sandBeach.position.set(costaneraPromenadeX + 4.8, -0.24, mid);
-  group.add(sandBeach);
-
-  // Espejo de agua hiperrealista del Río Paraguay con mapa de normales de oleaje e IBL solar
   const riverNormalTex = createRiverNormalTexture();
   riverNormalTex.wrapS = THREE.RepeatWrapping;
   riverNormalTex.wrapT = THREE.RepeatWrapping;
@@ -234,60 +217,111 @@ export function createUrbanTrackScenery(
     reflectivity: 0.96,
     envMapIntensity: 2.05,
   });
-  const paraguayRiver = new THREE.Mesh(
-    new THREE.PlaneGeometry(riverWidth, end + 220),
-    riverMaterial,
-  );
-  paraguayRiver.rotation.x = -Math.PI / 2;
-  paraguayRiver.position.set(riverCenterX, -0.20, mid);
-  paraguayRiver.name = 'rio_paraguay_asuncion';
-  group.add(paraguayRiver);
 
-  // Costa verde del Chaco Húmedo del otro lado del Río Paraguay
-  const chacoBank = new THREE.Mesh(
-    new THREE.BoxGeometry(42, 1.4, end + 220),
-    mat('#365f3b', 0.95),
-  );
-  chacoBank.position.set(chacoBankX, 0.35, mid);
-  chacoBank.name = 'costa_verde_chaco';
-  group.add(chacoBank);
+  if (hasRiverfront) {
+    const costaneraLawn = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 0.22, end + 120),
+      lushGrassMat,
+    );
+    costaneraLawn.position.set(costaneraGrassX, -0.16, mid);
+    costaneraLawn.name = 'parque_costanera_pasto';
+    costaneraLawn.receiveShadow = true;
+    group.add(costaneraLawn);
 
-  // Pequeñas embarcaciones / barcazas estilizadas navegando sobre el Río Paraguay (2 InstancedMesh)
-  const boatCount = Math.max(4, Math.floor(end / 320));
-  const boatHullInst = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(3.4, 1.1, 9.8),
-    mat('#e2e8f0', 0.48, 0.2),
-    boatCount,
-  );
-  const boatCabinInst = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(2.4, 1.35, 3.8),
-    mat('#0284c7', 0.38, 0.25),
-    boatCount,
-  );
-  for (let b = 0; b < boatCount; b++) {
-    const bx = riverCenterX - 36 + (b % 3) * 32;
-    const bz = 95 + b * (end / boatCount);
-    dummy.rotation.set(0, (b % 2 === 0 ? 0.04 : -0.04), 0);
-    dummy.scale.set(1, 1, 1);
-    dummy.position.set(bx, 0.22, bz);
-    dummy.updateMatrix();
-    boatHullInst.setMatrixAt(b, dummy.matrix);
-    dummy.position.set(bx, 1.15, bz - 1.1);
-    dummy.updateMatrix();
-    boatCabinInst.setMatrixAt(b, dummy.matrix);
+    const promenadeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(4.6, 0.30, end + 120),
+      mat('#cbd5e1', 0.78),
+    );
+    promenadeMesh.position.set(costaneraPromenadeX, -0.06, mid);
+    promenadeMesh.receiveShadow = true;
+    group.add(promenadeMesh);
+
+    const seawallMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 0.95, end + 120),
+      mat('#64748b', 0.85),
+    );
+    seawallMesh.position.set(costaneraPromenadeX + 2.5, -0.25, mid);
+    seawallMesh.castShadow = true;
+    seawallMesh.receiveShadow = true;
+    group.add(seawallMesh);
+
+    const sandBeach = new THREE.Mesh(
+      new THREE.PlaneGeometry(5.5, end + 120),
+      mat('#cbb894', 0.92),
+    );
+    sandBeach.rotation.x = -Math.PI / 2;
+    sandBeach.position.set(costaneraPromenadeX + 4.8, -0.24, mid);
+    group.add(sandBeach);
+
+    const paraguayRiver = new THREE.Mesh(
+      new THREE.PlaneGeometry(riverWidth, end + 220),
+      riverMaterial,
+    );
+    paraguayRiver.rotation.x = -Math.PI / 2;
+    paraguayRiver.position.set(riverCenterX, -0.20, mid);
+    paraguayRiver.name = 'rio_paraguay_asuncion';
+    group.add(paraguayRiver);
+
+    const chacoBank = new THREE.Mesh(
+      new THREE.BoxGeometry(42, 1.4, end + 220),
+      envMaterials.distantBankGrassMaterial,
+    );
+    chacoBank.position.set(chacoBankX, 0.35, mid);
+    chacoBank.name = 'costa_verde_chaco';
+    chacoBank.receiveShadow = true;
+    group.add(chacoBank);
+
+    const boatCount = Math.max(4, Math.floor(end / 320));
+    const boatHullInst = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(3.4, 1.1, 9.8),
+      mat('#e2e8f0', 0.48, 0.2),
+      boatCount,
+    );
+    const boatCabinInst = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(2.4, 1.35, 3.8),
+      mat('#0284c7', 0.38, 0.25),
+      boatCount,
+    );
+    for (let b = 0; b < boatCount; b++) {
+      const bx = riverCenterX - 36 + (b % 3) * 32;
+      const bz = 95 + b * (end / boatCount);
+      dummy.rotation.set(0, (b % 2 === 0 ? 0.04 : -0.04), 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.position.set(bx, 0.22, bz);
+      dummy.updateMatrix();
+      boatHullInst.setMatrixAt(b, dummy.matrix);
+      dummy.position.set(bx, 1.15, bz - 1.1);
+      dummy.updateMatrix();
+      boatCabinInst.setMatrixAt(b, dummy.matrix);
+    }
+    boatHullInst.instanceMatrix.needsUpdate = true;
+    boatCabinInst.instanceMatrix.needsUpdate = true;
+    boatHullInst.frustumCulled = false;
+    boatCabinInst.frustumCulled = false;
+    group.add(boatHullInst, boatCabinInst);
+  } else {
+    disposableMaterialsAddFallback();
+    const inlandParkBelt = new THREE.Mesh(
+      new THREE.BoxGeometry(92, 0.20, end + 140),
+      lushGrassMat,
+    );
+    inlandParkBelt.position.set(halfRoad + 82, -0.18, mid);
+    inlandParkBelt.name = 'cinturon_verde_urbano_interior';
+    inlandParkBelt.receiveShadow = true;
+    group.add(inlandParkBelt);
   }
-  boatHullInst.instanceMatrix.needsUpdate = true;
-  boatCabinInst.instanceMatrix.needsUpdate = true;
-  boatHullInst.frustumCulled = false;
-  boatCabinInst.frustumCulled = false;
-  group.add(boatHullInst, boatCabinInst);
+  function disposableMaterialsAddFallback() {
+    // riverMaterial se libera junto con envMaterials si no está asignado a malla
+  }
 
   // 5. CRUCES PERPENDICULARES Y SENDAS PEATONALES ADAPTADAS AL ANCHO VIAL
   const crossAsphalt = mat(wet ? '#454f54' : '#34383b', 0.92);
-  const crossingMaterial = new THREE.MeshBasicMaterial({
-    color: '#e4e1d5',
+  const crossingMaterial = new THREE.MeshStandardMaterial({
+    color: '#dcd6c6',
+    roughness: 0.64,
+    metalness: 0.04,
     transparent: true,
-    opacity: 0.86,
+    opacity: 0.88,
     depthWrite: false,
   });
   const stripesPerCrosswalk = Math.max(13, Math.floor((roadWidth - 1.8) / 1.05));
@@ -296,6 +330,7 @@ export function createUrbanTrackScenery(
     crossingMaterial,
     Math.max(1, crossings.length * 2 * stripesPerCrosswalk),
   );
+  crosswalks.receiveShadow = true;
   let stripeId = 0;
   const crossDummy = new THREE.Object3D();
   for (const cross of crossings) {
@@ -303,6 +338,7 @@ export function createUrbanTrackScenery(
     crossRoad.rotation.x = -Math.PI / 2;
     crossRoad.position.set(0, 0.012, cross.z);
     crossRoad.name = `interseccion_3d_${Math.round(cross.z)}`;
+    crossRoad.receiveShadow = true;
     group.add(crossRoad);
     const startStripeX = -(stripesPerCrosswalk - 1) * 0.5 * 1.02;
     for (const dz of [-7.4, 7.4]) {
@@ -320,8 +356,8 @@ export function createUrbanTrackScenery(
   crosswalks.frustumCulled = false;
   group.add(crosswalks);
 
-  // 6. EDIFICIOS DE ALTURAS VARIADAS + TORRES CORPORATIVAS + PLAZAS DE PASTO
-  let seed = Array.from(profile ?? 'asuncion').reduce(
+  // 6. EDIFICIOS DE ALTURAS VARIADAS + TORRES CORPORATIVAS + PLAZAS DE PASTO (SEMILLA ÚNICA POR CIRCUITO)
+  let seed = Array.from(`${circuitId ?? 'city'}:${profile ?? 'asuncion'}`).reduce(
     (acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0,
     1729,
   );
@@ -335,43 +371,18 @@ export function createUrbanTrackScenery(
   const maxRow1Count = approxBlocksPerSide * 2 + 8;
   const maxRow2Count = approxBlocksPerSide * 2 + 8;
 
-  const facadeMaterials = [
-    mat('#94a0aa', 0.78),
-    mat('#beb5a4', 0.82),
-    mat('#a5988e', 0.80),
-    mat('#7b8c9e', 0.65, 0.18),
+  const reflectiveProbeMaterials: Array<THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial> = [
+    riverMaterial,
+    ...envMaterials.reflectiveMaterials,
   ];
-  facadeMaterials.forEach((material, i) => {
-    const tex = createUrbanFacadeTexture(i);
-    generatedTextures.push(tex);
-    material.map = tex;
-    material.needsUpdate = true;
-  });
+
+  // 4 arquetipos PBR industriales-otoñales (hormigón meteorizado, ladrillo envejecido, mampostería ocre, metal oxidado) con POM y reflejos
+  const facadeMaterials = envMaterials.facadeMaterials;
 
   const towerGlassTex = createGlassTowerTexture();
-  generatedTextures.push(towerGlassTex);
-  const towerMaterials = [
-    new THREE.MeshPhysicalMaterial({
-      color: '#7dd3fc',
-      map: towerGlassTex,
-      roughness: 0.09,
-      metalness: 0.38,
-      clearcoat: 0.92,
-      clearcoatRoughness: 0.06,
-      reflectivity: 0.95,
-      envMapIntensity: 1.75,
-    }),
-    new THREE.MeshPhysicalMaterial({
-      color: '#cbd5e1',
-      map: towerGlassTex,
-      roughness: 0.14,
-      metalness: 0.34,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.08,
-      reflectivity: 0.92,
-      envMapIntensity: 1.65,
-    }),
-  ];
+  const towerRoughnessTex = createGlassTowerRoughnessTexture();
+  generatedTextures.push(towerGlassTex, towerRoughnessTex);
+  const towerMaterials = envMaterials.towerMaterials;
 
   const buildingGeometry = new THREE.BoxGeometry(1, 1, 1);
   const buildingMeshes = facadeMaterials.map(
@@ -387,7 +398,7 @@ export function createUrbanTrackScenery(
   // Coronamientos / terrazas técnicas en azoteas para riqueza visual desde el Dron
   const roofCapMesh = new THREE.InstancedMesh(
     buildingGeometry,
-    mat('#334155', 0.72, 0.25),
+    envMaterials.roofCapMaterial,
     maxRow1Count + maxRow2Count,
   );
   let roofCapIdx = 0;
@@ -400,12 +411,12 @@ export function createUrbanTrackScenery(
   );
   const parkPathMesh = new THREE.InstancedMesh(
     new THREE.BoxGeometry(1, 0.23, 1),
-    mat('#d6d3c9', 0.86),
+    envMaterials.sidewalkMaterial,
     approxBlocksPerSide * 4,
   );
   const parkBenchMesh = new THREE.InstancedMesh(
     new THREE.BoxGeometry(0.65, 0.52, 2.1),
-    mat('#7c4a2d', 0.82),
+    mat('#6b4228', 0.82),
     approxBlocksPerSide * 6,
   );
   let parkLawnIdx = 0;
@@ -413,11 +424,7 @@ export function createUrbanTrackScenery(
   let parkBenchIdx = 0;
   const parkZones: { side: number; centerX: number; centerZ: number; spanZ: number }[] = [];
 
-  const windowMaterial = new THREE.MeshBasicMaterial({
-    color: '#60798e',
-    transparent: true,
-    opacity: 0.72,
-  });
+  const windowMaterial = envMaterials.windowPaneMaterial;
   const windowMesh = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(1, 1),
     windowMaterial,
@@ -447,9 +454,7 @@ export function createUrbanTrackScenery(
   });
   let adCount = 0;
 
-  // 5B. COMPLEJO ICÓNICO TIPO PASEO LA GALERÍA EN AV. AVIADORES DEL CHACO
-  // Torres gemelas curvas de cristal celeste/azul con coronamiento escalonado en 3 niveles,
-  // podio comercial con jardines verticales verdes, terraza central con cubierta blanca octogonal y palmeras.
+  // 5B. COMPLEJO ICÓNICO TIPO PASEO LA GALERÍA EXCLUSIVO DE AV. AVIADORES DEL CHACO
   const isAviadores = circuitId === 'aviadores';
   const paseoSites: { z: number; side: -1 | 1 }[] = isAviadores
     ? [
@@ -457,9 +462,7 @@ export function createUrbanTrackScenery(
         ...(end > 980 ? [{ z: 910, side: 1 as const }] : []),
         ...(end > 1750 ? [{ z: 1680, side: -1 as const }] : []),
       ]
-    : end > 760
-      ? [{ z: Math.min(end - 180, 560), side: -1 }]
-      : [];
+    : [];
 
   for (const site of paseoSites) {
     if (site.z < end - 90 && !crossings.some((c) => Math.abs(c.z - site.z) < 26)) {
@@ -468,7 +471,9 @@ export function createUrbanTrackScenery(
         site.z,
         site.side,
         towerGlassTex,
-        grassTex,
+        towerRoughnessTex,
+        envMaterials,
+        reflectiveProbeMaterials,
       );
       group.add(paseoComplex);
     }
@@ -517,19 +522,33 @@ export function createUrbanTrackScenery(
         continue;
       }
 
-      // Fila 1: Edificios sobre línea municipal con alturas variadas (comercios bajos, edificios medios y esquinas altas)
+      // Fila 1: Alturas y arquetipos PBR adaptados a la identidad urbana de cada uno de los 6 circuitos
       const tierRoll = rng();
-      const height =
-        tierRoll < 0.30
-          ? 6.5 + rng() * 5.5 // Comercios / casonas bajas (6.5 - 12 m)
-          : tierRoll < 0.72
-            ? 15 + rng() * (historical ? 10 : 16) // Edificios residenciales medios (15 - 31 m)
-            : 30 + rng() * (historical ? 10 : 16); // Edificios altos frente a avenida (30 - 46 m)
+      const isIndustrialZone = circuitId === 'avelino' || circuitId === 'jose-felix';
+      const isColonialMicrocentro = circuitId === 'oliva';
+      const height = isColonialMicrocentro
+        ? 6.8 + rng() * 13.5 // Casonas históricas y edificios clásicos (6.8 - 20.3 m)
+        : isIndustrialZone
+          ? tierRoll < 0.58
+            ? 6.2 + rng() * 6.8 // Galpones industriales, talleres y comercios (6.2 - 13 m)
+            : 13.5 + rng() * 13.5 // Edificios medios de avenida periférica (13.5 - 27 m)
+          : tierRoll < 0.30
+            ? 6.5 + rng() * 5.5
+            : tierRoll < 0.72
+              ? 15 + rng() * (historical ? 10 : 16)
+              : 30 + rng() * (historical ? 10 : 18);
 
       const width = 10 + rng() * 11;
       const depth = 10 + rng() * 8;
       const x = side * (halfRoad + 10.5 + depth * 0.5 + rng() * 2.2);
-      const materialIndex = Math.floor(rng() * facadeMaterials.length);
+      // Sesgo de material PBR por barrio manteniendo los 4 shaders POM intactos:
+      // 0: hormigón industrial, 1: ladrillo visto envejecido, 2: estuco colonial ocre, 3: galpón metálico oxidado
+      const matRoll = rng();
+      const materialIndex = isColonialMicrocentro
+        ? (matRoll < 0.52 ? 2 : matRoll < 0.88 ? 1 : 0)
+        : isIndustrialZone
+          ? (matRoll < 0.42 ? 3 : matRoll < 0.76 ? 0 : 1)
+          : Math.floor(matRoll * facadeMaterials.length);
 
       dummy.position.set(x, height / 2 - 0.1, laneZ);
       dummy.rotation.set(0, 0, 0);
@@ -581,11 +600,16 @@ export function createUrbanTrackScenery(
         windowMesh.setMatrixAt(windowIndex++, dummy.matrix);
       }
 
-      // Fila 2: Skyline de torres corporativas y edificios altos detrás de la primera línea
-      // (En el lado +X dejamos corredores abiertos para ver el Río Paraguay y la Costanera)
-      const spawnSkylineTower = side === -1 ? block % 2 === 0 : block % 4 === 0;
+      // Fila 2: Skyline de torres corporativas según distrito (intenso en Aviadores/Artigas/Herrera, moderado/ausente en Oliva/Avelino)
+      const spawnSkylineTower = isColonialMicrocentro
+        ? false
+        : isIndustrialZone
+          ? block % 6 === 0 && side === -1
+          : isAviadores
+            ? (side === -1 ? block % 2 === 0 : block % 3 === 0)
+            : (side === -1 ? block % 3 === 0 : block % 5 === 0);
       if (spawnSkylineTower) {
-        const towerHeight = 34 + rng() * 38; // Torres de 34 m a 72 m (estilo Aviadores / Costanera)
+        const towerHeight = isIndustrialZone ? 24 + rng() * 14 : 34 + rng() * 38;
         const towerWidth = 13 + rng() * 9;
         const towerDepth = 13 + rng() * 8;
         const towerX = side * (halfRoad + 29 + towerDepth * 0.5 + rng() * 5);
@@ -611,6 +635,8 @@ export function createUrbanTrackScenery(
   buildingMeshes.forEach((mesh, i) => {
     mesh.name = `urban_buildings_${i}`;
     mesh.count = buildingCounters[i];
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     mesh.instanceMatrix.needsUpdate = true;
     mesh.frustumCulled = false;
     group.add(mesh);
@@ -619,28 +645,37 @@ export function createUrbanTrackScenery(
   towerMeshes.forEach((mesh, i) => {
     mesh.name = `skyline_towers_${i}`;
     mesh.count = towerCounters[i];
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     mesh.instanceMatrix.needsUpdate = true;
     mesh.frustumCulled = false;
     group.add(mesh);
   });
 
   roofCapMesh.count = roofCapIdx;
+  roofCapMesh.castShadow = true;
+  roofCapMesh.receiveShadow = true;
   roofCapMesh.instanceMatrix.needsUpdate = true;
   roofCapMesh.frustumCulled = false;
   group.add(roofCapMesh);
 
   parkLawnMesh.count = parkLawnIdx;
+  parkLawnMesh.receiveShadow = true;
   parkLawnMesh.instanceMatrix.needsUpdate = true;
   parkLawnMesh.frustumCulled = false;
   parkPathMesh.count = parkPathIdx;
+  parkPathMesh.receiveShadow = true;
   parkPathMesh.instanceMatrix.needsUpdate = true;
   parkPathMesh.frustumCulled = false;
   parkBenchMesh.count = parkBenchIdx;
+  parkBenchMesh.castShadow = true;
+  parkBenchMesh.receiveShadow = true;
   parkBenchMesh.instanceMatrix.needsUpdate = true;
   parkBenchMesh.frustumCulled = false;
   group.add(parkLawnMesh, parkPathMesh, parkBenchMesh);
 
   windowMesh.count = windowIndex;
+  windowMesh.receiveShadow = true;
   windowMesh.instanceMatrix.needsUpdate = true;
   windowMesh.frustumCulled = false;
   group.add(windowMesh);
@@ -672,6 +707,10 @@ export function createUrbanTrackScenery(
       lampIdx++;
     }
   }
+  lampPosts.castShadow = true;
+  lampPosts.receiveShadow = true;
+  fixture.castShadow = true;
+  fixture.receiveShadow = true;
   lampPosts.instanceMatrix.needsUpdate = true;
   fixture.instanceMatrix.needsUpdate = true;
   lampPosts.frustumCulled = false;
@@ -717,22 +756,22 @@ export function createUrbanTrackScenery(
 
   const trunks = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.14, 0.23, 2.8, 8),
-    mat('#544034', 0.92),
+    envMaterials.trunkMaterial,
     maxTrees,
   );
-  // Copa orgánica facetada de 4 racimos asimétricos por árbol (evita esferas lisas artificiales)
+  // Copa orgánica facetada de 4 racimos asimétricos por árbol con shader PBR de Subsurface Scattering (SSS) y brisa de vértices
   const leaves = new THREE.InstancedMesh(
     new THREE.IcosahedronGeometry(1.12, 0),
-    new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.84, metalness: 0.01 }),
+    envMaterials.foliageMaterial,
     maxTrees * 4,
   );
   const foliagePalette = [
-    new THREE.Color('#2d5e36'), // Ficus verde profundo
-    new THREE.Color('#3b7341'), // Yvyrá Pytã soleado
-    new THREE.Color('#244d2c'), // Sombra subtropical
-    new THREE.Color('#4a7c44'), // Copa verde oliva cálido
-    new THREE.Color('#9e4768'), // Lapacho rosado natural atenuado
-    new THREE.Color('#b8891e'), // Lapacho dorado natural
+    new THREE.Color('#536938'), // Verde oliva otoñal apagado
+    new THREE.Color('#c88b26'), // Amarillo ocre / dorado de otoño
+    new THREE.Color('#42562f'), // Verde bosque profundo
+    new THREE.Color('#cc671f'), // Naranja otoñal luminoso
+    new THREE.Color('#a84624'), // Cobrizo rojizo cálido
+    new THREE.Color('#ddb034'), // Amarillo ámbar traslúcido al sol
   ];
 
   let treeIdx = 0;
@@ -789,6 +828,10 @@ export function createUrbanTrackScenery(
 
   trunks.count = treeIdx;
   leaves.count = leafLobeIdx;
+  trunks.castShadow = true;
+  trunks.receiveShadow = true;
+  leaves.castShadow = true;
+  leaves.receiveShadow = true;
   trunks.instanceMatrix.needsUpdate = true;
   leaves.instanceMatrix.needsUpdate = true;
   if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
@@ -887,6 +930,8 @@ export function createUrbanTrackScenery(
 
     [pedLegsL, pedLegsR, pedTorso, pedHead, pedHair, pedArm].forEach((im) => {
       im.frustumCulled = false;
+      im.castShadow = true;
+      im.receiveShadow = true;
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       if (im.instanceColor) im.instanceColor.needsUpdate = true;
       pedestrianGroup.add(im);
@@ -1015,8 +1060,19 @@ export function createUrbanTrackScenery(
       timeSec: number,
       focusZ: number,
       roadPath?: CurvedRoadPath,
+      sunDir?: readonly [number, number, number],
     ) => {
+      envMaterials.update(timeSec, sunDir);
       applyPedestrianMatrices(timeSec, focusZ, roadPath, false);
+    };
+  } else {
+    group.userData.updateScenery = (
+      timeSec: number,
+      _focusZ: number,
+      _roadPath?: CurvedRoadPath,
+      sunDir?: readonly [number, number, number],
+    ) => {
+      envMaterials.update(timeSec, sunDir);
     };
   }
 
@@ -1084,8 +1140,16 @@ export function createUrbanTrackScenery(
     group.add(warn);
   }
 
-  group.userData.disposeTextureMaps = () =>
+  group.userData.applyDynamicReflectionEnvMap = (probeTex: THREE.Texture) => {
+    for (const m of reflectiveProbeMaterials) {
+      m.envMap = probeTex;
+      m.needsUpdate = true;
+    }
+  };
+  group.userData.disposeTextureMaps = () => {
     generatedTextures.forEach((texture) => texture.dispose());
+    envMaterials.dispose();
+  };
   return group;
 }
 
@@ -1155,62 +1219,57 @@ function buildPaseoLaGaleriaComplex(
   centerZ: number,
   side: -1 | 1,
   glassTex: THREE.Texture,
-  grassTex: THREE.Texture,
+  glassRoughnessTex: THREE.Texture,
+  envMaterials: PhotorealEnvironmentController,
+  reflectiveProbeMaterials?: Array<THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial>,
 ): THREE.Group {
   const complex = new THREE.Group();
   complex.name = `complejo_paseo_la_galeria_${Math.round(centerZ)}`;
 
   const sailGlassMat = new THREE.MeshPhysicalMaterial({
-    color: '#67c6f5',
+    color: '#96c9e0',
     map: glassTex,
-    roughness: 0.065,
-    metalness: 0.42,
+    roughnessMap: glassRoughnessTex,
+    bumpMap: glassRoughnessTex,
+    bumpScale: 0.02,
+    roughness: 0.06,
+    metalness: 0.50,
     clearcoat: 0.96,
     clearcoatRoughness: 0.04,
     reflectivity: 0.98,
-    envMapIntensity: 1.95,
+    envMapIntensity: 2.15,
   });
   const crownGlassMat = new THREE.MeshPhysicalMaterial({
-    color: '#0369a1',
+    color: '#2b678c',
     map: glassTex,
-    roughness: 0.06,
-    metalness: 0.48,
+    roughnessMap: glassRoughnessTex,
+    bumpMap: glassRoughnessTex,
+    bumpScale: 0.02,
+    roughness: 0.055,
+    metalness: 0.54,
     clearcoat: 0.96,
     clearcoatRoughness: 0.04,
-    envMapIntensity: 2.0,
+    envMapIntensity: 2.2,
   });
   const finNavyMat = new THREE.MeshPhysicalMaterial({
-    color: '#082f49',
-    roughness: 0.22,
-    metalness: 0.78,
+    color: '#1b3548',
+    roughness: 0.24,
+    metalness: 0.76,
     clearcoat: 0.72,
-    envMapIntensity: 1.45,
+    envMapIntensity: 1.55,
   });
-  const greenWallMat = new THREE.MeshStandardMaterial({
-    color: '#2e7d32',
-    map: grassTex,
-    roughness: 0.86,
-    metalness: 0.02,
-  });
-  const whiteRoofMat = new THREE.MeshStandardMaterial({
-    color: '#f8fafc',
-    roughness: 0.34,
+  if (reflectiveProbeMaterials) {
+    reflectiveProbeMaterials.push(sailGlassMat, crownGlassMat, finNavyMat);
+  }
+  const greenWallMat = envMaterials.hedgeMaterial;
+  const whiteRoofMat = envMaterials.sidewalkMaterial;
+  const woodPergolaMat = new THREE.MeshStandardMaterial({
+    color: '#7c3f16',
+    roughness: 0.76,
     metalness: 0.08,
   });
-  const woodPergolaMat = new THREE.MeshStandardMaterial({
-    color: '#92400e',
-    roughness: 0.72,
-    metalness: 0.06,
-  });
-  const palmTrunkMat = new THREE.MeshStandardMaterial({
-    color: '#78624c',
-    roughness: 0.88,
-  });
-  const palmLeafMat = new THREE.MeshStandardMaterial({
-    color: '#2f855a',
-    roughness: 0.70,
-    side: THREE.DoubleSide,
-  });
+  const palmTrunkMat = envMaterials.palmTrunkMaterial;
+  const palmLeafMat = envMaterials.palmLeafMaterial;
 
   const baseOffsetX = side * (halfRoad + 22.5);
   const podiumFrontDepth = 18;
@@ -1376,6 +1435,12 @@ function buildPaseoLaGaleriaComplex(
     }
   }
 
+  complex.traverse((obj) => {
+    if ((obj as THREE.Mesh).isMesh) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+    }
+  });
   return complex;
 }
 
@@ -1608,6 +1673,102 @@ function createUrbanFacadeTexture(variant: number): THREE.CanvasTexture {
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 2;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+/**
+ * Mapa PBR de rugosidad/especularidad (512x512, linear NoColorSpace) alineado a las ventanas
+ * de createUrbanFacadeTexture: vidrio pulido (baja rugosidad = alto especular) vs mampostería mate.
+ */
+function createUrbanFacadeRoughnessTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    // Muro de hormigón / revoque mate (~0.88 roughness)
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let n = 0; n < 2200; n++) {
+      const x = (n * 137.31) % 512;
+      const y = (n * 91.43) % 512;
+      const v = 195 + (n % 50);
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(x, y, 2 + (n % 4), 2 + (n % 4));
+    }
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = 30 + col * 164;
+        const y = 22 + row * 98;
+        // Marco metálico satinado
+        ctx.fillStyle = '#707070';
+        ctx.fillRect(x - 6, y - 5, 109, 78);
+        // Paño de vidrio altamente especular (~0.08 roughness)
+        ctx.fillStyle = '#161616';
+        ctx.fillRect(x, y, 97, 64);
+        // Carpintería divisoria
+        ctx.fillStyle = '#7c7c7c';
+        ctx.fillRect(x + 46, y, 4, 64);
+        ctx.fillRect(x, y + 32, 97, 3);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function createUrbanFacadeReliefTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#8c8c8c';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = '#5c5c5c';
+      ctx.fillRect(0, i * 98 + 92, 512, 4);
+    }
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        const x = 30 + col * 164;
+        const y = 22 + row * 98;
+        ctx.fillStyle = '#bcbcbc';
+        ctx.fillRect(x - 6, y - 5, 109, 78);
+        ctx.fillStyle = '#424242';
+        ctx.fillRect(x, y, 97, 64);
+        ctx.fillStyle = '#d4d4d4';
+        ctx.fillRect(x - 11, y + 67, 120, 6);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function createGlassTowerRoughnessTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    // Perfilería estructural de aluminio anodizado (~0.46 roughness)
+    ctx.fillStyle = '#787878';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let row = 0; row < 16; row++) {
+      for (let col = 0; col < 8; col++) {
+        const x = 6 + col * 63;
+        const y = 5 + row * 31;
+        // Cristal espejado (~0.06 roughness)
+        ctx.fillStyle = '#101010';
+        ctx.fillRect(x, y, 54, 24);
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
   return tex;
 }

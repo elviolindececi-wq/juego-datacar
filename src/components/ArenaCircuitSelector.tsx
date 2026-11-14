@@ -289,8 +289,8 @@ export const ArenaCircuitSelector: React.FC<ArenaCircuitSelectorProps> = ({
                   aria-pressed={raceMode === 'speed_pro'}
                   title={
                     speedModeUnlocked
-                      ? 'Carrera pura de velocidad sin obstáculos contra rivales expertos'
-                      : `Superá primero la Fase 1 (Prueba en Ciudad con Driving IQ ≥ ${CITY_UNLOCK_MIN_IQ}, sin atropellar peatones) para desbloquear`
+                      ? 'Contrarreloj pura de velocidad sin obstáculos contra el Tiempo Meta Oro'
+                      : `Superá primero la Fase 1 (Prueba en Ciudad con Driving IQ ≥ ${CITY_UNLOCK_MIN_IQ}, sin atropellar peatones ni motociclistas) para desbloquear`
                   }
                   className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition ${
                     !speedModeUnlocked
@@ -312,11 +312,11 @@ export const ArenaCircuitSelector: React.FC<ArenaCircuitSelectorProps> = ({
                     </span>
                     <div className="min-w-0">
                       <div className="font-display text-xs sm:text-sm font-black italic uppercase tracking-wider text-white">
-                        FASE 2 · CARRERA SIN OBSTÁCULOS
+                        FASE 2 · CONTRARRELOJ SIN OBSTÁCULOS
                       </div>
                       <p className="text-[11px] text-slate-300 truncate">
                         {speedModeUnlocked
-                          ? 'Velocidad pura a fondo contra rivales IA de nivel experto'
+                          ? 'Contrarreloj pura a fondo contra el Tiempo Meta Oro sin obstáculos'
                           : `Bloqueada: superá Fase 1 en ciudad (IQ ≥ ${CITY_UNLOCK_MIN_IQ}) para habilitar`}
                       </p>
                     </div>
@@ -542,15 +542,19 @@ export const ArenaCircuitSelector: React.FC<ArenaCircuitSelectorProps> = ({
                 <span className="inline-flex items-center gap-1 rounded-md border border-amber-400/50 bg-amber-950/75 px-2 py-0.5 text-[11px] font-black text-amber-300 tabular-nums">
                   <Clock className="h-3 w-3 shrink-0" />
                   <span>
-                    Tiempo Meta Oro: {formatTargetMinutesSec(activeTarget.targetSec)} (Límite {formatTargetMinutesSec(activeTarget.maxLimitSec)})
+                    🎯 Objetivo Oro: ≤ {formatTargetMinutesSec(activeTarget.targetSec)} (Límite {formatTargetMinutesSec(activeTarget.maxLimitSec)})
                   </span>
                 </span>
               </div>
               <h3 className="mt-0.5 font-display text-2xl sm:text-3xl font-black italic leading-none tracking-wide text-[#F3F7FC] truncate">
                 {activeCircuit.name}
               </h3>
-              <p className="mt-1.5 text-xs sm:text-sm italic text-slate-200/90">
-                “{activeCircuit.lore}”
+              <p className="mt-1.5 text-xs sm:text-sm text-cyan-200 font-semibold">
+                {raceMode === 'speed_pro'
+                  ? `Objetivo: Llegá en ≤ ${formatTargetMinutesSec(activeTarget.targetSec)} sin dañar el vehículo en pista limpia.`
+                  : raceMode === 'practice_free'
+                    ? 'Objetivo: Práctica libre de manejo, frenada, espejos y carga sin penalización.'
+                    : `Objetivo: Llegá antes de ${formatTargetMinutesSec(activeTarget.maxLimitSec)} (Oro ≤ ${formatTargetMinutesSec(activeTarget.targetSec)}), abrochá el cinturón, respetá semáforos y no choques motos (+15s) ni peatones.`}
               </p>
             </div>
           </div>

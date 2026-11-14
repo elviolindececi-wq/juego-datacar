@@ -71,8 +71,11 @@ export const ASUNCION_CIRCUITS: AsuncionCircuit[] = [
 
 export function toRaceTrack(circuit: AsuncionCircuit, laps = 1): RaceTrackConfig {
   const safeLaps = Math.max(1, Math.min(3, Math.round(laps)));
+  const foundIdx = ASUNCION_CIRCUITS.findIndex((c) => c.id === circuit.id);
+  const trackIndex = foundIdx >= 0 ? foundIdx + 1 : 1;
   return {
-    id: 'circuit',
+    id: `circuit-${circuit.id}` as RaceTrackConfig['id'],
+    trackIndex,
     name: circuit.name,
     subtitle: safeLaps > 1 ? `${circuit.zone} · ${safeLaps} vueltas` : circuit.zone,
     distanceMeters: circuit.distanceMeters * safeLaps,

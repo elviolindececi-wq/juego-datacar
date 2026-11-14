@@ -6,10 +6,23 @@ import {
 } from './faithfulVehicleSpecs.ts';
 import type { VehicleWheelRig } from './vehicleWheelRig.ts';
 
+export interface VehicleLampAnchors {
+  frontLeft: [number, number, number];
+  frontRight: [number, number, number];
+  rearLeft: [number, number, number];
+  rearRight: [number, number, number];
+}
+
+export interface FaithfulVehicleOptions {
+  trafficSuvMode?: boolean;
+  paintHexOverride?: string;
+}
+
 export interface FaithfulVehicleBuildResult {
   group: THREE.Group;
   spec: FaithfulVehicleSpec;
   wheelRig: VehicleWheelRig;
+  lampAnchors: VehicleLampAnchors;
   setBrakeLit: (braking: boolean) => void;
   dispose: () => void;
 }
@@ -318,8 +331,11 @@ function createAlloyWheelMesh(
 export function createFaithfulVehicle3D(
   vehicle: Vehicle,
   envMap?: THREE.Texture | null,
+  options?: FaithfulVehicleOptions,
 ): FaithfulVehicleBuildResult {
   const spec = getFaithfulVehicleSpec(vehicle);
+  const isTrafficSuv = Boolean(options?.trafficSuvMode);
+  const paintHex = options?.paintHexOverride || spec.bodyColorHex;
   const group = new THREE.Group();
   group.name = `faithful_oem_3d_${spec.modelId}`;
 
@@ -340,142 +356,174 @@ export function createFaithfulVehicle3D(
     return t;
   };
 
-  const L = spec.lengthM;
-  const W = spec.widthM;
-  const H = spec.heightM;
+  // Proporciones auténticas de SUV moderno: mayor despeje al suelo, techo alto y cabina trasera extendida
+  const L = isTrafficSuv ? Math.max(4.40, spec.lengthM) : spec.lengthM;
+  const W = isTrafficSuv ? Math.max(1.835, spec.widthM) : spec.widthM;
+  const H = isTrafficSuv ? Math.max(1.715, spec.heightM) : Math.max(1.64, spec.heightM);
+  const effectiveWheelRadius = isTrafficSuv
+    ? Math.max(0.382, spec.wheelRadiusM + 0.022)
+    : Math.max(0.360, spec.wheelRadiusM);
+  const effectiveWheelWidth = isTrafficSuv
+    ? Math.max(0.240, spec.wheelWidthM + 0.015)
+    : spec.wheelWidthM;
+  const effectiveRearSlope = isTrafficSuv
+    ? Math.max(0.80, spec.rearSlope)
+    : Math.max(0.62, spec.rearSlope);
+
   const halfL = L * 0.5;
   const halfW = W * 0.5;
-  const clearY = spec.clearanceM;
-  const beltY = clearY + (H - clearY) * spec.beltlineRatio;
-  const hoodY = clearY + (H - clearY) * spec.hoodLineRatio;
-  const roofY = H - 0.045;
+  const clearY = isTrafficSuv
+    ? Math.max(0.222, spec.clearanceM + 0.038)
+    : Math.max(0.195, spec.clearanceM + 0.018);
+  const beltY = clearY + (H - clearY) * Math.max(0.55, spec.beltlineRatio);
+  const hoodY = clearY + (H - clearY) * Math.max(0.50, spec.hoodLineRatio);
+  const roofY = H - 0.042;
 
   const frontAxleZ = halfL - L * spec.frontOverhangRatio;
   const rearAxleZ = frontAxleZ - L * spec.wheelbaseRatio;
 
-  // Materiales PBR automotrices calibrados (basecoat pigmentado + laca transparente clearcoat)
-  // Metalness moderado (~0.34) preserva el color OEM fiel bajo el sol sin lavar el techo en blanco espejo.
-  const tunedMetalness = Math.min(0.36, spec.metallicFactor * 0.46);
+  // Pintura automotriz PBR con clearcoat brillante (negro, plata, blanco, azul oscuro, charcoal u OEM)
+  const lowerPaintHex = paintHex.toLowerCase();
+  const isMetallicPaint =
+    lowerPaintHex === '#bcc4ce' ||
+    lowerPaintHex === '#2b313a' ||
+    lowerPaintHex === '#102648';
+  const tunedMetalness = isTrafficSuv
+    ? isMetallicPaint
+      ? 0.62
+      : lowerPaintHex === '#0d1016'
+        ? 0.38
+        : 0.22
+    : Math.min(0.42, spec.metallicFactor * 0.52);
+
   const bodyPaintMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: spec.bodyColorHex,
+      color: paintHex,
       metalness: tunedMetalness,
-      roughness: Math.max(0.22, spec.paintRoughness + 0.06),
-      clearcoat: Math.min(0.62, spec.clearcoat * 0.68),
-      clearcoatRoughness: 0.11,
-      reflectivity: 0.78,
+      roughness: isTrafficSuv ? 0.16 : Math.max(0.18, spec.paintRoughness + 0.02),
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.055,
+      reflectivity: 0.92,
       envMap: envMap || null,
-      envMapIntensity: 0.82,
+      envMapIntensity: 1.15,
     }),
   );
 
-  const isBlackFloatingRoof = spec.roofColorHex === '#0b0e14';
+  const effectiveRoofHex = isTrafficSuv
+    ? paintHex
+    : spec.roofColorHex;
+  const isBlackFloatingRoof = !isTrafficSuv && spec.roofColorHex === '#0b0e14';
   const roofPaintMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: spec.roofColorHex,
-      metalness: isBlackFloatingRoof ? 0.18 : tunedMetalness,
-      roughness: isBlackFloatingRoof ? 0.18 : Math.max(0.22, spec.paintRoughness + 0.06),
-      clearcoat: 0.62,
-      clearcoatRoughness: 0.10,
+      color: effectiveRoofHex,
+      metalness: isBlackFloatingRoof ? 0.22 : tunedMetalness,
+      roughness: isBlackFloatingRoof ? 0.16 : 0.17,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.055,
       envMap: envMap || null,
-      envMapIntensity: 0.80,
+      envMapIntensity: 1.12,
     }),
   );
 
   const secondaryAccentMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: spec.secondaryAccentHex,
-      metalness: 0.38,
-      roughness: 0.26,
-      clearcoat: 0.55,
+      color: isTrafficSuv ? '#94a3b8' : spec.secondaryAccentHex,
+      metalness: 0.65,
+      roughness: 0.24,
+      clearcoat: 0.65,
       envMap: envMap || null,
-      envMapIntensity: 0.82,
+      envMapIntensity: 0.95,
     }),
   );
 
   const mirrorMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: spec.mirrorColorHex,
-      metalness: spec.mirrorColorHex === '#0b0e14' || spec.mirrorColorHex === '#0e131b' ? 0.20 : tunedMetalness,
-      roughness: 0.20,
-      clearcoat: 0.60,
+      color: isTrafficSuv ? paintHex : spec.mirrorColorHex,
+      metalness: tunedMetalness,
+      roughness: 0.17,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.06,
       envMap: envMap || null,
-      envMapIntensity: 0.82,
+      envMapIntensity: 1.10,
     }),
   );
 
+  // Plástico negro mate automotriz para paragolpes, zócalos y pasarruedas SUV
   const claddingMat = trackMat(
     new THREE.MeshStandardMaterial({
-      color: spec.claddingColorHex,
-      roughness: 0.76,
-      metalness: 0.08,
+      color: '#12151b',
+      roughness: 0.86,
+      metalness: 0.04,
       envMap: envMap || null,
-      envMapIntensity: 0.55,
+      envMapIntensity: 0.42,
     }),
   );
 
   const chromeMat = trackMat(
     new THREE.MeshPhysicalMaterial({
       color: '#e5ecf3',
-      metalness: 0.88,
-      roughness: 0.18,
-      clearcoat: 0.6,
+      metalness: 0.92,
+      roughness: 0.16,
+      clearcoat: 0.75,
       envMap: envMap || null,
-      envMapIntensity: 1.05,
+      envMapIntensity: 1.20,
     }),
   );
 
   const skidMat = trackMat(
     new THREE.MeshStandardMaterial({
-      color: spec.skidPlateColorHex,
-      metalness: 0.48,
-      roughness: 0.36,
+      color: '#9aa4b2',
+      metalness: 0.68,
+      roughness: 0.30,
       envMap: envMap || null,
-      envMapIntensity: 0.78,
+      envMapIntensity: 0.95,
     }),
   );
 
+  // Cristales polarizados oscuros con reflejo nítido de cielo y entorno
   const glassMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: '#0b1522',
-      metalness: 0.08,
-      roughness: 0.08,
-      clearcoat: 0.82,
-      clearcoatRoughness: 0.06,
-      reflectivity: 0.88,
+      color: '#060d17',
+      metalness: 0.10,
+      roughness: 0.05,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      reflectivity: 0.94,
       envMap: envMap || null,
-      envMapIntensity: 1.05,
+      envMapIntensity: 1.25,
     }),
   );
 
   const pillarBlackMat = trackMat(
     new THREE.MeshPhysicalMaterial({
-      color: '#0a0e14',
-      metalness: 0.16,
-      roughness: 0.18,
-      clearcoat: 0.62,
+      color: '#090c12',
+      metalness: 0.18,
+      roughness: 0.16,
+      clearcoat: 0.80,
       envMap: envMap || null,
-      envMapIntensity: 0.80,
+      envMapIntensity: 0.92,
     }),
   );
 
+  // Ópticas delanteras HDR simétricas (activan bloom realista)
   const drlMat = trackMat(
     new THREE.MeshStandardMaterial({
-      color: '#f0f8ff',
-      emissive: '#dbeafe',
-      emissiveIntensity: 2.2,
-      roughness: 0.15,
-      metalness: 0.1,
+      color: '#f8fbff',
+      emissive: new THREE.Color(2.65, 2.82, 3.25),
+      emissiveIntensity: 1.0,
+      roughness: 0.10,
+      metalness: 0.08,
     }),
   );
 
+  // Ópticas traseras duales simétricas (posición reposo vs frenado HDR intenso)
   const tailLampMat = trackMat(
     new THREE.MeshStandardMaterial({
-      color: '#dc2626',
-      emissive: '#b91c1c',
-      emissiveIntensity: 1.45,
-      roughness: 0.18,
-      metalness: 0.15,
+      color: '#b91c1c',
+      emissive: new THREE.Color(0.55, 0.035, 0.025),
+      emissiveIntensity: 1.0,
+      roughness: 0.14,
+      metalness: 0.12,
     }),
   );
 
@@ -492,15 +540,15 @@ export function createFaithfulVehicle3D(
   chassisBodyGroup.name = 'chassis_body_shell';
   group.add(chassisBodyGroup);
 
-  const hoodTipZ = halfL - 0.03;
-  const windshieldBaseZ = L * 0.16;
-  const tailBaseZ = -halfL + 0.04;
-  const rearBeltZ = -halfL + 0.15;
-  const roofFrontZ = windshieldBaseZ - L * (spec.bodyType === 'mpv_3row' ? 0.165 : 0.185);
-  const roofRearZ = -halfL + L * (0.075 + (1 - spec.rearSlope) * 0.23);
+  const hoodTipZ = halfL - 0.025;
+  const windshieldBaseZ = L * 0.175;
+  const tailBaseZ = -halfL + 0.03;
+  const rearBeltZ = -halfL + 0.065;
+  const roofFrontZ = windshieldBaseZ - L * (spec.bodyType === 'mpv_3row' ? 0.155 : 0.172);
+  // Cabina SUV 2 volúmenes con área de carga trasera extendida y portón trasero vertical
+  const roofRearZ = -halfL + L * (0.055 + (1 - effectiveRearSlope) * 0.15);
 
-  // 1. CARROCERÍA INFERIOR LOFTED 3D CON CURVATURA COMPUESTA
-  // (ahusamiento en planta de trompa y cola + guardabarros musculosos + cintura entallada + capó abombado)
+  // 1. CARROCERÍA INFERIOR LOFTED 3D CON HOMBROS ESCULPIDOS DE SUV MODERNO
   const buildLoftedTube = (
     stations: number,
     ringPts: number,
@@ -527,7 +575,6 @@ export function createFaithfulVehicle3D(
         indices.push(a, c, b, a, d, c);
       }
     }
-    // Tapas cerradas trasera (u=0) y delantera (u=1)
     const rearCenterIdx = positions.length / 3;
     const [, rCy, rCz] = sampleRing(0, Math.PI * 0.5);
     const [, rBy] = sampleRing(0, Math.PI * 1.5);
@@ -554,75 +601,73 @@ export function createFaithfulVehicle3D(
 
   const lowerBodyGeo = trackGeo(
     buildLoftedTube(28, 24, (u, theta) => {
-      // u = 0 cola trasera -> u = 1 trompa delantera
-      // Curva longitudinal suave con redondeo en paragolpes delantero y trasero
       const zLinear = THREE.MathUtils.lerp(tailBaseZ, hoodTipZ, u);
       const endCurve =
-        u < 0.06
-          ? -Math.cos((u / 0.06) * Math.PI * 0.5) * 0.045
-          : u > 0.93
-            ? Math.cos(((1 - u) / 0.07) * Math.PI * 0.5) * 0.055
+        u < 0.045
+          ? -Math.cos((u / 0.045) * Math.PI * 0.5) * 0.028
+          : u > 0.94
+            ? Math.cos(((1 - u) / 0.06) * Math.PI * 0.5) * 0.038
             : 0;
-      const z = zLinear + endCurve * (Math.abs(Math.cos(theta)) * 0.55);
+      const z = zLinear + endCurve * (Math.abs(Math.cos(theta)) * 0.45);
 
-      // Ahusamiento en planta (boat-tail trasero + nariz aerodinámica + ensanche en guardabarros)
-      let planW = halfW * 0.955;
-      if (u < 0.16) {
-        const t = u / 0.16;
-        planW *= 0.78 + 0.22 * Math.sin(t * Math.PI * 0.5);
-      } else if (u > 0.80) {
-        const t = (1 - u) / 0.20;
-        planW *= 0.74 + 0.26 * Math.sin(t * Math.PI * 0.5);
+      // Planta ancha y robusta de SUV moderno con guardabarros ensanchados
+      let planW = halfW * 0.968;
+      if (u < 0.10) {
+        const t = u / 0.10;
+        planW *= 0.89 + 0.11 * Math.sin(t * Math.PI * 0.5);
+      } else if (u > 0.86) {
+        const t = (1 - u) / 0.14;
+        planW *= 0.86 + 0.14 * Math.sin(t * Math.PI * 0.5);
       }
       const distFrontAxle = Math.abs(zLinear - frontAxleZ);
       const distRearAxle = Math.abs(zLinear - rearAxleZ);
       const flare =
-        Math.exp(-Math.pow(distFrontAxle / (spec.wheelRadiusM * 1.35), 2)) * 0.032 +
-        Math.exp(-Math.pow(distRearAxle / (spec.wheelRadiusM * 1.38), 2)) * 0.034;
+        Math.exp(-Math.pow(distFrontAxle / (effectiveWheelRadius * 1.42), 2)) * 0.046 +
+        Math.exp(-Math.pow(distRearAxle / (effectiveWheelRadius * 1.45), 2)) * 0.048;
       planW += flare;
 
-      // Perfil superior moderno SUV/Crossover (capó alto y orgulloso con frente vertical limpio)
+      // Capó horizontal elevado + cintura alta de SUV
       const hoodStartU = (windshieldBaseZ - tailBaseZ) / (hoodTipZ - tailBaseZ);
       let topY = beltY;
       if (u >= hoodStartU) {
         const hu = (u - hoodStartU) / Math.max(0.01, 1 - hoodStartU);
-        topY = THREE.MathUtils.lerp(hoodY + 0.018, hoodY - 0.042, Math.pow(hu, 1.15));
-        if (hu > 0.91) {
-          topY -= ((hu - 0.91) / 0.09) * 0.042;
+        topY = THREE.MathUtils.lerp(hoodY + 0.024, hoodY - 0.026, Math.pow(hu, 1.25));
+        if (hu > 0.92) {
+          topY -= ((hu - 0.92) / 0.08) * 0.032;
         }
       } else {
         const bu = 1 - u / Math.max(0.01, hoodStartU);
-        topY = THREE.MathUtils.lerp(beltY - 0.008, beltY + 0.042, Math.min(1, bu * 1.1));
-        if (u < 0.05) {
-          topY -= ((0.05 - u) / 0.05) * 0.055;
+        topY = THREE.MathUtils.lerp(beltY, beltY + 0.048, Math.min(1, bu * 1.05));
+        if (u < 0.035) {
+          topY -= ((0.035 - u) / 0.035) * 0.028;
         }
       }
 
       const botY =
         clearY +
-        0.032 +
-        (u < 0.08 ? ((0.08 - u) / 0.08) * 0.062 : 0) +
-        (u > 0.90 ? ((u - 0.90) / 0.10) * 0.048 : 0);
+        0.024 +
+        (u < 0.07 ? ((0.07 - u) / 0.07) * 0.048 : 0) +
+        (u > 0.91 ? ((u - 0.91) / 0.09) * 0.042 : 0);
 
-      // Sección transversal superelíptica automotriz con nervadura de hombro definida
+      // Sección superelíptica estampada (costados verticales definidos de SUV, no cápsula ovalada)
       const c = Math.cos(theta);
       const s = Math.sin(theta);
       const signC = Math.sign(c) || 1;
       const signS = Math.sign(s) || 1;
-      const superX = signC * Math.pow(Math.abs(c), 0.46);
-      const superY = signS * Math.pow(Math.abs(s), 0.50);
+      const superX = signC * Math.pow(Math.abs(c), 0.34);
+      const superY = signS * Math.pow(Math.abs(s), 0.42);
 
       const y01 = (superY + 1) * 0.5;
-      const shoulderCrease = Math.exp(-Math.pow((y01 - 0.76) / 0.09, 2)) * 0.022;
+      const shoulderCrease = Math.exp(-Math.pow((y01 - 0.78) / 0.08, 2)) * 0.028;
       const sectionProfile =
-        y01 < 0.20
-          ? THREE.MathUtils.lerp(0.85, 0.99, y01 / 0.20)
-          : y01 > 0.86
-            ? THREE.MathUtils.lerp(1.01, 0.91, (y01 - 0.86) / 0.14)
-            : 0.99 + shoulderCrease;
+        y01 < 0.18
+          ? THREE.MathUtils.lerp(0.90, 1.0, y01 / 0.18)
+          : y01 > 0.88
+            ? THREE.MathUtils.lerp(1.01, 0.94, (y01 - 0.88) / 0.12)
+            : 0.995 + shoulderCrease;
 
       const x = superX * planW * sectionProfile;
-      const crown = s > 0 ? (1 - Math.min(1, Math.abs(superX))) * 0.028 * s : 0;
+      const crown = s > 0 ? (1 - Math.min(1, Math.abs(superX))) * 0.022 * s : 0;
       const y = THREE.MathUtils.lerp(botY, topY, y01) + crown;
       return [x, y, z];
     }),
@@ -631,6 +676,34 @@ export function createFaithfulVehicle3D(
   lowerBodyMesh.castShadow = true;
   lowerBodyMesh.receiveShadow = true;
   chassisBodyGroup.add(lowerBodyMesh);
+
+  // Molduras inferiores de plástico negro mate en paragolpes delantero y trasero (SUV lower bumper cladding)
+  const frontBumperTrim = new THREE.Mesh(
+    trackGeo(new THREE.BoxGeometry(W * 0.86, 0.135, 0.12)),
+    claddingMat,
+  );
+  frontBumperTrim.position.set(0, clearY + 0.092, hoodTipZ - 0.048);
+  frontBumperTrim.castShadow = true;
+  chassisBodyGroup.add(frontBumperTrim);
+
+  const rearBumperTrim = new THREE.Mesh(
+    trackGeo(new THREE.BoxGeometry(W * 0.88, 0.165, 0.13)),
+    claddingMat,
+  );
+  rearBumperTrim.position.set(0, clearY + 0.108, tailBaseZ + 0.042);
+  rearBumperTrim.castShadow = true;
+  chassisBodyGroup.add(rearBumperTrim);
+
+  // Portón trasero vertical esculpido de SUV (rear cargo liftgate panel)
+  const liftgateH = Math.max(0.28, beltY - clearY - 0.16);
+  const liftgatePanel = new THREE.Mesh(
+    trackGeo(new THREE.BoxGeometry(W * 0.80, liftgateH, 0.065)),
+    bodyPaintMat,
+  );
+  liftgatePanel.position.set(0, clearY + 0.17 + liftgateH * 0.5, tailBaseZ + 0.024);
+  liftgatePanel.castShadow = true;
+  liftgatePanel.receiveShadow = true;
+  chassisBodyGroup.add(liftgatePanel);
 
   // 2. ZÓCALOS LATERALES CONTORNEADOS, PASARRUEDAS CON GUARDAPOLVO INTERNO OSCURO Y DIFUSORES
   const wheelWellMat = trackMat(
@@ -641,16 +714,16 @@ export function createFaithfulVehicle3D(
     }),
   );
   const wheelWellGeo = trackGeo(
-    new THREE.CylinderGeometry(spec.wheelRadiusM * 1.04, spec.wheelRadiusM * 1.04, W * 0.86, 20, 1, false, 0, Math.PI),
+    new THREE.CylinderGeometry(effectiveWheelRadius * 1.07, effectiveWheelRadius * 1.07, W * 0.88, 20, 1, false, 0, Math.PI),
   );
   wheelWellGeo.rotateZ(Math.PI / 2);
   for (const axZ of [frontAxleZ, rearAxleZ]) {
     const well = new THREE.Mesh(wheelWellGeo, wheelWellMat);
-    well.position.set(0, spec.wheelRadiusM * 0.99, axZ);
+    well.position.set(0, effectiveWheelRadius * 1.01, axZ);
     chassisBodyGroup.add(well);
   }
 
-  const wheelSpanLen = frontAxleZ - rearAxleZ - spec.wheelRadiusM * 1.95;
+  const wheelSpanLen = frontAxleZ - rearAxleZ - effectiveWheelRadius * 2.02;
   if (wheelSpanLen > 0.3) {
     for (const sx of [-1, 1]) {
       const rockerCladding = new THREE.Mesh(
@@ -718,14 +791,15 @@ export function createFaithfulVehicle3D(
     chassisBodyGroup.add(tip);
   }
 
-  // Arcos guardabarros oscuros empotrados al filo de la carrocería
-  const archR = spec.wheelRadiusM * 1.11;
-  const archGeo = trackGeo(new THREE.TorusGeometry(archR, 0.038, 8, 20, Math.PI));
+  // Arcos guardabarros más anchos y musculosos en plástico negro mate alrededor de cada rueda SUV
+  const archR = effectiveWheelRadius * 1.14;
+  const archGeo = trackGeo(new THREE.TorusGeometry(archR, 0.052, 10, 22, Math.PI));
   archGeo.rotateY(Math.PI / 2);
   for (const axZ of [frontAxleZ, rearAxleZ]) {
     for (const sx of [-1, 1]) {
       const arch = new THREE.Mesh(archGeo, claddingMat);
-      arch.position.set(sx * (halfW * 0.935), spec.wheelRadiusM * 1.01, axZ);
+      arch.position.set(sx * (halfW * 0.955), effectiveWheelRadius * 1.02, axZ);
+      arch.castShadow = true;
       chassisBodyGroup.add(arch);
     }
   }
@@ -861,43 +935,58 @@ export function createFaithfulVehicle3D(
       cPillarMat,
     );
 
-    // Rieles de techo de perfil bajo aerodinámico
-    const rail = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.026, 0.026, roofLen * 0.82)), skidMat);
-    rail.position.set(sx * (cabinRoofHalfW * 0.82), roofY + 0.038, roofCenterZ);
+    // Barras longitudinales de techo SUV elevadas sobre soportes negro mate (roof rails)
+    const railY = roofY + 0.056;
+    const railX = sx * (cabinRoofHalfW * 0.84);
+    const rail = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(0.036, 0.030, roofLen * 0.88)),
+      skidMat,
+    );
+    rail.position.set(railX, railY, roofCenterZ);
+    rail.castShadow = true;
     chassisBodyGroup.add(rail);
+
+    for (const footOff of [-0.38, 0, 0.38]) {
+      const stanchion = new THREE.Mesh(
+        trackGeo(new THREE.BoxGeometry(0.038, 0.044, 0.085)),
+        claddingMat,
+      );
+      stanchion.position.set(railX, roofY + 0.028, roofCenterZ + roofLen * footOff);
+      chassisBodyGroup.add(stanchion);
+    }
 
     const handleMat = spec.doorHandleChrome ? chromeMat : bodyPaintMat;
     for (const hz of [0.14, -0.54]) {
-      const handle = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.028, 0.028, 0.15)), handleMat);
-      handle.position.set(sx * (halfW * 0.93), beltY - 0.12, hz);
+      const handle = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.030, 0.030, 0.16)), handleMat);
+      handle.position.set(sx * (halfW * 0.96), beltY - 0.11, hz);
       chassisBodyGroup.add(handle);
     }
 
-    const mirrorHousing = new THREE.Mesh(trackGeo(new THREE.SphereGeometry(0.075, 12, 10)), mirrorMat);
-    mirrorHousing.scale.set(1.25, 0.78, 0.95);
-    mirrorHousing.position.set(sx * (halfW * 0.96 + 0.045), beltY + 0.035, windshieldBaseZ - 0.17);
+    const mirrorHousing = new THREE.Mesh(trackGeo(new THREE.SphereGeometry(0.082, 12, 10)), mirrorMat);
+    mirrorHousing.scale.set(1.28, 0.82, 0.96);
+    mirrorHousing.position.set(sx * (halfW * 0.98 + 0.05), beltY + 0.04, windshieldBaseZ - 0.17);
     chassisBodyGroup.add(mirrorHousing);
 
-    const mirrorStalk = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.08, 0.032, 0.048)), claddingMat);
-    mirrorStalk.position.set(sx * (halfW * 0.88), beltY + 0.01, windshieldBaseZ - 0.18);
+    const mirrorStalk = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.085, 0.034, 0.050)), claddingMat);
+    mirrorStalk.position.set(sx * (halfW * 0.90), beltY + 0.015, windshieldBaseZ - 0.18);
     chassisBodyGroup.add(mirrorStalk);
   }
 
-  // Alerón trasero integrado al casquete del techo + antena aleta de tiburón
+  // Alerón trasero superior de portón SUV + antena aleta de tiburón
   const spoiler = new THREE.Mesh(
-    trackGeo(new THREE.BoxGeometry(cabinRoofHalfW * 1.62, 0.038, 0.19)),
+    trackGeo(new THREE.BoxGeometry(cabinRoofHalfW * 1.72, 0.044, 0.22)),
     roofPaintMat,
   );
-  spoiler.position.set(0, roofY + 0.018, roofRearZ - 0.06);
-  spoiler.rotation.x = -0.10;
+  spoiler.position.set(0, roofY + 0.020, roofRearZ - 0.07);
+  spoiler.rotation.x = -0.08;
   chassisBodyGroup.add(spoiler);
 
   const sharkFin = new THREE.Mesh(
-    trackGeo(new THREE.ConeGeometry(0.026, 0.11, 4)),
+    trackGeo(new THREE.ConeGeometry(0.028, 0.115, 4)),
     roofPaintMat,
   );
   sharkFin.scale.set(0.65, 1, 2.0);
-  sharkFin.position.set(0, roofY + 0.068, roofRearZ + 0.18);
+  sharkFin.position.set(0, roofY + 0.070, roofRearZ + 0.18);
   chassisBodyGroup.add(sharkFin);
 
   const wiperGeo = trackGeo(new THREE.BoxGeometry(0.48, 0.016, 0.022));
@@ -909,174 +998,143 @@ export function createFaithfulVehicle3D(
   wiperR.rotation.z = 0.05;
   chassisBodyGroup.add(wiperL, wiperR);
 
-  // 4. PARRILLA FRONTAL OEM CON EMBLEMA + PATENTE + FIRMA DE FAROS LED DRL AL RAS DEL FRENTE AHUSADO
+  // 4. PARRILLA METÁLICA 3D DE SUV + DOS FAROS DELANTEROS SIMÉTRICOS ALINEADOS AL FRENTE ALTO
   const frontTex = trackTex(createFrontFasciaTexture(spec));
   const frontFasciaMat = trackMat(
     new THREE.MeshStandardMaterial({
       map: frontTex,
-      roughness: 0.34,
-      metalness: 0.42,
+      roughness: 0.28,
+      metalness: 0.56,
       envMap: envMap || null,
     }),
   );
-  const fasciaW = W * 0.46;
+  const fasciaW = W * 0.48;
   const fasciaH = (hoodY - clearY) * 0.54;
+  const fasciaY = clearY + (hoodY - clearY) * 0.50;
+  const fasciaZ = hoodTipZ - 0.026;
   const fasciaMesh = new THREE.Mesh(
-    trackGeo(new THREE.BoxGeometry(fasciaW, fasciaH, 0.042)),
+    trackGeo(new THREE.BoxGeometry(fasciaW, fasciaH, 0.044)),
     frontFasciaMat,
   );
-  fasciaMesh.position.set(0, clearY + (hoodY - clearY) * 0.46, hoodTipZ - 0.032);
+  fasciaMesh.position.set(0, fasciaY, fasciaZ);
   chassisBodyGroup.add(fasciaMesh);
 
-  const headlampY = hoodY - 0.095;
-  const fogPodY = clearY + 0.22;
-  const lampX = W * 0.285;
-  const drlZ = hoodTipZ - 0.068;
+  // Marco perimetral metálico y lamas 3D horizontales cromadas/satinadas de parrilla SUV
+  const grilleTopFrame = new THREE.Mesh(
+    trackGeo(new THREE.BoxGeometry(fasciaW + 0.04, 0.028, 0.052)),
+    chromeMat,
+  );
+  grilleTopFrame.position.set(0, fasciaY + fasciaH * 0.5, fasciaZ + 0.006);
+  chassisBodyGroup.add(grilleTopFrame);
+
+  for (let sIdx = 0; sIdx < 3; sIdx++) {
+    const slatY = fasciaY + fasciaH * (0.28 - sIdx * 0.22);
+    const slat = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(fasciaW * 0.92, 0.018, 0.054)),
+      chromeMat,
+    );
+    slat.position.set(0, slatY, fasciaZ + 0.008);
+    chassisBodyGroup.add(slat);
+  }
+
+  // Faros delanteros simétricos izquierdo (+X) y derecho (-X) alineados a la altura de la parrilla SUV
+  const headlampY = hoodY - 0.072;
+  const fogPodY = clearY + 0.24;
+  const frontLampX = W * 0.345;
+  const drlZ = hoodTipZ - 0.048;
 
   for (const sx of [-1, 1]) {
-    const cornerYaw = sx * -0.28;
+    const cornerYaw = sx * -0.18;
     const lampHousing = new THREE.Mesh(
-      trackGeo(new THREE.BoxGeometry(0.26, 0.082, 0.046)),
+      trackGeo(new THREE.BoxGeometry(0.28, 0.096, 0.058)),
       claddingMat,
     );
-    lampHousing.position.set(sx * lampX, headlampY, drlZ - 0.012);
+    lampHousing.position.set(sx * frontLampX, headlampY, drlZ - 0.014);
     lampHousing.rotation.y = cornerYaw;
     chassisBodyGroup.add(lampHousing);
 
-    if (spec.drlStyle === 'chery_t2_slit_pod') {
-      const slit = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.25, 0.030, 0.038)), drlMat);
-      slit.position.set(sx * lampX, headlampY + 0.016, drlZ);
-      slit.rotation.y = cornerYaw;
-      chassisBodyGroup.add(slit);
+    const projectorBezel = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(0.25, 0.074, 0.048)),
+      chromeMat,
+    );
+    projectorBezel.position.set(sx * frontLampX, headlampY, drlZ - 0.004);
+    projectorBezel.rotation.y = cornerYaw;
+    chassisBodyGroup.add(projectorBezel);
 
-      const lowerHousing = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.19, 0.17, 0.042)), claddingMat);
-      lowerHousing.position.set(sx * (lampX + 0.008), fogPodY, drlZ - 0.018);
-      lowerHousing.rotation.y = cornerYaw;
-      chassisBodyGroup.add(lowerHousing);
+    // Lente emisiva principal simétrica de alta luminancia HDR
+    const mainProjectorLens = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(0.23, 0.056, 0.042)),
+      drlMat,
+    );
+    mainProjectorLens.position.set(sx * frontLampX, headlampY, drlZ + 0.006);
+    mainProjectorLens.rotation.y = cornerYaw;
+    chassisBodyGroup.add(mainProjectorLens);
 
-      const podLed = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.11, 0.088, 0.038)), drlMat);
-      podLed.position.set(sx * (lampX + 0.008), fogPodY + 0.022, drlZ - 0.004);
-      podLed.rotation.y = cornerYaw;
-      chassisBodyGroup.add(podLed);
-    } else if (spec.drlStyle === 'chery_t4_twinbar') {
-      const mainBeam = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.24, 0.064, 0.038)), drlMat);
-      mainBeam.position.set(sx * lampX, headlampY, drlZ);
-      mainBeam.rotation.y = cornerYaw;
-      chassisBodyGroup.add(mainBeam);
-
-      const fogHousing = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.19, 0.17, 0.042)), claddingMat);
-      fogHousing.position.set(sx * (lampX + 0.01), fogPodY, drlZ - 0.016);
-      fogHousing.rotation.y = cornerYaw;
-      chassisBodyGroup.add(fogHousing);
-
-      for (const fyOff of [0.038, -0.038]) {
-        const bar = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.14, 0.026, 0.035)), drlMat);
-        bar.position.set(sx * (lampX + 0.01), fogPodY + fyOff, drlZ - 0.002);
-        bar.rotation.y = cornerYaw;
-        chassisBodyGroup.add(bar);
-      }
-    } else if (spec.drlStyle === 'nissan_triple_bar') {
-      for (let b = 0; b < 3; b++) {
-        const barW = b === 0 ? 0.25 : b === 1 ? 0.21 : 0.16;
-        const bar = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(barW, 0.024, 0.038)), drlMat);
-        bar.position.set(sx * lampX, headlampY + 0.024 - b * 0.040, drlZ);
-        bar.rotation.y = cornerYaw;
-        chassisBodyGroup.add(bar);
-      }
-    } else if (spec.drlStyle === 'kia_starmap_y') {
-      const upperBar = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.25, 0.024, 0.035)), drlMat);
-      upperBar.position.set(sx * lampX, headlampY + 0.036, drlZ);
-      upperBar.rotation.y = cornerYaw;
-      chassisBodyGroup.add(upperBar);
-
-      const lowerFork = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.11, 0.022, 0.035)), drlMat);
-      lowerFork.position.set(sx * (lampX + 0.04), headlampY + 0.006, drlZ - 0.008);
-      lowerFork.rotation.set(0, cornerYaw, sx * -0.55);
-      chassisBodyGroup.add(lowerFork);
-
-      const quadCluster = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.19, 0.068, 0.038)), drlMat);
-      quadCluster.position.set(sx * lampX, headlampY - 0.042, drlZ);
-      quadCluster.rotation.y = cornerYaw;
-      chassisBodyGroup.add(quadCluster);
-    } else if (spec.drlStyle === 'suzuki_tricube') {
-      for (let c = 0; c < 3; c++) {
-        const cube = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.058, 0.032, 0.035)), drlMat);
-        cube.position.set(sx * (lampX - 0.068 + c * 0.070), headlampY + 0.018, drlZ - c * 0.010);
-        chassisBodyGroup.add(cube);
-      }
-      const lowerBezel = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.19, 0.17, 0.042)), claddingMat);
-      lowerBezel.position.set(sx * (lampX + 0.008), fogPodY, drlZ - 0.016);
-      lowerBezel.rotation.y = cornerYaw;
-      chassisBodyGroup.add(lowerBezel);
-      const podGrid = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.12, 0.10, 0.038)), drlMat);
-      podGrid.position.set(sx * (lampX + 0.008), fogPodY, drlZ - 0.002);
-      podGrid.rotation.y = cornerYaw;
-      chassisBodyGroup.add(podGrid);
-    } else {
-      const stdLed = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(0.25, 0.055, 0.038)), drlMat);
-      stdLed.position.set(sx * lampX, headlampY, drlZ);
-      stdLed.rotation.y = cornerYaw;
-      chassisBodyGroup.add(stdLed);
-    }
+    // Alojamiento antiniebla inferior en plástico negro mate
+    const lowerPod = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(0.18, 0.12, 0.044)),
+      claddingMat,
+    );
+    lowerPod.position.set(sx * (frontLampX + 0.012), fogPodY, drlZ - 0.014);
+    lowerPod.rotation.y = cornerYaw;
+    chassisBodyGroup.add(lowerPod);
   }
 
-  if (spec.grilleStyle === 'kia_tiger_chrome') {
-    const noseBar = new THREE.Mesh(trackGeo(new THREE.BoxGeometry(W * 0.45, 0.024, 0.038)), chromeMat);
-    noseBar.position.set(0, headlampY + 0.016, hoodTipZ - 0.026);
-    chassisBodyGroup.add(noseBar);
-  }
+  // 5. DOS LUCES DE FRENO TRASERAS ROJAS SIMÉTRICAS E INDEPENDIENTES EN EL PORTÓN SUV
+  const tailZ = tailBaseZ - 0.006;
+  const tailY = beltY - 0.032;
+  const rearLampX = W * 0.348;
 
-  // 5. ÓPTICAS TRASERAS LED ENVOLVENTES AL RAS DE LA ZAGA AHUSADA + PORTAPATENTE
-  const tailZ = tailBaseZ + 0.012;
-  const tailY = beltY - 0.06;
   for (const sx of [-1, 1]) {
+    const tailHousing = new THREE.Mesh(
+      trackGeo(new THREE.BoxGeometry(0.32, 0.098, 0.056)),
+      claddingMat,
+    );
+    tailHousing.position.set(sx * rearLampX, tailY, tailZ + 0.012);
+    tailHousing.rotation.y = sx * 0.14;
+    chassisBodyGroup.add(tailHousing);
+
     const tailCluster = new THREE.Mesh(
-      trackGeo(new THREE.BoxGeometry(0.28, 0.072, 0.048)),
+      trackGeo(new THREE.BoxGeometry(0.29, 0.078, 0.052)),
       tailLampMat,
     );
-    tailCluster.position.set(sx * W * 0.255, tailY, tailZ + 0.012);
-    tailCluster.rotation.y = sx * 0.20;
+    tailCluster.position.set(sx * rearLampX, tailY, tailZ);
+    tailCluster.rotation.y = sx * 0.14;
     chassisBodyGroup.add(tailCluster);
 
     const wrapTail = new THREE.Mesh(
-      trackGeo(new THREE.BoxGeometry(0.036, 0.065, 0.16)),
+      trackGeo(new THREE.BoxGeometry(0.042, 0.074, 0.17)),
       tailLampMat,
     );
-    wrapTail.position.set(sx * (halfW * 0.76), tailY, tailZ + 0.085);
-    wrapTail.rotation.y = sx * 0.12;
+    wrapTail.position.set(sx * (halfW * 0.85), tailY, tailZ + 0.088);
+    wrapTail.rotation.y = sx * 0.08;
     chassisBodyGroup.add(wrapTail);
   }
 
-  const centerTailStrip = new THREE.Mesh(
-    trackGeo(new THREE.BoxGeometry(W * 0.44, 0.024, 0.032)),
-    tailLampMat,
+  // Embellecedor metálico central sobre el portapatente (mantiene separadas las 2 luces de freno simétricas)
+  const liftgateGarnish = new THREE.Mesh(
+    trackGeo(new THREE.BoxGeometry(W * 0.36, 0.026, 0.036)),
+    chromeMat,
   );
-  centerTailStrip.position.set(0, tailY + 0.015, tailZ);
-  chassisBodyGroup.add(centerTailStrip);
-
-  const highBrake = new THREE.Mesh(
-    trackGeo(new THREE.BoxGeometry(0.32, 0.018, 0.026)),
-    tailLampMat,
-  );
-  highBrake.position.set(0, roofY + 0.016, roofRearZ - 0.14);
-  chassisBodyGroup.add(highBrake);
+  liftgateGarnish.position.set(0, tailY - 0.04, tailZ + 0.004);
+  chassisBodyGroup.add(liftgateGarnish);
 
   const rearPlateTex = trackTex(createRearPlateTexture(spec));
   const rearPlateMat = trackMat(
     new THREE.MeshStandardMaterial({ map: rearPlateTex, roughness: 0.35, metalness: 0.15 }),
   );
   const rearPlate = new THREE.Mesh(trackGeo(new THREE.PlaneGeometry(0.42, 0.135)), rearPlateMat);
-  rearPlate.position.set(0, tailY - 0.19, tailZ - 0.024);
+  rearPlate.position.set(0, tailY - 0.16, tailZ - 0.016);
   rearPlate.rotation.y = Math.PI;
   chassisBodyGroup.add(rearPlate);
 
-  // 6. CUATRO RUEDAS DE ALEACIÓN BI-TONO INDEPENDIENTES CON PINZAS DE FRENO Y RIG DE SUSPENSIÓN
+  // 6. CUATRO RUEDAS DE ALEACIÓN DE MAYOR DIÁMETRO SUV CON PINZAS DE FRENO Y RIG DE SUSPENSIÓN
   const wheelShared = {
     tireMat: trackMat(
       new THREE.MeshStandardMaterial({
-        color: '#14181f',
+        color: '#12161d',
         roughness: 0.84,
-        metalness: 0.08,
+        metalness: 0.06,
         envMap: envMap || null,
         envMapIntensity: 0.55,
       }),
@@ -1085,8 +1143,8 @@ export function createFaithfulVehicle3D(
     rimDarkMat: trackMat(
       new THREE.MeshStandardMaterial({
         color: '#111827',
-        metalness: 0.72,
-        roughness: 0.28,
+        metalness: 0.76,
+        roughness: 0.24,
         envMap: envMap || null,
       }),
     ),
@@ -1100,7 +1158,7 @@ export function createFaithfulVehicle3D(
     ),
     caliperMat: trackMat(
       new THREE.MeshStandardMaterial({
-        color: spec.modelId === 'chery-t4-pro-luxury-hev' ? '#dc2626' : '#334155',
+        color: spec.modelId === 'chery-t4-pro-luxury-hev' && !isTrafficSuv ? '#dc2626' : '#334155',
         metalness: 0.35,
         roughness: 0.42,
       }),
@@ -1108,7 +1166,7 @@ export function createFaithfulVehicle3D(
     geos: disposableGeos,
   };
 
-  const trackHalfW = halfW - spec.wheelWidthM * 0.48;
+  const trackHalfW = halfW - effectiveWheelWidth * 0.44;
   const cornerDefs: Array<{
     id: 'FL' | 'FR' | 'RL' | 'RR';
     x: number;
@@ -1134,22 +1192,22 @@ export function createFaithfulVehicle3D(
 
   for (const c of cornerDefs) {
     const built = createAlloyWheelMesh(
-      spec.wheelRadiusM,
-      spec.wheelWidthM,
+      effectiveWheelRadius,
+      effectiveWheelWidth,
       c.left,
       spec.alloyStyle,
       spec.alloySpokeCount,
       wheelShared,
     );
     built.steeringPivot.name = `WheelPivot_${c.id}`;
-    built.steeringPivot.position.set(c.x, spec.wheelRadiusM, c.z);
+    built.steeringPivot.position.set(c.x, effectiveWheelRadius, c.z);
     group.add(built.steeringPivot);
     riggedCorners.push({
       id: c.id,
       x: c.x,
       z: c.z,
       front: c.front,
-      initialY: spec.wheelRadiusM,
+      initialY: effectiveWheelRadius,
       steering: built.steeringPivot,
       rolling: built.rollingPivot,
     });
@@ -1158,7 +1216,7 @@ export function createFaithfulVehicle3D(
   const wheelRig: VehicleWheelRig = {
     wheelCount: riggedCorners.length,
     setDistanceMeters(distanceMeters: number) {
-      const rad = distanceMeters / spec.wheelRadiusM;
+      const rad = distanceMeters / effectiveWheelRadius;
       for (const w of riggedCorners) {
         w.rolling.rotation.x = rad;
       }
@@ -1193,14 +1251,27 @@ export function createFaithfulVehicle3D(
   };
 
   const setBrakeLit = (braking: boolean) => {
-    tailLampMat.emissiveIntensity = braking ? 3.2 : 1.35;
-    tailLampMat.color.setHex(braking ? 0xff2b2b : 0xdc2626);
+    if (braking) {
+      tailLampMat.color.setHex(0xff1414);
+      tailLampMat.emissive.setRGB(9.8, 0.08, 0.04);
+    } else {
+      tailLampMat.color.setHex(0xb91c1c);
+      tailLampMat.emissive.setRGB(0.55, 0.035, 0.025);
+    }
+  };
+
+  const lampAnchors: VehicleLampAnchors = {
+    frontLeft: [frontLampX, headlampY, drlZ + 0.012],
+    frontRight: [-frontLampX, headlampY, drlZ + 0.012],
+    rearLeft: [rearLampX, tailY, tailZ - 0.014],
+    rearRight: [-rearLampX, tailY, tailZ - 0.014],
   };
 
   return {
     group,
     spec,
     wheelRig,
+    lampAnchors,
     setBrakeLit,
     dispose: () => {
       disposableGeos.forEach((g) => g.dispose());

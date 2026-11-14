@@ -179,6 +179,7 @@ export class InteractiveRacePhysics {
   public weather: WeatherMode = 'sunny';
   public waterZones: WaterZone[] = [];
   public waterEvents = 0;
+  public timePenaltySec = 0;
 
   setWeather(mode: WeatherMode) {
     this.weather = mode;
@@ -194,6 +195,33 @@ export class InteractiveRacePhysics {
       this.unbuckledMovingSec = 0;
       this.pushNotice('ok', 'seatbelt_ok', '✓ CINTURÓN ABROCHADO', 'Conducción segura activada · sin penalización', 0);
     }
+  }
+
+  applyMotorcycleCollision(motoX: number, _motoZ: number, impactSpeedMps: number) {
+    const player = this.getCar(this.playerId);
+    if (!player || player.finishedAt !== null) return;
+    const pushDir = player.x >= motoX ? 1 : -1;
+    player.x = clamp(
+      player.x + pushDir * 0.55,
+      -this.roadHalfWidth + 1.1,
+      this.roadHalfWidth - 1.1,
+    );
+    player.speed *= 0.42;
+    player.lateralSpeed = pushDir * 2.2;
+    player.bump = 1;
+    player.impacts += 1;
+    player.damage = clamp(player.damage + 0.18, 0, 1);
+    player.drivingEvents.collisions += 1;
+    player.drivingEvents.collisionSeverity += Math.max(4, impactSpeedMps);
+    player.drivingEvents.motorcycleCollisions += 1;
+    this.timePenaltySec += 15;
+    this.pushNotice(
+      'penalty',
+      'motorcycle_collision',
+      '🚨 ¡ATROPELLASTE A UN MOTOCICLISTA! (+15s)',
+      'Moto y conductor caídos · +15s al tiempo final y -12 pts en Seguridad',
+      -12,
+    );
   }
 
   private pushNotice(
@@ -1303,8 +1331,12 @@ export class InteractiveRacePhysics {
     if (this.time > this.lastTelemetryTime) this.recordTelemetry();
     return this.cars.map(car => {
       const prev = base.find(r => r.vehicle.id === car.id);
-      const finishTimeSec = car.finishedAt ?? this.time;
+      const rawFinishSec = car.finishedAt ?? this.time;
+      const appliedPenaltySec = car.id === this.playerId ? this.timePenaltySec : 0;
+      const finishTimeSec = rawFinishSec + appliedPenaltySec;
       const finished = car.finishedAt !== null;
+      const penaltyNote =
+        appliedPenaltySec > 0 ? ` (+${appliedPenaltySec}s de penalización por atropello a moto)` : '';
       return {
         ...(prev || {}), vehicle: car.vehicle,
         finishPosition: 0, finishTimeSec, gapSec: 0,
@@ -1319,8 +1351,8 @@ export class InteractiveRacePhysics {
         drivingEvents: { ...car.drivingEvents },
         isDnf: !finished,
         verdict: finished
-          ? `Carrera interactiva: ${car.impacts} impactos; daño ${Math.round(car.damage * 100)}%. La conducción, los baches y las colisiones afectaron el tiempo real.`
-          : `No había cruzado la meta cuando terminó la partida del jugador; distancia ${Math.round(car.z)} m; ${car.impacts} impactos.`,
+          ? `Contrarreloj completada${penaltyNote}: ${car.impacts} impactos; daño ${Math.round(car.damage * 100)}%.`
+          : `No había cruzado la meta cuando terminó la partida${penaltyNote}; distancia ${Math.round(car.z)} m; ${car.impacts} impactos.`,
       } as VehicleRaceResult;
     }).sort((a, b) => Number(!!a.isDnf) - Number(!!b.isDnf) ||
       (a.isDnf && b.isDnf ? (b.telemetryHistory.at(-1)?.distanceMeters ?? 0) - (a.telemetryHistory.at(-1)?.distanceMeters ?? 0) : a.finishTimeSec - b.finishTimeSec))

@@ -748,7 +748,7 @@ export function ArcadeBriefingStage({
                   {speedModeUnlocked ? <Zap size={14} className="text-amber-400" /> : <Lock size={14} />}
                   <span>
                     {speedModeUnlocked
-                      ? 'Fase 2: Sin Obstáculos · IA Élite'
+                      ? 'Fase 2: Contrarreloj Pura'
                       : `Fase 2: Sin Obstáculos (IQ ≥ ${CITY_UNLOCK_MIN_IQ})`}
                   </span>
                 </button>
@@ -767,13 +767,43 @@ export function ArcadeBriefingStage({
                 </button>
               </div>
             )}
-            <div className="flex items-center justify-center gap-2 text-[10px] md:text-xs text-slate-300 bg-slate-950/70 border-y border-cyan-500/20 px-4 py-1 rounded-full text-center">
-              <Info size={13} className="text-cyan-400 shrink-0" />
-              <span>
-                {raceMode === 'practice_free'
-                  ? 'Modo Pruebas: ideal para ensayar frenado, peso con pasajeros y espejos sin afectar tu Ranking ni tu Driving IQ.'
-                  : `Meta Oro: ${formatTargetMinutesSec(targetInfo.targetSec)} (Límite ${formatTargetMinutesSec(targetInfo.maxLimitSec)}). Al cargar la pista comienza la cuenta regresiva.`}
-              </span>
+
+            {/* Tarjeta clara de OBJETIVO DE LA PRUEBA antes de largar */}
+            <div
+              data-testid="race-objective-banner"
+              className="w-full max-w-[920px] rounded-xl border border-amber-400/55 bg-[#061322]/95 px-3.5 py-2.5 text-left shadow-[0_0_18px_rgba(245,158,11,0.16)]"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 font-display text-xs md:text-sm font-black italic uppercase tracking-wider text-amber-300">
+                  <FlagTriangleRight size={15} className="text-amber-400 shrink-0" />
+                  <span>OBJETIVO DE LA CARRERA ({safeLaps} {safeLaps === 1 ? 'VUELTA' : 'VUELTAS'})</span>
+                </span>
+                {raceMode !== 'practice_free' && (
+                  <span className="rounded-md border border-amber-400/60 bg-amber-950/80 px-2 py-0.5 font-mono text-[11px] font-black text-amber-200 tabular-nums">
+                    Meta Oro ≤ {formatTargetMinutesSec(targetInfo.targetSec)} · Límite ≤ {formatTargetMinutesSec(targetInfo.maxLimitSec)}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[11px] md:text-xs text-slate-200">
+                <div className="rounded-lg border border-cyan-500/25 bg-slate-950/75 px-2.5 py-1">
+                  <strong className="text-cyan-300">1. Contra el reloj:</strong>{' '}
+                  {raceMode === 'practice_free'
+                    ? 'Práctica libre sin límite de tiempo ni puntos.'
+                    : `Superá ${formatTargetMinutesSec(targetInfo.maxLimitSec)} (Oro en ≤ ${formatTargetMinutesSec(targetInfo.targetSec)}).`}
+                </div>
+                <div className="rounded-lg border border-cyan-500/25 bg-slate-950/75 px-2.5 py-1">
+                  <strong className="text-emerald-300">2. Normas y cinturón:</strong>{' '}
+                  {raceMode === 'speed_pro'
+                    ? 'Pista despejada: mantené trazada limpia sin chocar bordes.'
+                    : 'Abrochá el cinturón y respetá semáforos y velocidades.'}
+                </div>
+                <div className="rounded-lg border border-cyan-500/25 bg-slate-950/75 px-2.5 py-1">
+                  <strong className="text-rose-300">3. Motos y peatones:</strong>{' '}
+                  {raceMode === 'speed_pro'
+                    ? 'Sin tránsito urbano: exprimí al máximo la ficha técnica.'
+                    : 'Chocar una moto suma +15s y resta IQ; atropellar peatón = cárcel.'}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1000,7 +1030,7 @@ export function ArcadeResultsStage({
                   : 'FASE 2 DISPONIBLE · MODALIDAD VELOCIDAD SIN OBSTÁCULOS'}
               </div>
               <p className="text-[11px] text-slate-200">
-                Superaste la Prueba en Ciudad con conducción limpia. Ya podés medirte a pura velocidad contra la IA experta sin obstáculos.
+                Superaste la Prueba en Ciudad con conducción limpia. Ya podés medirte a contrarreloj pura contra el Tiempo Meta Oro sin obstáculos.
               </p>
             </div>
           </div>
@@ -1016,145 +1046,250 @@ export function ArcadeResultsStage({
 
       {/* Main Content Split: Left (1º GANADOR + 3-Position Table) | Right (Golden DRIVING IQ + 2x2 Metric Cards) */}
       <div className="relative z-10 w-full max-w-[1120px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 my-1.5">
-        {/* LEFT COLUMN (7 cols): Winner Car with Laurel + Standings Table */}
+        {/* LEFT COLUMN (7 cols): Resultado del Objetivo Contrarreloj (o Podio si hay varios autos) */}
         <div className="lg:col-span-7 flex flex-col justify-between gap-2.5 min-w-0">
-          {/* Winner Hero Showcase + 1.º GANADOR Laurel */}
-          <div className="flex items-center justify-between gap-3 md:gap-5 px-1">
-            <div className="flex flex-col items-start shrink-0">
-              {/* Golden Laurel 1.º GANADOR */}
-              <div className="flex flex-col items-center px-2 py-0.5">
-                <div className="flex items-center gap-0.5 text-amber-400 drop-shadow-[0_0_14px_rgba(251,191,36,0.7)]">
-                  <LaurelBranchIcon className="w-5 h-8 md:w-7 md:h-11" />
-                  <span className="font-display text-3xl md:text-5xl font-black italic tracking-tight text-amber-300 leading-none">
-                    1.º
-                  </span>
-                  <LaurelBranchIcon mirrored className="w-5 h-8 md:w-7 md:h-11" />
-                </div>
-                <span className="font-display text-xs md:text-base font-black italic tracking-widest text-amber-400 uppercase -mt-0.5">
-                  GANADOR
-                </span>
-              </div>
-
-              {/* Winner Brand/Model Card */}
-              <div className="dc-specs-glass px-3.5 py-2.5 rounded-xl min-w-[155px] md:min-w-[205px] mt-1">
-                <div className="text-[10px] md:text-xs font-black tracking-widest text-slate-300 uppercase">
-                  {heroCar.brand}
-                </div>
-                <div className="font-display text-base md:text-xl font-black italic text-white uppercase leading-tight">
-                  {heroCar.name}
-                </div>
-                <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-950/80 border border-cyan-400/35 text-[10px] font-bold text-cyan-300">
-                  <Car size={11} />
-                  <span>SUV Compacto</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Winner Hero Car Image */}
-            <div className="flex-1 flex items-center justify-center relative min-w-0">
-              <div className="absolute inset-0 bg-radial from-cyan-400/20 via-amber-500/12 to-transparent blur-lg pointer-events-none" />
-              <img
-                src={getCarImageUrl(heroCar.id)}
-                alt={`${heroCar.brand} ${heroCar.name} — 1º Ganador`}
-                referrerPolicy="no-referrer"
-                className="w-full max-h-[120px] md:max-h-[175px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.94)] relative z-10"
-                draggable={false}
-              />
-            </div>
-          </div>
-
-          {/* 3-Position Standings Table (1.º, 2.º, 3.º) */}
-          <div className="flex flex-col gap-2">
-            {podium.slice(0, 3).map((p, idx) => {
-              const rank = idx + 1;
-              const isPlayer = p.vehicle.id === playerId;
-              const badgeStyle =
-                rank === 1
-                  ? 'bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 text-slate-950 border-amber-200'
-                  : rank === 2
-                    ? 'bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 text-slate-950 border-slate-100'
-                    : 'bg-gradient-to-b from-amber-600 via-orange-700 to-amber-900 text-amber-100 border-amber-400/60';
-              return (
-                <div key={p.vehicle.id} className={`dc-podium-row ${rank === 1 ? 'rank-1' : ''}`}>
-                  {/* Slanted Rank Badge */}
-                  <div
-                    className={`w-10 md:w-12 h-9 md:h-11 rounded-lg border font-display font-black italic text-base md:text-xl flex items-center justify-center -skew-x-12 shrink-0 ${badgeStyle}`}
-                  >
-                    <span className="skew-x-12">{rank}.º</span>
+          {podium.length <= 1 ? (
+            <>
+              {/* Hero de Resultado contra el Tiempo Meta */}
+              <div className="flex items-center justify-between gap-3 md:gap-5 px-1">
+                <div className="flex flex-col items-start shrink-0">
+                  <div className="flex flex-col items-start px-2 py-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <LaurelBranchIcon className="w-5 h-8 md:w-6 md:h-10" />
+                      <span
+                        className={`font-display text-2xl md:text-4xl font-black italic tracking-tight leading-none ${
+                          isPracticeFree
+                            ? 'text-sky-300'
+                            : targetEval?.medal === 'gold'
+                              ? 'text-amber-300'
+                              : targetEval?.medal === 'silver'
+                                ? 'text-cyan-300'
+                                : 'text-rose-300'
+                        }`}
+                      >
+                        {isPracticeFree
+                          ? 'PRÁCTICA'
+                          : playerResult?.isDnf
+                            ? 'NO COMPLETADO'
+                            : targetEval?.medal === 'gold'
+                              ? 'ORO LOGRADO'
+                              : targetEval?.medal === 'silver'
+                                ? 'PLATA LOGRADA'
+                                : 'TIEMPO EXCEDIDO'}
+                      </span>
+                      <LaurelBranchIcon mirrored className="w-5 h-8 md:w-6 md:h-10" />
+                    </div>
+                    <span className="font-display text-[11px] md:text-sm font-black italic tracking-widest text-slate-200 uppercase mt-1">
+                      {isPracticeFree
+                        ? 'VUELTA LIBRE COMPLETADA'
+                        : targetEval && (targetEval.medal === 'gold' || targetEval.medal === 'silver') && !playerResult?.isDnf
+                          ? '✓ OBJETIVO DE TIEMPO CUMPLIDO'
+                          : '⏱ OBJETIVO CONTRARRELOJ NO ALCANZADO'}
+                    </span>
                   </div>
 
-                  {/* Car Thumbnail */}
+                  <div className="dc-specs-glass px-3.5 py-2.5 rounded-xl min-w-[155px] md:min-w-[205px] mt-1.5">
+                    <div className="text-[10px] md:text-xs font-black tracking-widest text-slate-300 uppercase">
+                      {heroCar.brand}
+                    </div>
+                    <div className="font-display text-base md:text-xl font-black italic text-white uppercase leading-tight">
+                      {heroCar.name}
+                    </div>
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-950/80 border border-cyan-400/35 text-[10px] font-bold text-cyan-300">
+                      <Car size={11} />
+                      <span>TU VEHÍCULO EN PISTA</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex items-center justify-center relative min-w-0">
+                  <div className="absolute inset-0 bg-radial from-cyan-400/20 via-amber-500/12 to-transparent blur-lg pointer-events-none" />
                   <img
-                    src={getCarImageUrl(p.vehicle.id)}
-                    alt={`${p.vehicle.brand} ${p.vehicle.name}`}
+                    src={getCarImageUrl(heroCar.id)}
+                    alt={`${heroCar.brand} ${heroCar.name}`}
                     referrerPolicy="no-referrer"
-                    className="w-14 md:w-20 h-9 md:h-12 object-contain shrink-0"
+                    className="w-full max-h-[120px] md:max-h-[175px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.94)] relative z-10"
                     draggable={false}
                   />
+                </div>
+              </div>
 
-                  {/* Brand & Model */}
-                  <div className="min-w-[90px] md:min-w-[125px] flex-1 truncate">
-                    <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-slate-300 uppercase">
-                      <span className="truncate">{p.vehicle.brand}</span>
-                      {isPlayer && (
-                        <span className="px-1.5 py-0.2 rounded bg-cyan-500/25 border border-cyan-400/60 text-[8px] text-cyan-200 font-black shrink-0">
-                          TÚ
-                        </span>
-                      )}
-                    </div>
-                    <div className="font-display text-sm md:text-base font-black italic text-white uppercase truncate">
-                      {p.vehicle.name}
+              {/* Desglose claro contra los tiempos solicitados del circuito */}
+              <div className="flex flex-col gap-2">
+                <div className="dc-podium-row rank-1 justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-9 h-9 rounded-lg border border-amber-300 bg-amber-400/20 flex items-center justify-center text-amber-300 shrink-0">
+                      <Timer size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">
+                        TU TIEMPO OFICIAL
+                      </div>
+                      <div className="text-xs text-slate-300 truncate">
+                        {(playerInsight?.events.motorcycleCollisions ?? 0) > 0
+                          ? `Incluye +${(playerInsight?.events.motorcycleCollisions ?? 0) * 15}s de penalización por atropello a moto`
+                          : 'Cronómetro oficial al cruzar la bandera a cuadros'}
+                      </div>
                     </div>
                   </div>
+                  <div className="font-display text-xl md:text-2xl font-black italic text-amber-300 tabular-nums shrink-0">
+                    {playerResult?.isDnf ? 'DNF' : formatRaceTime(playerResult?.finishTimeSec ?? 0)}
+                  </div>
+                </div>
 
-                  {/* Total Time */}
-                  <div className="px-2 md:px-3 border-l border-slate-700/70 text-right shrink-0">
-                    <div className="flex items-center justify-end gap-1 text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
-                      <CheckeredFlagIcon className="w-3 h-3" />
-                      <span>TIEMPO TOTAL</span>
+                {targetSpec && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="dc-podium-row justify-between">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-wider text-amber-200">
+                          META MEDALLA ORO
+                        </div>
+                        <div className="text-[11px] text-slate-400">Bonificación +60 Driving IQ</div>
+                      </div>
+                      <div className="font-display text-base md:text-lg font-black italic text-white tabular-nums">
+                        ≤ {formatTargetMinutesSec(targetSpec.targetSec)}
+                      </div>
                     </div>
-                    <div
-                      className={`font-display text-sm md:text-base font-black italic tabular-nums ${
-                        rank === 1 ? 'text-amber-400' : 'text-white'
-                      }`}
-                    >
-                      {p.isDnf ? 'DNF' : formatRaceTime(p.finishTimeSec)}
+                    <div className="dc-podium-row justify-between">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-wider text-cyan-300">
+                          TIEMPO LÍMITE (PLATA)
+                        </div>
+                        <div className="text-[11px] text-slate-400">Objetivo máximo exigido</div>
+                      </div>
+                      <div className="font-display text-base md:text-lg font-black italic text-cyan-200 tabular-nums">
+                        ≤ {formatTargetMinutesSec(targetSpec.maxLimitSec)}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Vmáx */}
-                  <div className="px-2 md:px-2.5 border-l border-slate-700/70 text-right hidden sm:block shrink-0">
-                    <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
-                      VMÁX
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Winner Hero Showcase + 1.º GANADOR Laurel */}
+              <div className="flex items-center justify-between gap-3 md:gap-5 px-1">
+                <div className="flex flex-col items-start shrink-0">
+                  <div className="flex flex-col items-center px-2 py-0.5">
+                    <div className="flex items-center gap-0.5 text-amber-400 drop-shadow-[0_0_14px_rgba(251,191,36,0.7)]">
+                      <LaurelBranchIcon className="w-5 h-8 md:w-7 md:h-11" />
+                      <span className="font-display text-3xl md:text-5xl font-black italic tracking-tight text-amber-300 leading-none">
+                        1.º
+                      </span>
+                      <LaurelBranchIcon mirrored className="w-5 h-8 md:w-7 md:h-11" />
                     </div>
-                    <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
-                      {Math.round(p.topSpeedAchievedKmh)} km/h
-                    </div>
+                    <span className="font-display text-xs md:text-base font-black italic tracking-widest text-amber-400 uppercase -mt-0.5">
+                      GANADOR
+                    </span>
                   </div>
 
-                  {/* 0-100 */}
-                  <div className="px-2 md:px-2.5 border-l border-slate-700/70 text-right hidden md:block shrink-0">
-                    <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
-                      0–100
+                  <div className="dc-specs-glass px-3.5 py-2.5 rounded-xl min-w-[155px] md:min-w-[205px] mt-1">
+                    <div className="text-[10px] md:text-xs font-black tracking-widest text-slate-300 uppercase">
+                      {heroCar.brand}
                     </div>
-                    <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
-                      {(p.time0to100 ?? p.vehicle.accel0100).toFixed(1).replace('.', ',')} s
+                    <div className="font-display text-base md:text-xl font-black italic text-white uppercase leading-tight">
+                      {heroCar.name}
                     </div>
-                  </div>
-
-                  {/* Efficiency */}
-                  <div className="pl-2 md:pl-2.5 border-l border-slate-700/70 text-right shrink-0">
-                    <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
-                      EFI
-                    </div>
-                    <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
-                      {calcEfficiencyKmL(p, trackDistanceMeters)} km/l
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-950/80 border border-cyan-400/35 text-[10px] font-bold text-cyan-300">
+                      <Car size={11} />
+                      <span>SUV Compacto</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="flex-1 flex items-center justify-center relative min-w-0">
+                  <div className="absolute inset-0 bg-radial from-cyan-400/20 via-amber-500/12 to-transparent blur-lg pointer-events-none" />
+                  <img
+                    src={getCarImageUrl(heroCar.id)}
+                    alt={`${heroCar.brand} ${heroCar.name} — 1º Ganador`}
+                    referrerPolicy="no-referrer"
+                    className="w-full max-h-[120px] md:max-h-[175px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.94)] relative z-10"
+                    draggable={false}
+                  />
+                </div>
+              </div>
+
+              {/* 3-Position Standings Table (1.º, 2.º, 3.º) */}
+              <div className="flex flex-col gap-2">
+                {podium.slice(0, 3).map((p, idx) => {
+                  const rank = idx + 1;
+                  const isPlayer = p.vehicle.id === playerId;
+                  const badgeStyle =
+                    rank === 1
+                      ? 'bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 text-slate-950 border-amber-200'
+                      : rank === 2
+                        ? 'bg-gradient-to-b from-slate-200 via-slate-400 to-slate-600 text-slate-950 border-slate-100'
+                        : 'bg-gradient-to-b from-amber-600 via-orange-700 to-amber-900 text-amber-100 border-amber-400/60';
+                  return (
+                    <div key={p.vehicle.id} className={`dc-podium-row ${rank === 1 ? 'rank-1' : ''}`}>
+                      <div
+                        className={`w-10 md:w-12 h-9 md:h-11 rounded-lg border font-display font-black italic text-base md:text-xl flex items-center justify-center -skew-x-12 shrink-0 ${badgeStyle}`}
+                      >
+                        <span className="skew-x-12">{rank}.º</span>
+                      </div>
+                      <img
+                        src={getCarImageUrl(p.vehicle.id)}
+                        alt={`${p.vehicle.brand} ${p.vehicle.name}`}
+                        referrerPolicy="no-referrer"
+                        className="w-14 md:w-20 h-9 md:h-12 object-contain shrink-0"
+                        draggable={false}
+                      />
+                      <div className="min-w-[90px] md:min-w-[125px] flex-1 truncate">
+                        <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-bold text-slate-300 uppercase">
+                          <span className="truncate">{p.vehicle.brand}</span>
+                          {isPlayer && (
+                            <span className="px-1.5 py-0.2 rounded bg-cyan-500/25 border border-cyan-400/60 text-[8px] text-cyan-200 font-black shrink-0">
+                              TÚ
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-display text-sm md:text-base font-black italic text-white uppercase truncate">
+                          {p.vehicle.name}
+                        </div>
+                      </div>
+                      <div className="px-2 md:px-3 border-l border-slate-700/70 text-right shrink-0">
+                        <div className="flex items-center justify-end gap-1 text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
+                          <CheckeredFlagIcon className="w-3 h-3" />
+                          <span>TIEMPO TOTAL</span>
+                        </div>
+                        <div
+                          className={`font-display text-sm md:text-base font-black italic tabular-nums ${
+                            rank === 1 ? 'text-amber-400' : 'text-white'
+                          }`}
+                        >
+                          {p.isDnf ? 'DNF' : formatRaceTime(p.finishTimeSec)}
+                        </div>
+                      </div>
+                      <div className="px-2 md:px-2.5 border-l border-slate-700/70 text-right hidden sm:block shrink-0">
+                        <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
+                          VMÁX
+                        </div>
+                        <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
+                          {Math.round(p.topSpeedAchievedKmh)} km/h
+                        </div>
+                      </div>
+                      <div className="px-2 md:px-2.5 border-l border-slate-700/70 text-right hidden md:block shrink-0">
+                        <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
+                          0–100
+                        </div>
+                        <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
+                          {(p.time0to100 ?? p.vehicle.accel0100).toFixed(1).replace('.', ',')} s
+                        </div>
+                      </div>
+                      <div className="pl-2 md:pl-2.5 border-l border-slate-700/70 text-right shrink-0">
+                        <div className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase">
+                          EFI
+                        </div>
+                        <div className="text-xs md:text-sm font-black italic text-white tabular-nums">
+                          {calcEfficiencyKmL(p, trackDistanceMeters)} km/l
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* RIGHT COLUMN (5 cols): Golden DRIVING IQ Card + 2x2 Individual Metric Cards */}
@@ -1227,15 +1362,21 @@ export function ArcadeResultsStage({
                 ev.redLightViolations +
                 ev.speedLimitViolations +
                 ev.unbuckledSeatbelt +
-                ev.wrongWayInvasions;
+                ev.wrongWayInvasions +
+                (ev.motorcycleCollisions ?? 0);
               return (
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[10px] font-bold">
                   {totalRuleInfractions === 0 ? (
                     <span className="rounded-md border border-emerald-400/45 bg-emerald-950/75 px-2 py-0.5 text-emerald-300">
-                      ✓ Normas viales y cinturón respetados
+                      ✓ Normas viales, motos y cinturón respetados
                     </span>
                   ) : (
                     <>
+                      {(ev.motorcycleCollisions ?? 0) > 0 && (
+                        <span className="rounded-md border border-rose-400 bg-rose-950/90 px-2 py-0.5 text-rose-100">
+                          🏍 Moto atropellada ×{ev.motorcycleCollisions} (+{(ev.motorcycleCollisions ?? 0) * 15}s)
+                        </span>
+                      )}
                       {ev.redLightViolations > 0 && (
                         <span className="rounded-md border border-rose-400/55 bg-rose-950/80 px-2 py-0.5 text-rose-200">
                           🚦 Luz roja ×{ev.redLightViolations}

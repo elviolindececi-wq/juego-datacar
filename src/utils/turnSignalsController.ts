@@ -75,3 +75,23 @@ export function evaluateTurnSignalBlink(
     rightLit: blinkOn && (mode === 'right' || mode === 'hazards'),
   };
 }
+
+/**
+ * Apagado automático al girar en sentido contrario:
+ * - Si está encendido el señalero DERECHO ('right') y el conductor gira a la IZQUIERDA (steerDirection < -threshold) -> 'off'.
+ * - Si está encendido el señalero IZQUIERDO ('left') y el conductor gira a la DERECHA (steerDirection > threshold) -> 'off'.
+ * - Las balizas ('hazards') se mantienen activas hasta apagado manual.
+ */
+export function evaluateTurnSignalAutoCancel(
+  current: TurnSignalMode,
+  steerDirection: number,
+  threshold = 0.2,
+): TurnSignalMode {
+  if (current === 'right' && steerDirection < -threshold) {
+    return 'off';
+  }
+  if (current === 'left' && steerDirection > threshold) {
+    return 'off';
+  }
+  return current;
+}

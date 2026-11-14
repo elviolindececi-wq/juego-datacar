@@ -20,6 +20,7 @@ export interface DrivingEventStats {
   speedLimitViolations: number;
   unbuckledSeatbelt: number;
   wrongWayInvasions: number;
+  motorcycleCollisions: number;
 }
 
 export const emptyDrivingEvents = (): DrivingEventStats => ({
@@ -27,6 +28,7 @@ export const emptyDrivingEvents = (): DrivingEventStats => ({
   waterEntries: 0, lossOfControl: 0, absInterventions: 0, tcsInterventions: 0,
   escInterventions: 0, aebInterventions: 0,
   redLightViolations: 0, speedLimitViolations: 0, unbuckledSeatbelt: 0, wrongWayInvasions: 0,
+  motorcycleCollisions: 0,
 });
 
 export interface DrivingIQAssessment {
@@ -65,7 +67,8 @@ export function scoreDrivingIQ(
   const trafficSafetyPenalty =
     e.redLightViolations * 6.5 +
     e.unbuckledSeatbelt * 6.0 +
-    e.wrongWayInvasions * 3.5;
+    e.wrongWayInvasions * 3.5 +
+    e.motorcycleCollisions * 12.0;
   const safety = clamp(30 - e.collisions * 3.8 - e.collisionSeverity * 0.65 - trafficSafetyPenalty, 0, 30);
   const obstacles = clamp(20 - e.potholesHit * 2.5 - e.speedBumpsTooFast * 1.8 - e.waterEntries * 1.2, 0, 20);
   const control = clamp(15 - e.lossOfControl * 2.7 - e.speedLimitViolations * 3.0, 0, 15);
@@ -98,6 +101,9 @@ export function explainDriving(
   const e = assessment.events;
   const v: Vehicle = result.vehicle;
   const messages: string[] = [];
+  if (e.motorcycleCollisions > 0) {
+    messages.push(`Atropellaste a ${e.motorcycleCollisions} ${e.motorcycleCollisions === 1 ? 'motociclista' : 'motociclistas'} (+${e.motorcycleCollisions * 15}s de penalización y resta severa en Seguridad). Respetá siempre la distancia lateral y de frenado con las motos.`);
+  }
   if (e.collisions > 0) {
     messages.push(`Tuviste ${e.collisions} ${e.collisions === 1 ? 'contacto' : 'contactos'} con vehículos u obstáculos. La puntuación descuenta también la intensidad de los impactos virtuales. Esto NO equivale a una prueba de choque ni mide protección de ocupantes.`);
   } else messages.push('No registramos impactos con otros vehículos ni barreras en esta partida. Eso favoreció tu puntaje de conducción segura.');

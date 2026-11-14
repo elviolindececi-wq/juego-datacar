@@ -96,6 +96,7 @@ export function evaluateCityTrialCompletion(args: {
   finished?: boolean;
   isDnf?: boolean;
   pedestrianHit: boolean;
+  motorcycleCollisions?: number;
   iqScore1000: number;
   redLightViolations: number;
   circuitId?: string;
@@ -117,11 +118,12 @@ export function evaluateCityTrialCompletion(args: {
 
   const didCompleteCleanly =
     Boolean(args.completed ?? args.finished) && !args.isDnf;
-  // "Hacer bien la primera fase en ciudad": llegar a meta sin chocar peatones,
+  // "Hacer bien la primera fase en ciudad": llegar a meta sin chocar peatones ni motociclistas,
   // respetando razonablemente los semáforos (<= 1 infracción roja) y con Driving IQ >= 700.
   const qualifiesThisRun =
     didCompleteCleanly &&
     !args.pedestrianHit &&
+    (args.motorcycleCollisions ?? 0) === 0 &&
     args.redLightViolations <= 1 &&
     args.iqScore1000 >= CITY_UNLOCK_MIN_IQ;
 

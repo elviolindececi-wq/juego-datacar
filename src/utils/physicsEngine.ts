@@ -171,17 +171,23 @@ export function simulateFullRace(
         inCorner = false;
         currentCornerRadius = 999;
 
-        if (track.id === 'circuit' || track.id === 'endurance' || track.id === 'brake_slalom') {
+        if (
+          track.id === 'circuit' ||
+          Boolean(track.cityCircuitId) ||
+          track.id.startsWith('circuit-') ||
+          track.id === 'endurance' ||
+          track.id === 'brake_slalom'
+        ) {
           // Si es pista técnica de frenos (brake_slalom), curvas cerradas más frecuentes (cada 260m)
-          const cornerInterval = track.id === 'brake_slalom' ? 260 : 420;
+          const cornerInterval = track.id === 'brake_slalom' ? 260 : track.cityCircuitId === 'oliva' ? 320 : 420;
           const cornerZoneLength = track.id === 'brake_slalom' ? 95 : 120;
           const trackPositionMod = distanceM % cornerInterval;
 
           // Curva activa
           if (trackPositionMod > (cornerInterval - cornerZoneLength)) {
             inCorner = true;
-            // Radio de curvatura: horquillas cerradas de 28m a 45m en brake_slalom
-            currentCornerRadius = track.id === 'brake_slalom' ? 32 : 55;
+            // Radio de curvatura adaptado a cada trazado
+            currentCornerRadius = track.id === 'brake_slalom' ? 32 : track.cityCircuitId === 'oliva' ? 46 : 55;
             
             // v_max = sqrt(μ * g * R)
             // Considerar centro de gravedad y chasis

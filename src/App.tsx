@@ -192,11 +192,8 @@ export default function App() {
   const compareCars = useMemo(() => compareIds.map(id => allCars.find(c => c.id === id) || allCars[0]), [compareIds, allCars]);
   const comparePreviewCar = getCar(comparePreviewId);
   const compareResults = useMemo(() => simulateFullRace(compareCars, compareTrack), [compareCars, compareTrack]);
-  const rivalCount = raceMode === 'speed_pro' ? 4 : 2;
-  const raceCars = useMemo(
-    () => [getCar(playerId), ...allCars.filter(car => car.id !== playerId).slice(0, rivalCount)],
-    [allCars, playerId, rivalCount],
-  );
+  // En modo conducción individual se compite contra el Tiempo Meta del circuito (solo tu vehículo .glb en pista, sin rivales IA).
+  const raceCars = useMemo(() => [getCar(playerId)], [allCars, playerId]);
   const raceBaseResults = useMemo(() => simulateFullRace(raceCars, raceTrack), [raceCars, raceTrack]);
   const playerIndex = Math.max(0, allCars.findIndex(car => car.id === playerId));
   const playerCar = getCar(playerId);
@@ -323,8 +320,8 @@ export default function App() {
         ]
       : undefined;
 
-  if (isMobile) return <MobileGameExperience />;
-  if (arcadeView) return <MobileGameExperience initialPlayerId={playerId} forceArcadeMode onExitArcadeMode={() => setArcadeView(false)} />;
+  if (isMobile) return <MobileGameExperience initialCircuitId={circuitId} onCircuitChange={setCircuitId} />;
+  if (arcadeView) return <MobileGameExperience initialPlayerId={playerId} initialCircuitId={circuitId} onCircuitChange={setCircuitId} forceArcadeMode onExitArcadeMode={() => setArcadeView(false)} />;
 
   if (screen === 'intro') {
     return (
@@ -334,7 +331,7 @@ export default function App() {
         onGarage={id => { setPlayerId(id); setScreen('garage'); }}
         onCompare={id => { if (id) setComparePreviewId(id); setScreen('compare-choose'); }}
         onCircuits={id => { setPlayerId(id); setScreen('circuit-choose'); }}
-        onRace={id => { setPlayerId(id); setScreen('briefing'); }}
+        onRace={id => { setPlayerId(id); setScreen('circuit-choose'); }}
         onOpenArcade={() => setArcadeView(true)}
       />
     );
@@ -469,7 +466,7 @@ export default function App() {
         <div className="mx-auto max-w-3xl py-6 text-center">
           <p className="mb-3 text-xs font-black uppercase tracking-[.32em] text-cyan-400">Dos maneras de vivir DATACAR</p>
           <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-6xl">ELEGÍ TU <span className="text-cyan-400">EXPERIENCIA.</span></h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400">Compará el rendimiento de dos vehículos en pruebas predeterminadas, o conducí contra rivales automáticos en circuitos ficticios inspirados en Asunción.</p>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400">Compará el rendimiento de dos vehículos en pruebas predeterminadas, o conducí a contrarreloj contra el Tiempo Meta en circuitos urbanos inspirados en Asunción.</p>
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <button onClick={() => setScreen('compare-choose')} className={`${panel} group flex min-h-[330px] flex-col items-start justify-between overflow-hidden p-7 text-left transition hover:border-cyan-400/60 hover:bg-slate-800/85`}>
@@ -479,7 +476,7 @@ export default function App() {
           </button>
           <button onClick={() => setScreen('circuit-choose')} className={`${panel} group flex min-h-[330px] flex-col items-start justify-between overflow-hidden border-emerald-400/20 p-7 text-left transition hover:border-emerald-400/70 hover:bg-slate-800/85`}>
             <span className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3 text-emerald-300"><FlagTriangleRight size={28}/></span>
-            <div><p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-emerald-400">Modalidad 02 · Interactiva</p><h2 className="text-4xl font-black">MODO CARRERA</h2><p className="mt-3 max-w-md text-sm leading-relaxed text-slate-400">Elegí un circuito, seleccioná tu auto en el showroom 360° y conducí. Los rivales intentan esquivar los peligros.</p></div>
+            <div><p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-emerald-400">Modalidad 02 · Contrarreloj & Conducción</p><h2 className="text-4xl font-black">MODO CARRERA</h2><p className="mt-3 max-w-md text-sm leading-relaxed text-slate-400">Elegí un circuito, seleccioná tu auto y superá el Tiempo Meta oficial respetando semáforos, motociclistas y peatones.</p></div>
             <span className="flex items-center gap-2 text-sm font-bold text-emerald-300">Elegir circuito <ArrowRight className="transition group-hover:translate-x-1" size={17}/></span>
           </button>
         </div>
@@ -656,7 +653,7 @@ export default function App() {
       </div>}
 
       {screen === 'race-run' && <div className="dc-game-running space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">{onlineSession ? 'MULTIJUGADOR EN LÍNEA EN VIVO' : raceMode === 'speed_pro' ? 'FASE 2 · CARRERA DE VELOCIDAD SIN OBSTÁCULOS' : raceMode === 'practice_free' ? 'PISTA DE PRUEBAS · SIN PUNTAJE' : 'FASE 1 · PRUEBA EN CIUDAD'} · {raceLaps} {raceLaps === 1 ? 'VUELTA' : 'VUELTAS'}</p><h1 className="mt-1 font-display text-3xl font-black italic uppercase">{circuit.name}</h1><p className="mt-1 text-sm text-slate-300">Vos: {playerCar.brand} {playerCar.name}{playerPayloadKg > 0 ? ` (+${playerPayloadKg} kg)` : ''} · {raceMode === 'speed_pro' ? 'Pista libre de obstáculos contra 4 rivales IA nivel experto' : 'Semáforos, franjas peatonales con cruce en rojo y tránsito 3D doble mano'}</p></div><button onClick={() => { soundEngine.stopAll(0.05); if (onlineSession) { multiplayerClient.leaveRoom(); setOnlineSession(false); } setScreen('briefing'); }} className={buttonSecondary}><ArrowLeft size={16}/> Abandonar partida</button></div>
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-400">{onlineSession ? 'MULTIJUGADOR EN LÍNEA EN VIVO' : raceMode === 'speed_pro' ? 'FASE 2 · CONTRARRELOJ PURA SIN OBSTÁCULOS' : raceMode === 'practice_free' ? 'PISTA DE PRUEBAS · SIN PUNTAJE' : 'FASE 1 · OBJETIVO CONTRARRELOJ EN CIUDAD'} · {raceLaps} {raceLaps === 1 ? 'VUELTA' : 'VUELTAS'}</p><h1 className="mt-1 font-display text-3xl font-black italic uppercase">{circuit.name}</h1><p className="mt-1 text-sm text-slate-300">Vos: {playerCar.brand} {playerCar.name}{playerPayloadKg > 0 ? ` (+${playerPayloadKg} kg)` : ''} · {raceMode === 'speed_pro' ? 'Contrarreloj pura sin obstáculos: batí el Tiempo Meta Oro' : 'Superá el Tiempo Meta respetando semáforos, motociclistas (+15s penal.) y peatones'}</p></div><button onClick={() => { soundEngine.stopAll(0.05); if (onlineSession) { multiplayerClient.leaveRoom(); setOnlineSession(false); } setScreen('briefing'); }} className={buttonSecondary}><ArrowLeft size={16}/> Abandonar partida</button></div>
         <Race3DPerspectiveView
           key={`race-${circuitId}-${playerId}-${raceLaps}-${raceMode}-${onlineSession ? 'online' : 'solo'}-${raceSession}`}
           experience="race"
@@ -700,6 +697,7 @@ export default function App() {
                   isDnf: Boolean(playerRes?.isDnf),
                   iqScore1000: baseIq1000,
                   redLightViolations: playerIq?.events.redLightViolations ?? 0,
+                  motorcycleCollisions: playerIq?.events.motorcycleCollisions ?? 0,
                   pedestrianHit: false,
                   circuitId,
                 });

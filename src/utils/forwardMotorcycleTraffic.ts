@@ -39,6 +39,19 @@ export interface ForwardMotorcycleActor {
   bikeColorHex: string;
   jacketColorHex: string;
   helmetColorHex: string;
+  downedTimerSec: number;
+  collisionCooldownSec: number;
+  fallSide: -1 | 1;
+  skidVx: number;
+  skidVz: number;
+  riderSlideOffset: number;
+}
+
+export interface MotorcycleCollisionEvent {
+  motoId: string;
+  x: number;
+  z: number;
+  impactSpeedMps: number;
 }
 
 const MOTO_PALETTES: ReadonlyArray<{
@@ -90,6 +103,12 @@ export function createForwardMotorcyclePool(track: RaceTrackConfig): ForwardMoto
       bikeColorHex: palette.bike,
       jacketColorHex: palette.jacket,
       helmetColorHex: palette.helmet,
+      downedTimerSec: 0,
+      collisionCooldownSec: 0,
+      fallSide: 1,
+      skidVx: 0,
+      skidVz: 0,
+      riderSlideOffset: 0,
     });
   }
 
@@ -117,10 +136,12 @@ export function stepForwardMotorcycles(args: {
   playerX: number;
   playerZ: number;
   playerSpeedMps: number;
+  playerLengthM?: number;
+  playerWidthM?: number;
   timeSec: number;
   dt: number;
   trackDistanceM: number;
-}): void {
+}): MotorcycleCollisionEvent[] {
   const {
     motorcycles,
     lights,
@@ -129,16 +150,88 @@ export function stepForwardMotorcycles(args: {
     playerX,
     playerZ,
     playerSpeedMps,
+    playerLengthM,
+    playerWidthM,
     timeSec,
     dt,
     trackDistanceM,
   } = args;
 
+  const collisionEvents: MotorcycleCollisionEvent[] = [];
   const safeDt = clamp(dt, 0, 0.1);
-  if (safeDt <= 0 || motorcycles.length === 0) return;
+  if (safeDt <= 0 || motorcycles.length === 0) return collisionEvents;
+
+  const playerHalfLen = (playerLengthM ?? 4.4) * 0.5;
+  const playerHalfWid = (playerWidthM ?? 1.82) * 0.5;
 
   for (let i = 0; i < motorcycles.length; i++) {
     const moto = motorcycles[i];
+    moto.collisionCooldownSec = Math.max(0, moto.collisionCooldownSec - safeDt);
+
+    // 0. Detección de atropello / impacto del jugador contra la moto y el motociclista
+    if (
+      moto.downedTimerSec <= 0 &&
+      moto.collisionCooldownSec <= 0 &&
+      Math.abs(playerSpeedMps) > 1.0 &&
+      Math.abs(playerZ - moto.z) < playerHalfLen + moto.lengthM * 0.46 &&
+      Math.abs(playerX - moto.x) < playerHalfWid + moto.widthM * 0.52
+    ) {
+      const fallSide: -1 | 1 = moto.x <= playerX ? -1 : 1;
+      const impactSpeedMps = Math.max(4.5, Math.abs(playerSpeedMps - moto.speedMps));
+      moto.downedTimerSec = 6.0;
+      moto.collisionCooldownSec = 8.5;
+      moto.fallSide = fallSide;
+      moto.skidVx = fallSide * clamp(2.8 + Math.abs(playerSpeedMps) * 0.16, 2.8, 6.2);
+      moto.skidVz = Math.max(moto.speedMps * 0.72, Math.abs(playerSpeedMps) * 0.58);
+      moto.braking = true;
+      collisionEvents.push({
+        motoId: moto.id,
+        x: moto.x,
+        z: moto.z,
+        impactSpeedMps,
+      });
+    }
+
+    // Si la moto fue impactada: derrapa volcada hacia la banquina y el motociclista cae a un costado
+    if (moto.downedTimerSec > 0) {
+      moto.downedTimerSec = Math.max(0, moto.downedTimerSec - safeDt);
+      moto.skidVx = THREE.MathUtils.damp(moto.skidVx, 0, 3.2, safeDt);
+      moto.skidVz = THREE.MathUtils.damp(moto.skidVz, 0, 2.6, safeDt);
+      moto.x = clamp(moto.x + moto.skidVx * safeDt, -10.1, -1.1);
+      moto.z += Math.max(0, moto.skidVz) * safeDt;
+      moto.speedMps = Math.max(0, moto.skidVz);
+      moto.leanAngleRad = THREE.MathUtils.damp(
+        moto.leanAngleRad,
+        moto.fallSide * 1.34,
+        11,
+        safeDt,
+      );
+      moto.riderSlideOffset = THREE.MathUtils.damp(
+        moto.riderSlideOffset,
+        moto.fallSide * 0.96,
+        8.5,
+        safeDt,
+      );
+      moto.braking = true;
+      if (moto.downedTimerSec <= 0) {
+        moto.skidVx = 0;
+        moto.skidVz = 0;
+        moto.targetX = clamp(moto.x, -9.2, -1.4);
+      }
+      if (moto.z < playerZ - 58 || moto.z > trackDistanceM + 90) {
+        moto.downedTimerSec = 0;
+        moto.collisionCooldownSec = 0;
+        moto.riderSlideOffset = 0;
+        moto.leanAngleRad = 0;
+        moto.x = moto.preferredLaneX;
+        moto.targetX = moto.preferredLaneX;
+        moto.z = Math.max(playerZ + 135 + (i % 4) * 32, 65);
+      }
+      continue;
+    }
+
+    moto.riderSlideOffset = THREE.MathUtils.damp(moto.riderSlideOffset, 0, 7, safeDt);
+
     const zone = getActiveSpeedLimitZone(speedZones, moto.z);
     const maxUrbanMps = (zone.maxKmh * 0.84) / 3.6;
     const minUrbanMps = (zone.minKmh * 1.02) / 3.6;
@@ -291,15 +384,23 @@ export function stepForwardMotorcycles(args: {
         moto.x = moto.preferredLaneX;
         moto.targetX = moto.preferredLaneX;
         moto.leanAngleRad = 0;
+        moto.downedTimerSec = 0;
+        moto.collisionCooldownSec = 0;
+        moto.riderSlideOffset = 0;
+        moto.skidVx = 0;
+        moto.skidVz = 0;
         moto.speedMps = clamp(maxUrbanMps * 0.9, 8.5, 14.5);
       }
     }
   }
+
+  return collisionEvents;
 }
 
 interface MotorcycleMeshRig {
   root: THREE.Group;
   leanPivot: THREE.Group;
+  riderGroup: THREE.Group;
   frontWheel: THREE.Mesh;
   rearWheel: THREE.Mesh;
   tailLightMat: THREE.MeshStandardMaterial;
@@ -517,20 +618,20 @@ export function createForwardMotorcyclesVisuals3D(args: {
       handlebar,
       headlight,
       tailLight,
-      torso,
-      legL,
-      legR,
-      armL,
-      armR,
-      helmet,
-      visor,
     );
+
+    // Grupo independiente para el motociclista: acompaña la inclinación normal en marcha,
+    // pero si sufre un impacto se desplaza a un costado en postura sentada de resguardo.
+    const riderGroup = new THREE.Group();
+    riderGroup.add(torso, legL, legR, armL, armR, helmet, visor);
+    root.add(riderGroup);
 
     group.add(root);
 
     return {
       root,
       leanPivot,
+      riderGroup,
       frontWheel,
       rearWheel,
       tailLightMat,
@@ -539,16 +640,44 @@ export function createForwardMotorcyclesVisuals3D(args: {
 
   const update = (actors: readonly ForwardMotorcycleActor[]) => {
     const count = Math.min(rigs.length, actors.length);
+    const blinkOn = Math.floor(Date.now() / 220) % 2 === 0;
     for (let i = 0; i < count; i++) {
       const actor = actors[i];
       const rig = rigs[i];
       const worldPt = args.roadPath.world(actor.z, actor.x);
       rig.root.position.set(worldPt.x, 0, worldPt.z);
       rig.root.rotation.set(0, worldPt.yaw, 0);
+
+      const fallProgress = clamp(Math.abs(actor.riderSlideOffset) / 0.96, 0, 1);
       rig.leanPivot.rotation.z = actor.leanAngleRad;
+      rig.leanPivot.position.y = -0.18 * fallProgress;
+
+      if (actor.downedTimerSec > 0 || fallProgress > 0.03) {
+        rig.riderGroup.position.set(
+          actor.riderSlideOffset,
+          -0.44 * fallProgress,
+          -0.34 * fallProgress,
+        );
+        rig.riderGroup.rotation.set(
+          -0.25 * fallProgress,
+          0,
+          actor.fallSide * 0.36 * fallProgress,
+        );
+      } else {
+        rig.riderGroup.position.set(0, 0, 0);
+        rig.riderGroup.rotation.set(0, 0, actor.leanAngleRad);
+      }
+
       rig.frontWheel.rotation.x = actor.wheelAngleRad;
       rig.rearWheel.rotation.x = actor.wheelAngleRad;
-      rig.tailLightMat.emissiveIntensity = actor.braking ? 2.6 : 0.75;
+      rig.tailLightMat.emissiveIntensity =
+        actor.downedTimerSec > 0
+          ? blinkOn
+            ? 3.2
+            : 0.4
+          : actor.braking
+            ? 2.6
+            : 0.75;
     }
   };
 

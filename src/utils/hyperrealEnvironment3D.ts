@@ -31,114 +31,114 @@ function norm3(x: number, y: number, z: number): readonly [number, number, numbe
 
 const ATMOSPHERE_BY_WEATHER: Record<WeatherMode, HyperrealAtmosphereSpec> = {
   sunny: {
-    zenithHex: '#1d4f8c',
-    midSkyHex: '#4f91cf',
-    horizonHex: '#c6dff2',
-    sunDiscHex: '#fff9e6',
-    sunGlowHex: '#ffdca8',
-    cloudTintHex: '#f8fbff',
-    cloudOpacity: 0.68,
-    fogHex: '#b4d0e6',
-    fogDensity: 0.00125,
-    sunDir: norm3(0.36, 0.72, -0.59),
-    sunLightHex: '#fff4df',
-    sunIntensity: 1.98,
-    hemiSkyHex: '#a5d0ff',
-    hemiGroundHex: '#4e5d6c',
-    hemiIntensity: 0.84,
-    ambientHex: '#e2efff',
-    ambientIntensity: 0.28,
-    rimLightHex: '#7dd3fc',
-    rimIntensity: 0.48,
-    exposure: 1.03,
+    zenithHex: '#2b4761',
+    midSkyHex: '#6e8699',
+    horizonHex: '#ebd0a3',
+    sunDiscHex: '#fff6dc',
+    sunGlowHex: '#ffc978',
+    cloudTintHex: '#f6e4c6',
+    cloudOpacity: 0.64,
+    fogHex: '#dbc198',
+    fogDensity: 0.00205,
+    sunDir: norm3(0.56, 0.518, -0.646),
+    sunLightHex: '#ffd694',
+    sunIntensity: 3.18,
+    hemiSkyHex: '#e2cfb2',
+    hemiGroundHex: '#3e3328',
+    hemiIntensity: 0.88,
+    ambientHex: '#efe2ce',
+    ambientIntensity: 0.26,
+    rimLightHex: '#ffcf87',
+    rimIntensity: 0.62,
+    exposure: 1.08,
   },
   cloudy: {
-    zenithHex: '#35587a',
-    midSkyHex: '#6386a6',
-    horizonHex: '#aec4d6',
-    sunDiscHex: '#eef4f8',
-    sunGlowHex: '#c4d4e2',
-    cloudTintHex: '#cfdbe6',
-    cloudOpacity: 0.84,
-    fogHex: '#9fb6c9',
-    fogDensity: 0.00175,
-    sunDir: norm3(0.34, 0.68, -0.65),
-    sunLightHex: '#eef4fa',
-    sunIntensity: 1.68,
-    hemiSkyHex: '#adc7dc',
-    hemiGroundHex: '#43515f',
-    hemiIntensity: 0.80,
-    ambientHex: '#e2e8f0',
+    zenithHex: '#3a4e61',
+    midSkyHex: '#738391',
+    horizonHex: '#cbb99e',
+    sunDiscHex: '#f5e8d3',
+    sunGlowHex: '#ddb98a',
+    cloudTintHex: '#d6cab8',
+    cloudOpacity: 0.82,
+    fogHex: '#bfb09a',
+    fogDensity: 0.00235,
+    sunDir: norm3(0.52, 0.525, -0.673),
+    sunLightHex: '#f5dec0',
+    sunIntensity: 2.25,
+    hemiSkyHex: '#cabda8',
+    hemiGroundHex: '#3c362f',
+    hemiIntensity: 0.82,
+    ambientHex: '#e5ddd2',
     ambientIntensity: 0.28,
-    rimLightHex: '#93c5fd',
-    rimIntensity: 0.44,
-    exposure: 1.0,
+    rimLightHex: '#eab36c',
+    rimIntensity: 0.48,
+    exposure: 1.04,
   },
   rain: {
-    zenithHex: '#364d63',
-    midSkyHex: '#59738a',
-    horizonHex: '#8da3b5',
-    sunDiscHex: '#dce6ee',
-    sunGlowHex: '#9db4c6',
-    cloudTintHex: '#8d9fae',
+    zenithHex: '#344657',
+    midSkyHex: '#5c6e7d',
+    horizonHex: '#9da19e',
+    sunDiscHex: '#e2dfd8',
+    sunGlowHex: '#b8ae9e',
+    cloudTintHex: '#999d9c',
     cloudOpacity: 0.88,
-    fogHex: '#7d93a6',
-    fogDensity: 0.0024,
-    sunDir: norm3(0.30, 0.64, -0.71),
-    sunLightHex: '#dce7f3',
-    sunIntensity: 1.58,
-    hemiSkyHex: '#9bb4c8',
-    hemiGroundHex: '#394652',
+    fogHex: '#8d928f',
+    fogDensity: 0.00285,
+    sunDir: norm3(0.46, 0.535, -0.708),
+    sunLightHex: '#e4ded2',
+    sunIntensity: 1.78,
+    hemiSkyHex: '#a3a8a6',
+    hemiGroundHex: '#34383b',
     hemiIntensity: 0.80,
-    ambientHex: '#cbd5e1',
+    ambientHex: '#d1d5d8',
     ambientIntensity: 0.30,
-    rimLightHex: '#93c5fd',
+    rimLightHex: '#cbd5e1',
     rimIntensity: 0.45,
-    exposure: 1.01,
+    exposure: 1.02,
   },
   storm: {
-    zenithHex: '#1f2e3d',
-    midSkyHex: '#35485a',
-    horizonHex: '#5f7385',
-    sunDiscHex: '#9fb4c7',
-    sunGlowHex: '#6e8396',
-    cloudTintHex: '#5a6b7a',
+    zenithHex: '#212d38',
+    midSkyHex: '#3c4a56',
+    horizonHex: '#6f7370',
+    sunDiscHex: '#b4b2ab',
+    sunGlowHex: '#87837a',
+    cloudTintHex: '#646869',
     cloudOpacity: 0.94,
-    fogHex: '#596e80',
-    fogDensity: 0.0031,
-    sunDir: norm3(0.26, 0.60, -0.76),
-    sunLightHex: '#c2d3e4',
-    sunIntensity: 1.24,
-    hemiSkyHex: '#7d93a7',
-    hemiGroundHex: '#2b3743',
+    fogHex: '#636868',
+    fogDensity: 0.00345,
+    sunDir: norm3(0.40, 0.54, -0.741),
+    sunLightHex: '#cfc9be',
+    sunIntensity: 1.38,
+    hemiSkyHex: '#848a8e',
+    hemiGroundHex: '#2a2e32',
     hemiIntensity: 0.74,
-    ambientHex: '#94a3b8',
+    ambientHex: '#a3aab0',
     ambientIntensity: 0.28,
-    rimLightHex: '#64748b',
-    rimIntensity: 0.36,
-    exposure: 0.97,
+    rimLightHex: '#94a3b8',
+    rimIntensity: 0.38,
+    exposure: 0.99,
   },
   flood: {
-    zenithHex: '#293e52',
-    midSkyHex: '#466178',
-    horizonHex: '#7691a6',
-    sunDiscHex: '#c6dae8',
-    sunGlowHex: '#88a4ba',
-    cloudTintHex: '#72889b',
+    zenithHex: '#2c3d4d',
+    midSkyHex: '#4e6270',
+    horizonHex: '#8c9492',
+    sunDiscHex: '#d2cfc7',
+    sunGlowHex: '#a49f92',
+    cloudTintHex: '#7d8588',
     cloudOpacity: 0.90,
-    fogHex: '#6d879c',
-    fogDensity: 0.0029,
-    sunDir: norm3(0.28, 0.62, -0.73),
-    sunLightHex: '#cbe0f2',
-    sunIntensity: 1.40,
-    hemiSkyHex: '#8aa4ba',
-    hemiGroundHex: '#32414f',
+    fogHex: '#7d8687',
+    fogDensity: 0.00315,
+    sunDir: norm3(0.42, 0.535, -0.733),
+    sunLightHex: '#dcd6c8',
+    sunIntensity: 1.56,
+    hemiSkyHex: '#959ea1',
+    hemiGroundHex: '#30373c',
     hemiIntensity: 0.76,
-    ambientHex: '#cbd5e1',
+    ambientHex: '#cbd0d4',
     ambientIntensity: 0.29,
-    rimLightHex: '#7dd3fc',
+    rimLightHex: '#b8c4ce',
     rimIntensity: 0.44,
-    exposure: 1.0,
+    exposure: 1.01,
   },
 };
 
@@ -197,30 +197,37 @@ const SKY_FRAGMENT_SHADER = `
   void main() {
     vec3 dir = normalize(vWorldDir);
     float h = clamp(dir.y, -0.15, 1.0);
-    float skyBand = clamp(h * 1.45, 0.0, 1.0);
-    float zenithBand = pow(clamp(h, 0.0, 1.0), 0.72);
-    vec3 col = mix(uHorizonColor, uMidSkyColor, smoothstep(0.0, 0.28, skyBand));
-    col = mix(col, uZenithColor, smoothstep(0.18, 0.92, zenithBand));
+    float skyBand = clamp(h * 1.38, 0.0, 1.0);
+    float zenithBand = pow(clamp(h, 0.0, 1.0), 0.75);
+    vec3 col = mix(uHorizonColor, uMidSkyColor, smoothstep(0.0, 0.32, skyBand));
+    col = mix(col, uZenithColor, smoothstep(0.20, 0.94, zenithBand));
 
-    // Dispersión atmosférica cálida alrededor del sol
+    // Bruma aérea dorada sobre la franja del horizonte para fundir LODs lejanos y alimentar HDR bloom
+    float horizonAerialGlow = exp(-max(0.0, dir.y) * 10.5) * smoothstep(-0.08, 0.01, dir.y);
+    col += uSunColor * horizonAerialGlow * 0.34;
+
+    // Dispersión Mie HDR cálida de sol vespertino bajo + disco sobrebrillante (> 1.0 para UnrealBloomPass)
     float sunDot = max(dot(dir, normalize(uSunDir)), 0.0);
-    float mieGlow = pow(sunDot, 7.0) * 0.34 + pow(sunDot, 42.0) * 0.42;
-    float sunDisc = smoothstep(0.9985, 0.9996, sunDot);
-    col += uSunColor * (mieGlow + sunDisc * 1.35);
+    float mieWide = pow(sunDot, 5.0) * 0.46;
+    float mieTight = pow(sunDot, 36.0) * 0.92;
+    float sunDisc = smoothstep(0.9982, 0.9995, sunDot);
+    col += uSunColor * (mieWide + mieTight + sunDisc * 3.2);
 
-    // Nubes suaves realistas sobre el plano celestial
-    if (dir.y > 0.025) {
-      vec2 cloudUv = dir.xz / (dir.y + 0.14) * 1.35 + vec2(uTime * 0.008, uTime * 0.004);
+    // Nubes otoñales iluminadas desde abajo por el sol dorado de la tarde
+    if (dir.y > 0.02) {
+      vec2 cloudUv = dir.xz / (dir.y + 0.14) * 1.35 + vec2(uTime * 0.007, uTime * 0.0035);
       float n = fbmClouds(cloudUv);
-      float cloudMask = smoothstep(0.46, 0.78, n) * smoothstep(0.025, 0.22, dir.y) * uCloudOpacity;
-      vec3 litCloud = mix(uCloudColor * 0.86, uCloudColor * 1.12 + uSunColor * 0.14, pow(sunDot, 3.0));
+      float cloudMask = smoothstep(0.45, 0.78, n) * smoothstep(0.02, 0.24, dir.y) * uCloudOpacity;
+      vec3 cloudShadow = uCloudColor * 0.76;
+      vec3 cloudHighlight = uCloudColor * 1.18 + uSunColor * 0.38;
+      vec3 litCloud = mix(cloudShadow, cloudHighlight, clamp(pow(sunDot, 2.2) + horizonAerialGlow * 0.45, 0.0, 1.0));
       col = mix(col, litCloud, clamp(cloudMask, 0.0, 0.88));
     }
 
-    // Fusión limpia debajo del horizonte para espejos / ángulo dron
+    // Fusión limpia debajo del horizonte para sondas de reflexión y ángulo dron
     if (dir.y < 0.0) {
       float below = clamp(-dir.y * 6.0, 0.0, 1.0);
-      col = mix(uHorizonColor, uHorizonColor * 0.55, below);
+      col = mix(uHorizonColor, uHorizonColor * 0.48, below);
     }
 
     gl_FragColor = vec4(col, 1.0);
@@ -233,36 +240,36 @@ export function createProceduralOutdoorEquirectTexture(): THREE.CanvasTexture {
   canvas.height = 256;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    // Cielo superior -> horizonte luminoso -> suelo cálido/asfalto inferior para IBL real en carrocerías
+    // Domo IBL otoñal de tarde: cenit azul-pizarra desaturado -> horizonte ámbar/ocre -> asfalto húmedo cálido
     const skyGrad = ctx.createLinearGradient(0, 0, 0, 256);
-    skyGrad.addColorStop(0.0, '#174278');
-    skyGrad.addColorStop(0.28, '#4c8ec9');
-    skyGrad.addColorStop(0.47, '#cfe4f5');
-    skyGrad.addColorStop(0.505, '#e8eef2');
-    skyGrad.addColorStop(0.53, '#3c4940');
-    skyGrad.addColorStop(0.74, '#242b30');
-    skyGrad.addColorStop(1.0, '#14181d');
+    skyGrad.addColorStop(0.0, '#264159');
+    skyGrad.addColorStop(0.28, '#698196');
+    skyGrad.addColorStop(0.46, '#e7c998');
+    skyGrad.addColorStop(0.505, '#ffe3b3');
+    skyGrad.addColorStop(0.535, '#473d31');
+    skyGrad.addColorStop(0.74, '#2a2622');
+    skyGrad.addColorStop(1.0, '#161514');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, 512, 256);
 
-    // Disco solar brillante + corona para reflejos especulares nítidos en pintura clearcoat y vidrios
-    const sunGrad = ctx.createRadialGradient(340, 62, 3, 340, 62, 84);
-    sunGrad.addColorStop(0.0, 'rgba(255, 252, 236, 1.0)');
-    sunGrad.addColorStop(0.14, 'rgba(255, 236, 195, 0.88)');
-    sunGrad.addColorStop(0.45, 'rgba(255, 214, 150, 0.25)');
-    sunGrad.addColorStop(1.0, 'rgba(255, 214, 150, 0)');
+    // Sol de tarde bajo e intenso + corona dorada para reflejos especulares en carrocería, vidrio y charcos
+    const sunGrad = ctx.createRadialGradient(356, 86, 3, 356, 86, 98);
+    sunGrad.addColorStop(0.0, 'rgba(255, 250, 228, 1.0)');
+    sunGrad.addColorStop(0.18, 'rgba(255, 218, 152, 0.92)');
+    sunGrad.addColorStop(0.48, 'rgba(245, 178, 96, 0.36)');
+    sunGrad.addColorStop(1.0, 'rgba(245, 178, 96, 0)');
     ctx.fillStyle = sunGrad;
-    ctx.fillRect(250, 0, 180, 155);
+    ctx.fillRect(245, 0, 220, 185);
 
-    // Bandas suaves de nubes iluminadas en el domo para reflejos realistas sobre capós y parabrisas
+    // Bandas de nubes cálidas iluminadas al atardecer
     for (let i = 0; i < 18; i++) {
       const cx = (i * 83 + 24) % 512;
-      const cy = 54 + ((i * 29) % 56);
+      const cy = 58 + ((i * 29) % 54);
       const rx = 28 + (i % 4) * 18;
       const ry = 8 + (i % 3) * 5;
       const cg = ctx.createRadialGradient(cx, cy, 2, cx, cy, rx);
-      cg.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
-      cg.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      cg.addColorStop(0, 'rgba(255, 236, 198, 0.44)');
+      cg.addColorStop(1, 'rgba(255, 236, 198, 0)');
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(1, ry / rx);

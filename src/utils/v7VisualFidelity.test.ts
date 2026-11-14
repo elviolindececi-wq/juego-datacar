@@ -159,7 +159,7 @@ test('experiencia mobile habilita touch-action:pan-y y evita recortar Iniciar Ca
   assert.ok(mobileTsx.includes('dc-mobile-track-card') && mobileTsx.includes('dc-mobile-compare-card'), 'Las tarjetas mobile de circuitos y comparador deben usar el layout responsivo sin aplastamiento');
 });
 
-test('perfil mobile 3D reserva GLB solo para el vehículo del jugador y usa modelos 3D livianos para rivales', async () => {
+test('perfil 3D nítido y liviano reserva GLB exclusivamente para el auto del jugador en mobile y desktop', async () => {
   const {
     resolveRace3DPerformanceProfile,
     shouldUseLightweightProceduralVehicle,
@@ -173,12 +173,21 @@ test('perfil mobile 3D reserva GLB solo para el vehículo del jugador y usa mode
     innerWidth: 800,
   });
   assert.equal(mobileProfile.antialias, false);
-  assert.equal(mobileProfile.maxDpr, 1);
+  assert.equal(mobileProfile.maxDpr, 1.75);
+  assert.equal(mobileProfile.maxAnisotropy, 4);
   assert.equal(mobileProfile.shadowsEnabled, false);
   assert.equal(mobileProfile.defaultRearviewMirror, false);
   assert.equal(mobileProfile.defaultSideMirrors, false);
-  assert.equal(mobileProfile.gameplayCameraFar, 420);
-  assert.equal(mobileProfile.skyDomeRadius, 360);
+  assert.equal(mobileProfile.gameplayCameraFar, 540);
+  assert.equal(mobileProfile.skyDomeRadius, 460);
+
+  const softwareMobileProfile = resolveRace3DPerformanceProfile({
+    isMobilePerf: true,
+    isSoftwareGl: true,
+    devicePixelRatio: 3,
+    innerWidth: 800,
+  });
+  assert.equal(softwareMobileProfile.maxDpr, 1);
 
   const desktopProfile = resolveRace3DPerformanceProfile({
     isMobilePerf: false,
@@ -187,54 +196,64 @@ test('perfil mobile 3D reserva GLB solo para el vehículo del jugador y usa mode
     innerWidth: 1440,
   });
   assert.equal(desktopProfile.antialias, true);
-  assert.equal(desktopProfile.maxDpr, 1.5);
+  assert.equal(desktopProfile.maxDpr, 1.75);
+  assert.equal(desktopProfile.maxAnisotropy, 8);
   assert.equal(desktopProfile.shadowsEnabled, true);
   assert.equal(desktopProfile.defaultRearviewMirror, true);
   assert.equal(desktopProfile.defaultSideMirrors, true);
 
-  // En mobile durante carrera: el auto elegido usa su GLB (false) y todos los rivales / pares online usan el 3D liviano (true)
-  assert.equal(
-    shouldUseLightweightProceduralVehicle({
-      isMobilePerf: true,
-      experience: 'race',
-      vehicleId: 'nissan-kicks-2027',
-      playerVehicleId: 'nissan-kicks-2027',
-    }),
-    false,
-  );
-  assert.equal(
-    shouldUseLightweightProceduralVehicle({
-      isMobilePerf: true,
-      experience: 'race',
-      vehicleId: 'chevrolet-tracker-lite',
-      playerVehicleId: 'nissan-kicks-2027',
-    }),
-    true,
-  );
-  assert.equal(
-    shouldUseLightweightProceduralVehicle({
-      isMobilePerf: true,
-      experience: 'race',
-      vehicleId: 'nissan-kicks-2027',
-      playerVehicleId: 'nissan-kicks-2027',
-      isOnlinePeer: true,
-    }),
-    true,
-  );
-  // En desktop todos conservan su GLB
-  assert.equal(
-    shouldUseLightweightProceduralVehicle({
-      isMobilePerf: false,
-      experience: 'race',
-      vehicleId: 'chevrolet-tracker-lite',
-      playerVehicleId: 'nissan-kicks-2027',
-    }),
-    false,
-  );
+  // Tanto en mobile como en desktop: SOLO el auto conducido por el jugador usa GLB (false); todos los demás usan 3D liviano (true)
+  for (const isMobilePerf of [true, false]) {
+    assert.equal(
+      shouldUseLightweightProceduralVehicle({
+        isMobilePerf,
+        experience: 'race',
+        vehicleId: 'chevrolet-tracker-lite',
+        playerVehicleId: 'chevrolet-tracker-lite',
+      }),
+      false,
+    );
+    assert.equal(
+      shouldUseLightweightProceduralVehicle({
+        isMobilePerf,
+        experience: 'race',
+        vehicleId: 'chevrolet-tracker-lite',
+        playerVehicleId: 'nissan-kicks-2027',
+      }),
+      true,
+    );
+    assert.equal(
+      shouldUseLightweightProceduralVehicle({
+        isMobilePerf,
+        experience: 'race',
+        vehicleId: 'chevrolet-tracker-lite',
+        playerVehicleId: 'chevrolet-tracker-lite',
+        isOnlinePeer: true,
+      }),
+      true,
+    );
+  }
 
   const preloadedMobile = filterVehiclesForRacePreload(PRESET_VEHICLES.slice(0, 3), PRESET_VEHICLES[1].id, true);
+  const preloadedDesktop = filterVehiclesForRacePreload(PRESET_VEHICLES.slice(0, 3), PRESET_VEHICLES[1].id, false);
   assert.equal(preloadedMobile.length, 1);
-  assert.equal(preloadedMobile[0].id, PRESET_VEHICLES[1].id);
+  assert.equal(preloadedDesktop.length, 1);
+  assert.equal(preloadedDesktop[0].id, PRESET_VEHICLES[1].id);
+
+  // El tránsito CGI urbano tampoco debe cargar modelos .glb pesados nunca
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const trafficSource = fs.readFileSync(path.join(process.cwd(), 'src/utils/urbanTrafficVisuals3D.ts'), 'utf8');
+  assert.equal(
+    trafficSource.includes('resolveDedicatedVehicleGLTF'),
+    false,
+    'Los autos CGI del tránsito nunca deben cargar archivos GLB',
+  );
+  assert.equal(
+    trafficSource.includes('createCalibratedVehicle3DInstance'),
+    false,
+    'Los autos CGI del tránsito deben usar exclusivamente carrocerías 3D livianas no-GLB',
+  );
 });
 
 test('createVehicleEntity con preferProceduralModel instancia inmediatamente el modelo 3D liviano por defecto sin descargar GLB', async () => {
@@ -274,10 +293,121 @@ test('createVehicleEntity con preferProceduralModel instancia inmediatamente el 
   }
 });
 
-test('Race3DPerspectiveView elimina backdrop-blur sobre WebGL y expone botón visible PONER CINTURÓN', async () => {
+test('señaleros de giro se apagan automáticamente al girar el volante hacia el lado opuesto', async () => {
+  const { evaluateTurnSignalAutoCancel } = await import('./turnSignalsController');
+
+  // Si presiono señalero derecho y luego giro a la izquierda (-1), se apaga
+  assert.equal(evaluateTurnSignalAutoCancel('right', -1), 'off');
+  assert.equal(evaluateTurnSignalAutoCancel('right', -0.45), 'off');
+  // Mientras giro a la derecha (+1) o mantengo recto (0), sigue encendido
+  assert.equal(evaluateTurnSignalAutoCancel('right', 1), 'right');
+  assert.equal(evaluateTurnSignalAutoCancel('right', 0), 'right');
+
+  // Si presiono señalero izquierdo y luego giro a la derecha (+1), se apaga
+  assert.equal(evaluateTurnSignalAutoCancel('left', 1), 'off');
+  assert.equal(evaluateTurnSignalAutoCancel('left', 0.45), 'off');
+  assert.equal(evaluateTurnSignalAutoCancel('left', -1), 'left');
+
+  // Las balizas de emergencia permanecen encendidas hasta apagarlas manualmente
+  assert.equal(evaluateTurnSignalAutoCancel('hazards', -1), 'hazards');
+  assert.equal(evaluateTurnSignalAutoCancel('hazards', 1), 'hazards');
+});
+
+test('atropellar a una motocicleta tumba la moto, desplaza al motociclista y penaliza al jugador con impacto y +15s', async () => {
+  const { createForwardMotorcyclePool, stepForwardMotorcycles } = await import('./forwardMotorcycleTraffic');
+  const { InteractiveRacePhysics } = await import('./interactiveRacePhysics');
+  const { ASUNCION_CIRCUITS, toRaceTrack } = await import('../data/asuncionCircuits');
+  const { scoreDrivingIQ } = await import('./drivingIQ');
+  const { evaluateCityTrialCompletion } = await import('./careerProgression');
+
+  const cityTrack = toRaceTrack(ASUNCION_CIRCUITS[0], 1);
+  const tracker = DEALERSHIP_VEHICLES.find((v) => v.id === 'chevrolet-tracker-lite')!;
+  const motos = createForwardMotorcyclePool(cityTrack);
+  assert.ok(motos.length > 0, 'Debe poblar motocicletas en circuitos urbanos');
+
+  // Colocar la primera motocicleta justo delante del auto del jugador
+  motos[0].x = -4.2;
+  motos[0].z = 25.0;
+  motos[0].speedMps = 6.0;
+
+  const collisions = stepForwardMotorcycles({
+    motorcycles: motos,
+    lights: [],
+    speedZones: [],
+    forwardCars: [],
+    playerX: -4.1,
+    playerZ: 24.2,
+    playerSpeedMps: 18.0,
+    playerLengthM: 4.3,
+    playerWidthM: 1.8,
+    timeSec: 10.0,
+    dt: 0.05,
+    trackDistanceM: cityTrack.distanceMeters,
+  });
+
+  assert.equal(collisions.length, 1, 'Debe detectar el atropello a la motocicleta');
+  assert.ok(motos[0].downedTimerSec > 3.5, 'La motocicleta queda caída tras el impacto');
+  assert.notEqual(motos[0].fallSide, 0, 'Debe definir hacia qué costado cae la moto');
+
+  // Avanzar unos cuadros para verificar inclinación de caída y separación del motociclista
+  stepForwardMotorcycles({
+    motorcycles: motos,
+    lights: [],
+    speedZones: [],
+    forwardCars: [],
+    playerX: -4.1,
+    playerZ: 32.0,
+    playerSpeedMps: 8.0,
+    timeSec: 10.35,
+    dt: 0.35,
+    trackDistanceM: cityTrack.distanceMeters,
+  });
+  assert.ok(Math.abs(motos[0].leanAngleRad) > 0.8, 'La motocicleta se vuelca sobre el asfalto');
+  assert.ok(Math.abs(motos[0].riderSlideOffset) > 0.25, 'El motociclista cae desplazado al costado de la moto');
+
+  // Verificar consecuencias sobre el jugador en InteractiveRacePhysics
+  const physics = new InteractiveRacePhysics([tracker], cityTrack, tracker.id, true, {
+    urbanTrafficRules: true,
+  });
+  const playerCar = physics.getCar(tracker.id)!;
+  playerCar.speed = 20;
+  physics.applyMotorcycleCollision(motos[0].x, motos[0].z, 20);
+
+  assert.ok(playerCar.speed < 10, 'El impacto frena fuertemente al jugador');
+  assert.equal(physics.timePenaltySec, 15, 'Suma +15 segundos de penalización al cronómetro oficial');
+  assert.equal(playerCar.drivingEvents.motorcycleCollisions, 1, 'Registra el atropello en telemetría de seguridad');
+  assert.equal(physics.lastTrafficNotice?.code, 'motorcycle_collision');
+
+  playerCar.finishedAt = 100;
+  const results = physics.makeResults([]);
+  assert.equal(results[0].finishTimeSec, 115, 'El tiempo final incluye los +15s de penalización');
+
+  const iqClean = scoreDrivingIQ(
+    { ...results[0], drivingEvents: { ...results[0].drivingEvents!, motorcycleCollisions: 0 } },
+    100,
+    cityTrack.distanceMeters,
+  );
+  const iqHit = scoreDrivingIQ(results[0], 100, cityTrack.distanceMeters);
+  assert.ok(iqHit.safety < iqClean.safety, 'El índice de seguridad baja al atropellar motociclistas');
+
+  const trialEval = evaluateCityTrialCompletion({
+    circuitId: cityTrack.cityCircuitId!,
+    raceMode: 'city_trial',
+    completed: true,
+    isDnf: false,
+    pedestrianHit: false,
+    redLightViolations: 0,
+    motorcycleCollisions: 1,
+    iqScore1000: 850,
+  });
+  assert.equal(trialEval.qualifiesThisRun, false, 'No puede aprobar limpiamente Fase 1 si atropelló a un motociclista');
+});
+
+test('Race3DPerspectiveView y Briefing exponen objetivo claro de carrera, señaleros mobile y cinturón visible sin backdrop-blur', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
   const raceSource = fs.readFileSync(path.join(process.cwd(), 'src/components/Race3DPerspectiveView.tsx'), 'utf8');
+  const briefingSource = fs.readFileSync(path.join(process.cwd(), 'src/components/ArcadeBriefingAndResults.tsx'), 'utf8');
 
   assert.equal(
     raceSource.includes('backdrop-blur'),
@@ -287,8 +417,14 @@ test('Race3DPerspectiveView elimina backdrop-blur sobre WebGL y expone botón vi
   assert.ok(
     raceSource.includes('data-testid="seatbelt-button"') &&
       raceSource.includes('PONER CINTURÓN') &&
-      raceSource.includes('✓ CINTURÓN PUESTO') &&
-      raceSource.includes('onClick={buckleSeatbelt}'),
-    'El botón de cinturón de seguridad debe estar visible y conectado a buckleSeatbelt',
+      raceSource.includes('data-testid="turn-left-button"') &&
+      raceSource.includes('data-testid="turn-right-button"') &&
+      raceSource.includes('evaluateTurnSignalAutoCancel'),
+    'Los botones mobile de giro IZQ/DER con auto-apagado y el cinturón de seguridad deben estar conectados',
+  );
+  assert.ok(
+    briefingSource.includes('data-testid="race-objective-banner"') &&
+      briefingSource.includes('OBJETIVO DE LA CARRERA'),
+    'La pantalla previa y de resultados debe mostrar un objetivo claro contra el tiempo',
   );
 });

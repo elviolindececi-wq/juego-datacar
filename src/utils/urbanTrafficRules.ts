@@ -34,19 +34,31 @@ export interface CrosswalkPedestrianState {
   heightScale: number;
 }
 
+/**
+ * Paleta automotriz realista para SUVs del tránsito urbano:
+ * negro obsidiana, plata metálico, blanco perlado, azul marino oscuro y gris carbón (charcoal).
+ */
+export const REALISTIC_TRAFFIC_SUV_PALETTE = [
+  '#0d1016', // Black (Negro Obsidiana)
+  '#bcc4ce', // Silver (Plata Metálico)
+  '#eef2f7', // White (Blanco Perlado)
+  '#102648', // Dark Blue (Azul Marino Profundo)
+  '#2b313a', // Charcoal (Gris Carbón Grafito)
+] as const;
+
 export const TRAFFIC_3D_CATALOG_SPECS: ReadonlyArray<{
   modelId: string;
   lengthM: number;
   widthM: number;
   tintHex: string;
 }> = [
-  { modelId: 'toyota-corolla-cross-seg-2027', lengthM: 4.46, widthM: 1.825, tintHex: '#f8fafc' },
-  { modelId: 'chevrolet-tracker-lite', lengthM: 4.27, widthM: 1.79, tintHex: '#cbd5e1' },
-  { modelId: 'nissan-kicks-2027', lengthM: 4.31, widthM: 1.76, tintHex: '#fde68a' },
-  { modelId: 'suzuki-fronx', lengthM: 3.995, widthM: 1.765, tintHex: '#fdba74' },
-  { modelId: 'kia-carens-ex', lengthM: 4.54, widthM: 1.80, tintHex: '#7dd3fc' },
-  { modelId: 'chery-t4-pro-luxury-hev', lengthM: 4.32, widthM: 1.83, tintHex: '#e2e8f0' },
-  { modelId: 'chery-t2-pro-max', lengthM: 4.20, widthM: 1.86, tintHex: '#fca5a5' },
+  { modelId: 'toyota-corolla-cross-seg-2027', lengthM: 4.46, widthM: 1.825, tintHex: '#eef2f7' },
+  { modelId: 'chery-t4-pro-luxury-hev', lengthM: 4.52, widthM: 1.845, tintHex: '#0d1016' },
+  { modelId: 'nissan-kicks-2027', lengthM: 4.38, widthM: 1.82, tintHex: '#bcc4ce' },
+  { modelId: 'kia-carens-ex', lengthM: 4.56, widthM: 1.835, tintHex: '#102648' },
+  { modelId: 'chevrolet-tracker-lite', lengthM: 4.41, widthM: 1.83, tintHex: '#2b313a' },
+  { modelId: 'chery-t2-pro-max', lengthM: 4.48, widthM: 1.875, tintHex: '#0d1016' },
+  { modelId: 'suzuki-fronx', lengthM: 4.39, widthM: 1.825, tintHex: '#bcc4ce' },
 ];
 
 export type TrafficSignalPhase = 'green' | 'yellow' | 'red';
@@ -108,6 +120,7 @@ export interface TrafficRuleNotice {
     | 'wrong_way'
     | 'seatbelt_ok'
     | 'pedestrian_arrest'
+    | 'motorcycle_collision'
     | 'collision';
   title: string;
   subtitle: string;
@@ -390,7 +403,7 @@ export function stepOncomingTraffic(
       25,
     );
     if (targetSpeed === 0 && car.speedMps < 0.08) car.speedMps = 0;
-    car.braking = braking && car.speedMps > 0.2;
+    car.braking = braking;
     const stepDist = car.speedMps * dt;
     car.z -= stepDist;
     car.distanceTraveledM += stepDist;
