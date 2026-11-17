@@ -46,14 +46,14 @@ export const JailLockoutModal: React.FC<JailLockoutModalProps> = ({
       aria-label="Sanción de cárcel por atropello peatonal"
       className="pointer-events-none fixed inset-x-0 top-[64px] bottom-[12px] z-[90] flex items-center justify-center p-3 select-none"
     >
-      <div className="pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border-2 border-rose-500/90 bg-[#090d18]/96 shadow-[0_18px_50px_rgba(0,0,0,0.92),0_0_32px_rgba(244,63,94,0.4)]">
+      <div className="pointer-events-auto relative w-full max-w-md max-h-[calc(100dvh-76px)] overflow-y-auto rounded-2xl border-2 border-rose-500/90 bg-[#090d18]/96 shadow-[0_18px_50px_rgba(0,0,0,0.92),0_0_32px_rgba(244,63,94,0.4)]">
         {/* Baliza policial superior */}
-        <div className="flex h-2 w-full">
+        <div className="sticky top-0 z-10 flex h-2 w-full">
           <div className="h-full w-1/2 animate-pulse bg-rose-500" />
           <div className="h-full w-1/2 animate-pulse bg-sky-500" />
         </div>
 
-        <div className="relative p-4 sm:p-5 text-center">
+        <div className="relative p-3 sm:p-5 text-center">
           <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-rose-400/80 bg-rose-950/90 shadow-[0_0_20px_rgba(244,63,94,0.45)]">
             <ShieldAlert className="h-5 w-5 text-rose-300" />
           </div>

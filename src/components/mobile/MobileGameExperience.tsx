@@ -987,45 +987,50 @@ export default function MobileGameExperience({initialPlayerId,initialCircuitId,o
           />
         </div>
 
-        {/* Top Title: Crown + TU MISIÓN. TU MÁQUINA. */}
+        {/* Top Title: Crown + TU MISIÓN. TU MÁQUINA. (oculta subtítulo en pantallas apaisadas bajas para evitar superposición) */}
         <div className="relative z-10 pt-0.5 pb-0.5 shrink-0">
-          <ArenaCrownTitle compact subtitle={DATACAR_SELECTOR_COPY.subtitle} />
+          <div className="[@media(max-height:460px)]:hidden">
+            <ArenaCrownTitle compact subtitle={DATACAR_SELECTOR_COPY.subtitle} />
+          </div>
+          <div className="hidden [@media(max-height:460px)]:block">
+            <ArenaCrownTitle compact eyebrow={null} subtitle={null} />
+          </div>
           <span className="sr-only">TU MISIÓN. TU MÁQUINA.</span>
         </div>
 
         {/* Main Content: Responsive Stack in Portrait / Side-by-Side in Landscape */}
-        <div className="flex-1 min-h-0 flex flex-col landscape:flex-row md:flex-row items-center justify-between gap-2.5 md:gap-6 px-1 md:px-5 relative z-10 my-auto">
+        <div className="flex-1 min-h-0 flex flex-col landscape:flex-row md:flex-row items-center justify-between gap-2 md:gap-6 px-1 md:px-5 relative z-10 overflow-hidden">
           {/* Left Chamfered Petrol-Blue Specs Card */}
-          <div className="dc-arena-spec-wrap w-full max-w-[360px] landscape:w-[220px] md:w-[310px] shrink-0 order-2 landscape:order-1 md:order-1">
+          <div className="dc-arena-spec-wrap w-full max-w-[360px] landscape:w-[235px] md:w-[310px] max-h-full overflow-y-auto shrink-0 order-2 landscape:order-1 md:order-1">
             <div className="dc-arena-spec-card-border">
-              <div className="dc-arena-spec-card p-2.5 md:p-4 flex flex-col justify-between">
+              <div className="dc-arena-spec-card p-2.5 landscape:p-2 md:p-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <ArenaBrandEmblem brand={featuredSpecs.brand} className="w-9 h-7 md:w-12 md:h-10 shrink-0" />
-                    <div className="h-7 w-[1.5px] bg-slate-500/45 shrink-0" />
+                    <ArenaBrandEmblem brand={featuredSpecs.brand} className="w-8 h-6 md:w-12 md:h-10 shrink-0" />
+                    <div className="h-6 w-[1.5px] bg-slate-500/45 shrink-0" />
                     <div className="min-w-0">
-                      <div className="font-display text-lg md:text-3xl font-black italic tracking-wide text-[#F3F7FC] uppercase leading-none truncate">
+                      <div className="font-display text-base md:text-3xl font-black italic tracking-wide text-[#F3F7FC] uppercase leading-none truncate">
                         {featuredSpecs.modelName}
                       </div>
-                      <div className="font-display text-[10px] md:text-xs font-extrabold italic tracking-wider text-[#00E5F5] uppercase truncate mt-0.5">
+                      <div className="font-display text-[9.5px] md:text-xs font-extrabold italic tracking-wider text-[#00E5F5] uppercase truncate mt-0.5">
                         {featuredSpecs.trimBadge}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-1.5">
-                    <span className="inline-block px-2 py-0.5 font-display text-[9px] md:text-xs font-black italic uppercase tracking-wider text-[#04131A] bg-[#00E5F5]" style={{clipPath:'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)'}}>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="inline-block px-2 py-0.5 font-display text-[8.5px] md:text-xs font-black italic uppercase tracking-wider text-[#04131A] bg-[#00E5F5]" style={{clipPath:'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)'}}>
                       {featuredSpecs.categoryBadge}
                     </span>
                   </div>
-                  <p className="mt-1 text-[10px] md:text-xs text-[#F3F7FC]/90 leading-snug line-clamp-2">
+                  <p className="mt-1 text-[10px] md:text-xs text-[#F3F7FC]/90 leading-snug line-clamp-2 [@media(max-height:460px)]:hidden">
                     {featuredSpecs.summary}
                   </p>
-                  <p className="mt-1 text-[10px] md:text-[11px] font-bold text-[#FFAA12] leading-tight">
+                  <p className="mt-1 text-[9.5px] md:text-[11px] font-bold text-[#FFAA12] leading-tight [@media(max-height:420px)]:hidden">
                     {DATACAR_SELECTOR_COPY.onSelectVehicle}
                   </p>
                 </div>
 
-                <div className="mt-2 pt-1.5 border-t border-[#00E5F5]/25 divide-y divide-[#00E5F5]/20">
+                <div className="mt-1.5 pt-1 border-t border-[#00E5F5]/25 divide-y divide-[#00E5F5]/20">
                   <div className="flex items-center justify-between py-1 gap-2">
                     <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-[#F3F7FC] uppercase shrink-0">
                       <Zap size={12} className="text-[#00E5F5]" />

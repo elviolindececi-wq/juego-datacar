@@ -73,7 +73,7 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
       setVisibleCount((prev) => Math.min(totalCount, prev + 1));
       if (!soundEngine.getIsMuted()) {
         try {
-          soundEngine.playCountdownBeep(false);
+          soundEngine.playMessageNotification();
         } catch {
           // Respetar políticas de autoplay del navegador
         }
@@ -89,6 +89,13 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
     if (!allRevealed) {
       setVisibleCount((prev) => Math.min(totalCount, prev + 1));
       setIsTyping(visibleCount + 1 < totalCount);
+      if (!soundEngine.getIsMuted()) {
+        try {
+          soundEngine.playMessageNotification();
+        } catch {
+          // Respetar políticas de autoplay del navegador
+        }
+      }
     } else {
       onAccept();
     }
@@ -102,12 +109,12 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
   return (
     <div
       data-testid="datacar-phone-interface"
-      className="relative mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[28px] border-2 border-[#00E5F5]/55 bg-[#040d16]/98 text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,245,0.22)] select-none"
+      className="relative mx-auto flex w-full max-w-[460px] max-h-[calc(100dvh-6.2rem)] flex-col overflow-hidden rounded-[24px] sm:rounded-[28px] border-2 border-[#00E5F5]/55 bg-[#040d16]/98 text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,245,0.22)] select-none"
       role="region"
       aria-label="Teléfono encriptado DATACAR"
     >
       {/* Barra de estado del teléfono táctico */}
-      <div className="flex items-center justify-between border-b border-[#00E5F5]/20 bg-[#02080e] px-4 py-2 text-[10px] font-mono font-bold uppercase tracking-widest text-[#00E5F5]">
+      <div className="shrink-0 flex items-center justify-between border-b border-[#00E5F5]/20 bg-[#02080e] px-4 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-[#00E5F5]">
         <div className="flex items-center gap-1.5">
           <Radio className="h-3 w-3 animate-pulse text-[#FFAA12]" />
           <span>DATACAR SECURE OS</span>
@@ -119,7 +126,7 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
       </div>
 
       {/* Cabecera del remitente */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800/90 bg-[#071624] px-4 py-3">
+      <div className="shrink-0 flex items-center justify-between gap-2 border-b border-slate-800/90 bg-[#071624] px-3.5 py-2 sm:px-4 sm:py-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#00E5F5]/60 bg-[#00E5F5]/15 text-[#00E5F5] shadow-[0_0_12px_rgba(0,229,245,0.3)]">
             <Smartphone className="h-5 w-5" />
@@ -165,7 +172,7 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
 
       {/* Historial de mensajes progresivos */}
       <div
-        className="flex max-h-[52dvh] min-h-[250px] flex-col gap-2.5 overflow-y-auto px-4 py-4 bg-gradient-to-b from-[#040d16] via-[#061421] to-[#040c14]"
+        className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto px-3.5 py-2.5 sm:px-4 sm:py-4 bg-gradient-to-b from-[#040d16] via-[#061421] to-[#040c14]"
         aria-live="polite"
       >
         {visibleMessages.map((msg) => {
@@ -242,8 +249,8 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
         )}
       </div>
 
-      {/* Pie de controles táctiles grandes */}
-      <div className="border-t border-[#00E5F5]/25 bg-[#030a12] p-3.5 sm:p-4 space-y-2.5">
+      {/* Pie de controles táctiles grandes (siempre visible sin cortarse en móvil horizontal) */}
+      <div className="shrink-0 border-t border-[#00E5F5]/25 bg-[#030a12] px-3.5 py-2.5 sm:p-4 space-y-2">
         {!allRevealed ? (
           <div className="flex items-center gap-2">
             <button

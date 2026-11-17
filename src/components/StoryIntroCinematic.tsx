@@ -4,8 +4,8 @@ import {
   STORY_DIALOGUES_BY_CHAPTER,
   STORY_INTRO_10S_TIMELINE,
 } from '../utils/storyCampaign';
-import { AVIADORES_CIRCUIT_IMAGE_URL } from '../data/aviadoresHeroImage';
 import { resolveIntroCinematicCueAtTime } from '../utils/NarrativeDirector';
+import { soundEngine } from '../utils/soundEngine';
 import { DatacarPhoneMessages } from './DatacarPhoneMessages';
 
 export interface StoryIntroCinematicProps {
@@ -75,6 +75,18 @@ export const StoryIntroCinematic: React.FC<StoryIntroCinematicProps> = ({
   if (!open) return null;
 
   const activeCue = resolveIntroCinematicCueAtTime(elapsedSec);
+  const lastSoundCueIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || phase !== 'cinematic_10s' || !activeCue) return;
+    if (activeCue.kind === 'phone_notification' && lastSoundCueIdRef.current !== activeCue.id) {
+      lastSoundCueIdRef.current = activeCue.id;
+      try {
+        soundEngine.playMessageNotification();
+      } catch {
+        // Ignorar si autoplay bloqueado antes del primer toque
+      }
+    }
+  }, [open, phase, activeCue]);
   const progressPercent = Math.min(100, Math.round((elapsedSec / INTRO_DURATION_SEC) * 100));
 
   const skip10sToPhone = () => {
@@ -109,23 +121,13 @@ export const StoryIntroCinematic: React.FC<StoryIntroCinematicProps> = ({
           }`}
         />
 
-        {/* Escenario nocturno atmosférico de Asunción (siempre activo como base o escena principal generada) */}
-        <img
-          src={AVIADORES_CIRCUIT_IMAGE_URL}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center opacity-45 scale-105 transition-transform duration-1000"
-          style={{
-            transform: `scale(${1.04 + (elapsedSec / INTRO_DURATION_SEC) * 0.08}) translateY(${-(elapsedSec * 0.6)}px)`,
-          }}
-        />
-
-        {/* Gradientes nocturnos cinematográficos y haces de luz urbana */}
+        {/* Fondo nocturno táctico generado al instante (0ms sin imágenes pesadas en móvil) */}
         <div
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(circle at 50% 42%, rgba(0, 229, 245, 0.14) 0%, rgba(4, 12, 22, 0.86) 62%, rgba(2, 5, 10, 0.98) 100%),
-              linear-gradient(180deg, rgba(2, 6, 12, 0.92) 0%, rgba(4, 12, 20, 0.35) 45%, rgba(2, 6, 12, 0.95) 100%)
+              radial-gradient(circle at 50% 42%, rgba(0, 229, 245, 0.22) 0%, rgba(7, 21, 36, 0.92) 55%, rgba(2, 6, 12, 0.99) 100%),
+              linear-gradient(180deg, #030a14 0%, #071b2d 48%, #02060c 100%)
             `,
           }}
         />

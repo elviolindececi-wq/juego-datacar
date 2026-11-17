@@ -837,6 +837,30 @@ class EngineSoundSynthesizer {
     osc.onended = () => { osc.disconnect(); gain.disconnect(); };
   }
 
+  /** Sonido de notificación tipo mensaje al recibir comunicaciones de CENTRAL DATACAR. */
+  playMessageNotification() {
+    if (this.muted) return;
+    this.unlock();
+    if (!this.ctx || !this.master) return;
+    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1318.5, t + .075);
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.linearRampToValueAtTime(.11, t + .012);
+    gain.gain.exponentialRampToValueAtTime(.045, t + .072);
+    gain.gain.linearRampToValueAtTime(.13, t + .085);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .24);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + .25);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+  }
+
   /** Sirena policial bitonal al atropellar a un peatón e ir detenido a la comisaría. */
   playPoliceSiren() {
     this.clearSuspendTimer();
