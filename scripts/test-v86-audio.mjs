@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const root = new URL('../', import.meta.url);
+const load = (p) => readFileSync(new URL(p, root), 'utf8');
+const audio=load('src/utils/soundEngine.ts');
+const view=load('src/components/Race3DPerspectiveView.tsx');
+const physics=load('src/utils/interactiveRacePhysics.ts');
+for(const word of ['brakeGain','brakeIntensity','brakeSlip','absActive','brakeVolume']) assert.ok(audio.includes(word), `Falta audio: ${word}`);
+assert.ok(/voice\.brakeGain\.gain\.setTargetAtTime\(brakeVolume/.test(audio), 'Audio con ganancia variable');
+assert.ok(/fadeGain\(voice\.brakeGain\)/.test(audio), 'Fade al terminar evita clic');
+assert.ok(/soundEngine\.updateTelemetry\(/.test(view) && view.includes('st.brakeIntensity, st.absActive, st.brakeSlip'), 'Telemetría conecta frenada/audio');
+assert.ok(view.includes('ABS ACTIVO'), 'HUD ABS');
+assert.ok(physics.includes('absActive: car.absActive, brakeIntensity: car.brakeIntensity, brakeSlip: car.brakeSlip'), 'Replay graba frenada');
+console.log('OK V8.6: audio de emergencia con ganancia gradual, ABS y datos para repetición.');

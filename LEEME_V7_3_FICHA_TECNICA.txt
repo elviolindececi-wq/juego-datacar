@@ -1,0 +1,13 @@
+DATACAR ARENA V7.3 — FICHA TECNICA EN SELECCION DE AUTOS
+
+REQUISITO: Tener V7.2 instalado. Este parche no contiene fotos, MP4 ni modelos GLB.
+
+NOVEDADES:
+- COMPARAR: ficha técnica visible al explorar cada auto antes de elegir hasta dos.
+- MODO CARRERA: ficha técnica visible junto al showroom 360° antes de confirmar.
+- Datos procedentes de src/data/presetVehicles.ts sin agregar valores nuevos.
+- Botón para desplegar/ocultar dimensiones, equipamiento, seguridad y confort.
+- Se retira la indicación de ficha verificada, ya que falta validar cada dato con el fabricante.
+- No cambia física, telemetría, comparación ni controles.
+
+INSTALACION: extraer el ZIP sobre la carpeta del proyecto, permitiendo reemplazar los archivos src/App.tsx y src/components/CarShowroom3D.tsx. Reiniciar servidor npm run dev y recargar navegador.

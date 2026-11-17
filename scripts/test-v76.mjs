@@ -1,0 +1,16 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
+const app = read('../src/App.tsx');
+const race = read('../src/components/Race3DPerspectiveView.tsx');
+const entity = read('../src/utils/vehicle3DEntity.ts');
+const street = read('../src/utils/urbanTrackScenery.ts');
+assert.ok(app.includes('¿Querés dejar los jueguitos y pasar a los autos reales?'), 'Falta llamada comercial final');
+assert.ok(app.includes('href="https://datacarpy.com"'), 'Falta enlace de DATACAR');
+assert.equal((app.match(/<RealCarsCTA\/>/g) ?? []).length, 3, 'El CTA debe estar en comparación, podio y repetición');
+assert.ok(race.includes("useState(experience !== 'race')"), 'Las etiquetas deben apagarse al conducir');
+assert.ok(race.includes('Nombres {showVehicleLabels'), 'Falta interruptor etiquetas');
+assert.ok(entity.includes('this.nameplateSprite.visible = visible'), 'Falta visibilidad real sobre los autos');
+assert.ok(race.includes('createUrbanTrackScenery(roadWidth, trackLength'), 'No se integró el entorno urbano');
+assert.ok(street.includes('new THREE.InstancedMesh(') && street.includes('lane_markings'), 'Faltan elementos optimizados de pista');
+console.log('OK V7.6: CTA al terminar, ocultación de etiquetas y entorno urbano instanciado.');

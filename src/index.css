@@ -1,0 +1,1313 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Barlow Condensed', 'Plus Jakarta Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #090d16;
+    color: #f1f5f9;
+    overflow-x: hidden;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom slick dark motorsport scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #24324d;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Siluetas urbanas procedimentales, livianas y propias de DATACAR ARENA. */
+.dc-city-building {
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 9px, rgba(62, 196, 224, .20) 10px 12px, transparent 13px 23px),
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(161, 210, 220, .17) 10px 12px, transparent 13px 26px),
+    linear-gradient(180deg, #203b4a 0%, #06101a 100%);
+  box-shadow: inset 0 0 22px rgba(0,0,0,.75), 0 0 18px rgba(4,10,20,.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-city-building, .dc-city-skyline { animation: none !important; }
+}
+
+
+/* DATACAR ARENA V9.7 · conducción mobile real, sin modificar el motor físico. */
+.dc-mobile-controls, .dc-portrait-prompt, .dc-landscape-toggle { display: none; }
+@media (pointer: coarse) {
+  .dc-landscape-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 12px; background: #0e7490; color: white; font-size: 12px; font-weight: 800; cursor: pointer; }
+  .dc-mobile-controls { display: flex; position: absolute; z-index: 35; left: 0; right: 0; bottom: max(10px, env(safe-area-inset-bottom)); padding: 0 max(15px, env(safe-area-inset-right)) 0 max(15px, env(safe-area-inset-left)); justify-content: space-between; align-items: end; pointer-events: none; touch-action: none; }
+  .dc-touch-steering, .dc-touch-pedals { display: flex; gap: clamp(6px, 1.2vw, 14px); align-items: end; pointer-events: auto; }
+  .dc-touch-button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: clamp(55px, 9vw, 82px); height: clamp(55px, 9vw, 82px); padding: 4px; border-radius: 19px; border: 2px solid rgba(162,224,245,.58); background: rgba(4,16,31,.67); box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 5px 20px rgba(0,0,0,.35); color: #eefaff; font-weight: 800; font-size: 8px; text-align: center; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:none; }
+  .dc-touch-button span { display: none !important; font-size: 0 !important; visibility: hidden !important; }
+  .dc-touch-button.dc-touch-active { background: rgba(6,182,212,.82); border-color: white; transform: scale(.96); }
+  .dc-touch-throttle { border-color: rgba(52,211,153,.78); color: #a7f3d0; height: clamp(68px, 12vw, 100px); }
+  .dc-touch-brake { border-color: rgba(251,113,133,.8); color: #fecdd3; }
+  .dc-touch-reverse { border-color: rgba(251,191,36,.75); color: #fde68a; }
+  .dc-mobile-race .dc-race-viewport { touch-action: none; }
+}
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 950px) {
+  .dc-mobile-race .dc-race-viewport { min-height: 340px !important; }
+  .dc-portrait-prompt { display:flex; position:absolute; z-index: 50; inset:0; flex-direction:column; gap:12px; align-items:center; justify-content:center; padding:20px; background:rgba(3,9,19,.97); color:white; text-align:center; }
+  .dc-portrait-prompt strong { font-size:19px; }
+  .dc-portrait-prompt span { font-size:12px; max-width:270px; color:#cbd5e1; }
+  .dc-portrait-prompt button { display:flex; gap:8px; align-items:center; padding:12px; background:#0891b2; border-radius:12px; font-weight:800; font-size:12px; }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
+  body:has(.dc-mobile-race) { overflow:hidden; }
+  body:has(.dc-mobile-race):not(:has(.dc-jail-active)) > #root > div > header { display:none; }
+  body:has(.dc-mobile-race) > #root > div > main { padding:0; max-width:none; }
+  body:has(.dc-mobile-race) main > div > div:first-child, body:has(.dc-mobile-race) main > div > div:nth-child(2), body:has(.dc-mobile-race) main > div > p { display:none; }
+  .dc-mobile-race { position:fixed !important; inset:0; z-index:100; border:0; border-radius:0; width:100vw; height:100dvh; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+  .dc-mobile-race > div:first-of-type { padding:3px 10px; min-height:0; max-height:42px; overflow:hidden; flex-wrap:nowrap; gap:5px; }
+  .dc-mobile-race > div:first-of-type > div:first-child { max-width:36%; overflow:hidden; white-space:nowrap; }
+  .dc-mobile-race > div:first-of-type > div:first-child p, .dc-mobile-race > div:first-of-type > div:first-child span:nth-child(n+3) { display:none; }
+  .dc-mobile-race > div:first-of-type > div:nth-child(2) { gap:3px; flex-wrap:nowrap; overflow:auto hidden; }
+  .dc-mobile-race > div:first-of-type button { padding:4px 6px; font-size:10px; }
+  .dc-mobile-race .dc-race-viewport { height:calc(100dvh - 84px) !important; min-height:0 !important; flex:1; }
+  .dc-mobile-race .dc-race-viewport > div:has(> span) { font-size:9px; }
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 { right:7px; bottom:12px; transform:scale(.62); transform-origin:bottom right; opacity:.92; }
+  .dc-mobile-race .dc-race-viewport > div.absolute.left-4.bottom-5 { left:8px; bottom:108px; transform:scale(.62); transform-origin:bottom left; }
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-\[224px\] { display:none; }
+  .dc-mobile-race .dc-race-viewport > div.absolute.left-3 { max-width:230px; font-size:9px; }
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-3 { display:none; }
+  .dc-mobile-race .dc-race-viewport .dc-touch-button { width:clamp(53px, 9vw, 74px); height:clamp(53px, 9vw, 74px); }
+  .dc-mobile-race .dc-race-viewport .dc-touch-throttle { height:clamp(66px, 11vw, 88px); }
+  .dc-mobile-race .dc-landscape-toggle { position:absolute; z-index:120; top:3px; right:4px; width:27px; height:27px; overflow:hidden; padding:4px; border-radius:7px; }
+  .dc-mobile-race .dc-landscape-toggle span { display:none; }
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:390px) {
+ .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 { transform:scale(.48); }
+ .dc-mobile-race .dc-race-viewport > div.absolute.left-4.bottom-5 { display:none; }
+ .dc-touch-button span { display:none; }
+}
+
+/* V9.8 — experiencia de videojuego desde el primer contacto en smartphone */
+.dc-mobile-start,.dc-mobile-game-top,.dc-mobile-camera-menu,.dc-mobile-pause-screen { display:none; }
+@media (max-width: 950px) and (pointer:coarse) {
+  .dc-desktop-start { display:none !important; }
+  .dc-mobile-start { display:flex; position:relative; isolation:isolate; min-height:100dvh; width:100%; flex-direction:column; justify-content:space-between; overflow:hidden; background:radial-gradient(ellipse at 50% 43%,#143b50 0%,#071625 50%,#02050d 94%); color:white; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+  .dc-mobile-start-glow { position:absolute; z-index:-1; inset:15% -20% 0; background:repeating-linear-gradient(167deg,transparent 0 28px,rgba(42,180,210,.06) 29px 31px,transparent 32px 65px); transform:perspective(360px) rotateX(55deg); pointer-events:none; }
+  .dc-mobile-game-brand { display:flex; flex-direction:column; align-items:center; font-weight:900; font-style:italic; letter-spacing:-.03em; line-height:.96; font-size:clamp(24px,7vw,36px); text-shadow:0 3px 18px #000; }
+  .dc-mobile-game-brand b { color:#4de1ff; font-weight:400; } .dc-mobile-game-brand strong {font-size:clamp(36px,10vw,54px);letter-spacing:.12em;}
+  .dc-mobile-game-brand small {font-style:normal;font-size:9px;letter-spacing:.32em;color:#a9bdc8;margin-top:8px;}
+  .dc-mobile-hero-copy {text-align:center; margin-top:clamp(12px,4dvh,35px);}
+  .dc-mobile-eyebrow {color:#fbbf24;letter-spacing:.24em;font-size:10px;font-weight:900;}
+  .dc-mobile-hero-copy h1 {font-family:var(--font-display);font-weight:900;font-style:italic;font-size:clamp(35px,10vw,58px);line-height:.95;margin-top:5px;}
+  .dc-mobile-hero-copy em {color:#67e8f9;font-style:inherit;}
+  .dc-mobile-car-picker {position:relative;display:flex;align-items:center;justify-content:space-between;min-height:clamp(128px,24dvh,300px);gap:4px;}
+  .dc-mobile-car-picker img {min-width:0;max-width:78%;max-height:clamp(125px,25dvh,290px);object-fit:contain;filter:drop-shadow(0 24px 17px rgba(0,0,0,.65));}
+  .dc-mobile-pick-arrow {display:grid;place-items:center;flex:0 0 42px;height:48px;border:1px solid rgba(125,211,252,.45);border-radius:13px;background:rgba(3,9,19,.72);}
+  .dc-mobile-car-title {text-align:center;display:flex;flex-direction:column;gap:4px;}
+  .dc-mobile-car-title span {font-size:10px;color:#67e8f9;letter-spacing:.18em;font-weight:800;}
+  .dc-mobile-car-title strong {font-family:var(--font-display);font-size:clamp(25px,7vw,40px);line-height:1.05;text-transform:uppercase;}
+  .dc-mobile-car-title small {color:#c4ced8;font-size:11px;}
+  .dc-mobile-start-actions {display:flex;flex-direction:column;gap:9px;max-width:480px;width:100%;margin:14px auto 0;}
+  .dc-mobile-start-actions button {display:flex;align-items:center;justify-content:center;gap:9px;font-weight:900;letter-spacing:.07em;border-radius:13px;min-height:48px;border:1px solid #526575;background:rgba(7,16,31,.95);font-size:12px;}
+  .dc-mobile-start-actions .dc-mobile-play {min-height:58px;background:linear-gradient(90deg,#0ea5c9,#67e8f9);color:#041321;border:1px solid #a5f3fc;font-size:16px;box-shadow:0 0 26px rgba(34,211,238,.22);}
+  .dc-mobile-start-actions>div {display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .dc-mobile-disclaimer {text-align:center;color:#71879a;font-size:9px;margin-top:10px;}
+  .dc-app-shell>header {padding:0 4px;}
+  .dc-app-shell>header>div {padding:10px 12px;gap:6px;}
+  .dc-app-shell>header>div>div {gap:3px;font-size:10px;}
+  .dc-app-shell>header>div>div>span {display:none;}
+  .dc-app-main {padding:16px 12px 40px;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"] {gap:3px;margin-bottom:14px;justify-content:center;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"]>svg {display:none;}
+  .dc-app-main .mb-7[aria-label="Etapas de la experiencia"]>div {padding:5px 7px;font-size:9px;letter-spacing:0;}
+  .dc-game-home>div.mx-auto {padding:6px 0;}
+  .dc-game-home h1 {font-size:clamp(33px,10vw,54px);}
+  .dc-app-main button {touch-action:manipulation;}
+  .dc-app-main button:not(.dc-touch-button) {min-height:38px;}
+  .dc-app-main .grid {min-width:0;}
+  .dc-game-running>div:not(:has(.dc-mobile-race)) {display:none;}
+  .dc-game-running>p {display:none;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:650px) {
+  .dc-mobile-start {flex-direction:row;flex-wrap:wrap;align-content:center;align-items:center;gap:8px 3%;padding:12px max(22px,env(safe-area-inset-right)) 12px max(22px,env(safe-area-inset-left));}
+  .dc-mobile-game-brand {width:100%;flex-direction:row;gap:9px;justify-content:center;font-size:17px;}
+  .dc-mobile-game-brand strong {font-size:25px;}.dc-mobile-game-brand small{margin:0;font-size:7px;}
+  .dc-mobile-hero-copy {width:38%;margin:0;text-align:left;}.dc-mobile-hero-copy h1{font-size:clamp(34px,5vw,50px);}
+  .dc-mobile-car-picker {width:58%;min-height:clamp(105px,35dvh,230px);}
+  .dc-mobile-car-picker img {max-height:38dvh;}
+  .dc-mobile-car-title {width:38%;text-align:left;}.dc-mobile-car-title strong{font-size:23px;}
+  .dc-mobile-start-actions {width:58%;margin:0;max-width:none;}
+  .dc-mobile-start-actions .dc-mobile-play{min-height:43px;font-size:13px;}
+  .dc-mobile-start-actions button {min-height:34px;font-size:10px;}
+  .dc-mobile-disclaimer {width:100%;margin:0;}
+  .dc-mobile-race .dc-race-viewport {height:100dvh !important;min-height:0 !important;flex:1;}
+  .dc-mobile-race>div:first-of-type {display:none !important;}
+  .dc-mobile-race>.border-t {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-3.right-3 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-3.left-3 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-\[96px\] {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 {right:calc(50% - 80px);bottom:3px;transform:scale(.43);transform-origin:bottom center;opacity:.85;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.left-4.bottom-5 {display:none !important;}
+  .dc-mobile-race .dc-race-viewport > div.absolute.top-4.right-4 {right:12px;top:50px;}
+  .dc-mobile-race .dc-landscape-toggle {display:none;}
+  .dc-mobile-controls {bottom:max(8px,env(safe-area-inset-bottom));padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right));}
+  .dc-mobile-game-top {position:absolute;z-index:42;display:flex;align-items:center;gap:7px;top:max(4px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));pointer-events:auto;}
+  .dc-mobile-track-name {font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36%;text-transform:uppercase;font-weight:900;color:#8be8ff;text-shadow:0 2px 5px #000;}
+  .dc-mobile-clock {font-weight:900;font-variant-numeric:tabular-nums;font-size:13px;margin-left:auto;text-shadow:0 2px 5px #000;}
+  .dc-mobile-game-top button {display:grid;place-items:center;min-width:35px;height:35px;background:rgba(2,8,20,.8);border:1px solid rgba(103,232,249,.38);border-radius:10px;}
+  .dc-mobile-camera-menu {display:flex;position:absolute;z-index:49;right:max(45px,env(safe-area-inset-right));top:42px;background:#071322;border:1px solid #276174;border-radius:12px;padding:6px;gap:4px;flex-direction:column;box-shadow:0 12px 35px #0009;}
+  .dc-mobile-camera-menu button {padding:8px 13px;text-align:left;font-size:12px;border-radius:7px;}
+  .dc-mobile-camera-menu button:active {background:#16445b;}
+  .dc-mobile-pause-screen {display:flex;position:absolute;z-index:80;inset:0;background:rgba(1,7,17,.96);align-items:center;justify-content:center;flex-direction:column;gap:9px;overflow-y:auto;}
+  .dc-mobile-pause-screen h2 {font-family:var(--font-display);font-size:40px;font-weight:900;font-style:italic;line-height:1;}
+  .dc-mobile-pause-screen p{font-size:10px;color:#67e8f9;letter-spacing:.2em;margin-bottom:5px;}
+  .dc-mobile-pause-screen button,.dc-mobile-pause-screen label {width:min(260px,70vw);min-height:35px;display:flex;align-items:center;justify-content:center;gap:8px;padding:5px;border:1px solid #334e62;border-radius:9px;background:#101d30;font-size:12px;font-weight:700;}
+  .dc-mobile-pause-screen .dc-mobile-resume {background:#22d3ee;color:#06131c;border-color:#a5f3fc;}
+  .dc-mobile-pause-screen select {background:transparent;font-size:12px;}
+  .dc-mobile-race .dc-touch-steering{gap:10px;}
+  .dc-mobile-race .dc-touch-pedals{gap:9px;}
+  .dc-mobile-race .dc-touch-button{width:clamp(48px,8.5vw,72px);height:clamp(48px,8.5vw,72px);border-radius:18px;}
+  .dc-mobile-race .dc-touch-throttle{height:clamp(64px,12vw,86px);}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:390px) {
+  .dc-mobile-race .dc-race-viewport > div.absolute.bottom-4.right-4 {transform:scale(.36);}
+  .dc-mobile-game-top button {height:29px;min-width:31px;}
+}
+
+/* DATACAR ARENA V9.9 · Mobile game shell. Desktop remains unchanged. */
+.dc99-game { display:none; }
+@media (pointer:coarse) and (max-width:1100px), (pointer:coarse) and (max-height:560px) {
+  html:has(.dc99-game),body:has(.dc99-game),body:has(.dc99-game) #root { margin:0!important; padding:0!important; width:100%;height:100%;overscroll-behavior:none;overflow:hidden!important;background:#030916; }
+  .dc99-game { display:flex; flex-direction:column; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; z-index:1000; isolation:isolate; overflow:hidden; color:#f8fbff; background:radial-gradient(circle at 65% 50%, #14374a 0%,#091525 44%,#02050e 100%); font-family:var(--font-sans);touch-action:pan-y; }
+  .dc99-game button {cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+  .dc99-game button:focus-visible,.dc99-game select:focus-visible {outline:2px solid #67e8f9;outline-offset:2px;}
+  .dc99-game :disabled {opacity:.36;cursor:not-allowed;}
+  .dc99-world{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:radial-gradient(ellipse at 65% 50%,rgba(15,135,163,.18),transparent 57%);}
+  .dc99-world-grid{position:absolute;inset:40% -40% -70%;background:repeating-linear-gradient(0deg,transparent 0 43px,#44b7db10 44px 45px),repeating-linear-gradient(90deg,transparent 0 80px,#44b7db12 81px 82px);transform:perspective(500px) rotateX(67deg);}
+  .dc99-topbar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #ffffff18;padding:3px max(17px,env(safe-area-inset-right)) 3px max(17px,env(safe-area-inset-left));background:#030b1cb8;position:relative;z-index:2;}
+  .dc99-logo{font-weight:900;font-size:17px;white-space:nowrap;letter-spacing:-.07em;}.dc99-logo span{color:#40dafa;font-weight:500;}.dc99-logo strong{letter-spacing:0;font-size:14px;margin-left:4px;}.dc99-logo small{font-size:8px;letter-spacing:.19em;font-weight:600;color:#7493a7;margin-left:9px;}
+  .dc99-back,.dc99-icon{height:35px;width:37px;display:grid;place-items:center;background:#102236;border:1px solid #32516a;border-radius:10px;flex-shrink:0;}.dc99-icon{margin-left:auto;}
+  .dc99-step{border:1px solid #174a5e;background:#0a2533;border-radius:20px;color:#67e8f9;font-size:9px;padding:6px 10px;font-weight:900;letter-spacing:.13em;margin-left:auto;white-space:nowrap;}
+  .dc99-primary,.dc99-secondary{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:42px;border-radius:12px;padding:8px 19px;font-size:12px;font-weight:900;letter-spacing:.05em;text-align:center;white-space:nowrap;}
+  .dc99-primary{color:#061625;background:linear-gradient(135deg,#19bde0,#74ecff);border:1px solid #a5f3fc;box-shadow:0 3px 28px #22d3ee33;}.dc99-secondary{background:#0c1b2cdd;color:#d4e4f0;border:1px solid #456075;}
+  .dc99-home{display:grid;grid-template-columns:40% 60%;grid-template-rows:1fr auto;flex:1;min-height:0;align-items:center;padding:10px max(25px,env(safe-area-inset-right)) 6px max(25px,env(safe-area-inset-left));position:relative;}
+  .dc99-home-copy{position:relative;z-index:2;align-self:center;}.dc99-overline,.dc99-heading>span{font-size:10px;color:#fdbd42;letter-spacing:.19em;font-weight:900;}.dc99-home-copy h1{font-family:var(--font-display);font-size:clamp(39px,6.7vw,94px);font-style:italic;font-weight:900;line-height:.89;margin:10px 0;white-space:nowrap;text-shadow:0 7px 17px #030711;}.dc99-home-copy h1 em{font-style:inherit;color:#57dfff;}.dc99-home-copy>p{font-size:11px;color:#bed2de;margin-bottom:17px;}.dc99-home-copy button{display:flex;margin-top:8px;min-width:175px;}
+  .dc99-hero-car{height:100%;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;}.dc99-hero-glow{position:absolute;inset:17% 0;background:radial-gradient(ellipse,#29b6df4a,transparent 68%);filter:blur(12px);}.dc99-hero-car img{width:100%;height:84%;object-fit:contain;position:relative;filter:drop-shadow(0 24px 20px #000c);}.dc99-hero-car>span{position:absolute;bottom:3%;right:5%;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#dff9ff;}.dc99-home-footer{grid-column:1/-1;color:#6d91a5;font-size:9px;letter-spacing:.14em;font-weight:900;align-self:end;text-align:center;}.dc99-home-footer b{color:#3b5f72;padding:0 8px;}
+  .dc99-picker{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:6px max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));}.dc99-heading{text-align:center;flex:none;}.dc99-heading h1{font-family:var(--font-display);font-size:clamp(22px,4.2vw,40px);font-weight:900;font-style:italic;line-height:1;margin:1px 0 2px;}.dc99-heading p{font-size:10px;color:#8fa7b6;}.dc99-deck{display:flex;align-items:center;justify-content:center;gap:6px;flex:1 0 auto;min-height:206px;position:relative;padding:2px 0 14px;}.dc99-snap-row{display:flex;align-items:stretch;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:8%;gap:14px;width:min(760px,88%);height:auto;min-height:192px;max-height:330px;position:relative;scrollbar-width:none;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;}.dc99-snap-row::-webkit-scrollbar{display:none;}.dc99-snap-slide{scroll-snap-align:center;flex:0 0 84%;min-width:0;min-height:0;transition:opacity .17s,transform .17s;opacity:.68;transform:scale(.95);cursor:pointer;display:flex;}.dc99-snap-slide.dc99-active{opacity:1;transform:scale(1);}.dc99-deck-arrow{background:#101f31dd;border:1px solid #3e657b;color:#9deeff;border-radius:50%;height:38px;width:38px;flex-shrink:0;display:grid;place-items:center;}.dc99-deck-dots{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:6px;}.dc99-deck-dots button{height:5px;width:12px;background:#537184;border-radius:20px;}.dc99-deck-dots button.selected{width:27px;background:#5edfff;}
+  .dc99-track-card,.dc99-car-card{height:auto;min-height:190px;width:100%;border:1px solid #2c5064;border-radius:17px;background:linear-gradient(145deg,#0d2434f2,#050d1bf5);position:relative;padding:10px 12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 40px #0007;}.dc99-track-card h2,.dc99-car-card h2{font-family:var(--font-display);font-size:clamp(18px,3.1vw,28px);text-transform:uppercase;line-height:1.06;font-weight:900;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0;}.dc99-track-card>p,.dc99-car-card>p{font-size:11px;color:#9db5c4;margin-top:2px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0;}.dc99-track-art{height:118px;min-height:110px;margin-bottom:7px;overflow:hidden;position:relative;border-radius:10px;background:radial-gradient(circle at 50% 70%,color-mix(in srgb,var(--dc99-track-accent) 32%,#0c1f30),#08101d 75%);}.dc99-track-art:before{content:"";position:absolute;inset:40% 0 -90%;background:repeating-linear-gradient(90deg,#1b3240 0 25px,#273746 26px 27px);transform:perspective(160px) rotateX(40deg);}.dc99-track-road{position:absolute;left:44%;top:15%;width:15%;height:130%;background:linear-gradient(90deg,#627985 0 4%,#28333d 4% 96%,#627985 96%);transform:perspective(190px) rotateX(38deg);box-shadow:0 0 20px #000;}.dc99-track-road:after{content:"";position:absolute;left:48%;top:0;height:100%;border-left:2px dashed #c8b75d;}.dc99-track-number,.dc99-track-difficulty{position:absolute;z-index:2;font-size:9px;font-weight:900;letter-spacing:.12em;color:#d5faff;top:9px;left:10px;}.dc99-track-difficulty{left:auto;right:10px;bottom:10px;top:auto;}.dc99-stats{display:flex;gap:8px;margin-top:auto;padding-top:5px;font-weight:900;color:#a9eafd;font-size:10px;white-space:nowrap;flex-shrink:0;}.dc99-stats span+span{overflow:hidden;text-overflow:ellipsis;color:#afbdc7;}.dc99-selected{position:absolute;top:7px;right:9px;color:#5cecc6;font-size:8px;font-weight:900;display:flex;align-items:center;gap:3px;background:#05252aab;padding:3px 5px;border-radius:5px;}.dc99-car-frame{height:115px;min-height:95px;position:relative;display:grid;place-items:center;flex-shrink:0;}.dc99-car-frame>span{position:absolute;top:2px;left:2px;font-size:9px;color:#78b4cd;letter-spacing:.11em;}.dc99-car-frame img{width:100%;height:100%;min-height:0;object-fit:contain;filter:drop-shadow(0 13px 14px #000a);}
+  .dc99-actions{display:flex;justify-content:center;align-items:center;gap:10px;flex:0 0 auto;padding-top:5px;}.dc99-actions .dc99-primary{min-width:160px;}
+  .dc99-briefing{display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:auto 1fr auto;gap:7px 12px;padding:5px max(24px,env(safe-area-inset-right)) 9px max(24px,env(safe-area-inset-left));flex:1;min-height:0;align-items:center;}.dc99-briefing .dc99-heading{grid-column:1/-1;}.dc99-briefing-car,.dc99-briefing-track{border:1px solid #24536b;background:#081a2dce;border-radius:14px;display:flex;align-items:center;gap:10px;padding:10px;height:100%;min-height:0;}.dc99-briefing-car img{height:94%;width:49%;object-fit:contain;}.dc99-briefing h2{font-family:var(--font-display);font-size:clamp(17px,2.8vw,27px);font-weight:900;text-transform:uppercase;line-height:1.05;}.dc99-briefing-car span,.dc99-briefing-track span{font-size:9px;font-weight:900;color:#59d6f7;letter-spacing:.12em;}.dc99-briefing-car p,.dc99-briefing-track p{font-size:10px;color:#b2c3cf;margin-top:4px;}.dc99-briefing-car button,.dc99-briefing-track button{font-size:9px;font-weight:800;color:#60dfff;text-decoration:underline;margin-top:8px;}.dc99-briefing-track{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;}.dc99-weather{display:flex;align-items:center;gap:9px;grid-column:1/-1;justify-content:center;}.dc99-weather label{font-size:10px;color:#7fd8f0;font-weight:900;}.dc99-weather select{color:white;background:#0e2637;border:1px solid #2b6077;border-radius:8px;padding:6px;min-width:110px;font-size:11px;}.dc99-briefing .dc99-start-race{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));right:max(18px,env(safe-area-inset-right));}
+  .dc99-race-stage{position:fixed;inset:0;z-index:10;background:#020713;overflow:hidden;touch-action:none;}.dc99-race-stage .dc-mobile-race{position:absolute!important;inset:0!important;display:flex!important;flex-direction:column!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;overflow:hidden!important;}.dc99-race-stage .dc-mobile-race>div:first-of-type:not(.dc-race-viewport){display:none!important;}.dc99-race-stage .dc-mobile-race>.border-t{display:none!important;}.dc99-race-stage .dc-mobile-race>.dc-race-viewport{position:relative!important;display:block!important;flex:1 1 auto!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;max-height:none!important;overflow:hidden!important;}.dc99-race-stage .dc-mobile-race>.dc-race-viewport>div:first-of-type:not(.dc-portrait-prompt){height:100%!important;}.dc99-race-stage .dc-race-viewport canvas{display:block!important;max-width:none!important;}
+  .dc99-race-stage .dc-race-viewport>.absolute.top-3.right-3,.dc99-race-stage .dc-race-viewport>.absolute.top-3.left-3,.dc99-race-stage .dc-race-viewport>.absolute.bottom-3,.dc99-race-stage .dc-race-viewport>.absolute.top-\[96px\]{display:none!important;}
+  .dc99-race-stage .dc-race-viewport>.absolute.bottom-4.right-4{bottom:7px!important;right:39%!important;transform:scale(.40)!important;transform-origin:bottom center!important;opacity:.92!important;pointer-events:none!important;}.dc99-race-stage .dc-race-viewport>.absolute.left-4.bottom-5{display:none!important;}.dc99-race-stage .dc-race-viewport>.absolute.top-4.right-4{right:14px;top:52px;}
+  .dc99-race-stage .dc-mobile-game-top{position:absolute;z-index:45;display:flex;align-items:center;gap:7px;top:max(7px,env(safe-area-inset-top));left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));pointer-events:auto;}.dc99-race-stage .dc-mobile-track-name{max-width:40%;font-size:11px;font-weight:900;color:#a3eeff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;text-shadow:0 2px 5px #000;}.dc99-race-stage .dc-mobile-clock{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;margin-left:auto;text-shadow:0 2px 4px #000;}.dc99-race-stage .dc-mobile-game-top button{display:grid;place-items:center;min-width:36px;height:35px;padding:0;background:#051323d9;border:1px solid #44aec7a0;border-radius:10px;}
+  .dc99-race-stage .dc-mobile-controls{position:absolute!important;display:flex!important;align-items:flex-end!important;justify-content:space-between!important;inset:auto 0 max(11px,env(safe-area-inset-bottom))!important;padding-left:max(18px,env(safe-area-inset-left))!important;padding-right:max(18px,env(safe-area-inset-right))!important;z-index:50;pointer-events:none!important;}.dc99-race-stage .dc-mobile-controls button{pointer-events:auto!important;width:clamp(48px,8.0vw,75px)!important;height:clamp(48px,8.0vw,75px)!important;border-radius:15px!important;background:#061222b3;}.dc99-race-stage .dc-mobile-controls .dc-touch-throttle{height:clamp(58px,11vw,95px)!important;border-color:#4ade80!important;}.dc99-race-stage .dc-mobile-controls .dc-touch-button span{display:none!important;}.dc99-race-stage .dc-touch-steering,.dc99-race-stage .dc-touch-pedals{display:flex;gap:8px;}.dc99-race-stage .dc-touch-active{background:#1d8ca8!important;}
+  .dc99-race-stage .dc-mobile-camera-menu{display:flex;position:absolute;z-index:66;right:max(65px,env(safe-area-inset-right));top:45px;background:#061626;border:1px solid #3e8ca4;border-radius:12px;padding:6px;flex-direction:column;gap:3px;}.dc99-race-stage .dc-mobile-camera-menu button{padding:8px 14px;text-align:left;font-size:12px;}.dc99-race-stage .dc-mobile-pause-screen{display:flex;position:absolute;z-index:90;inset:0;background:#020916f5;flex-direction:column;align-items:center;justify-content:center;gap:8px;}.dc99-race-stage .dc-mobile-pause-screen h2{font-family:var(--font-display);font-weight:900;font-size:42px;}.dc99-race-stage .dc-mobile-pause-screen>button,.dc99-race-stage .dc-mobile-pause-screen label{display:flex;align-items:center;justify-content:center;width:220px;min-height:35px;border:1px solid #395c73;border-radius:9px;background:#0c2435;font-size:11px;font-weight:800;gap:8px;}.dc99-race-stage .dc-mobile-pause-screen .dc-mobile-resume{background:#4de3fa;color:#051521;}.dc99-race-stage .dc-mobile-pause-screen p{font-size:9px;letter-spacing:.18em;color:#8cdbee;}.dc99-race-stage .dc-mobile-pause-screen select{background:#0a1927;color:white;}
+  .dc99-race-stage .dc-portrait-prompt{display:none!important;}.dc99-race-stage .dc-landscape-toggle{display:none!important;}
+  .dc99-rotate{position:absolute;inset:0;z-index:9999;background:radial-gradient(circle at 50% 30%,#164c65,#030916 70%);display:flex;flex-direction:column;gap:19px;align-items:center;justify-content:center;text-align:center;padding:30px;color:white;touch-action:manipulation;}.dc99-rotate .dc99-logo{font-size:26px;}.dc99-rotate h1{font:italic 900 36px/1 var(--font-display);}.dc99-rotate p{font-size:13px;color:#bed5e5;max-width:285px;}.dc99-rotate small{max-width:290px;font-size:10px;color:#8da6b8;}.dc99-rotate-icon{position:relative;transform:rotate(90deg);color:#61dfff;}.dc99-rotate-icon svg+svg{position:absolute;right:-18px;top:-20px;}
+  .dc99-results{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:10px;padding:6px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));}.dc99-results-body{display:grid;grid-template-columns:1fr 1fr;gap:11px;flex:1;min-height:0;}.dc99-results-hero{min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}.dc99-results-hero img{height:65%;min-height:0;width:100%;object-fit:contain;}.dc99-results-hero h2{font:900 23px/1 var(--font-display);text-transform:uppercase;}.dc99-results-hero p{color:#67e8f9;font-weight:900;font-size:11px;}.dc99-ranking{border:1px solid #274e64;border-radius:12px;background:#0a1827ed;padding:8px 12px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:0;flex-shrink:0;}.dc99-ranking>div{display:flex;align-items:center;gap:10px;border-bottom:1px solid #304c6070;padding-bottom:6px;font-size:12px;}.dc99-ranking b{color:#f5c04e;font-size:17px;}.dc99-ranking span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.dc99-ranking strong{color:#80e7fa;font-variant-numeric:tabular-nums;}.dc99-ranking small{color:#7899ad;font-size:9px;}
+  .dc99-replay-back{position:absolute;z-index:200;top:8px;left:16px;background:#071829;color:#f2fcff;padding:8px 12px;border:1px solid #3c8095;border-radius:10px;display:flex;gap:7px;align-items:center;font-size:11px;font-weight:800;}
+  .dc99-info-backdrop{position:absolute;inset:0;z-index:500;background:#000c;display:grid;place-items:center;}.dc99-info{position:relative;background:#0a1c2b;color:white;border:1px solid #4488a1;border-radius:16px;padding:25px;max-width:min(550px,88vw);}.dc99-info>button{position:absolute;right:9px;top:9px;}.dc99-info h2{font-weight:900;font-size:20px;margin-bottom:9px;}.dc99-info p{font-size:12px;color:#b2c9d8;line-height:1.6;}.dc99-info a{font-size:11px;font-weight:900;color:#65e4fc;display:block;margin-top:17px;}
+}
+@media (pointer:coarse) and (max-width:1100px) and (orientation:portrait){.dc99-game:not(.dc99-allow-portrait)>*:not(.dc99-rotate){visibility:hidden!important;pointer-events:none!important;}.dc99-game:not(.dc99-allow-portrait)>.dc99-rotate{visibility:visible!important;pointer-events:auto!important;}}
+@media (pointer:coarse) and (max-width:1100px) and (orientation:landscape) and (max-height:420px), (pointer:coarse) and (orientation:landscape) and (max-height:420px){.dc99-topbar{height:40px;flex-basis:40px;}.dc99-topbar .dc99-back,.dc99-topbar .dc99-icon{height:29px;width:31px;}.dc99-logo{font-size:14px;}.dc99-logo strong{font-size:11px;}.dc99-heading h1{font-size:23px;}.dc99-heading>span{font-size:8px;}.dc99-heading p{font-size:9px;}.dc99-picker{padding-top:3px;padding-bottom:6px;}.dc99-deck{min-height:186px;padding-bottom:12px;}.dc99-snap-row{min-height:176px;max-height:none;}.dc99-primary,.dc99-secondary{min-height:38px;padding:6px 14px;font-size:11px;}.dc99-track-art{min-height:110px;}.dc99-track-card,.dc99-car-card{padding:8px 11px;min-height:176px;}.dc99-track-card h2,.dc99-car-card h2{font-size:19px;}.dc99-home-copy h1{font-size:clamp(35px,6vw,63px);}.dc99-home-copy>p{margin-bottom:9px;}.dc99-home-copy button{min-height:34px;}.dc99-briefing .dc99-start-race{bottom:5px;}.dc99-weather{justify-content:flex-start;margin-left:10px;}}
+@media (pointer:coarse) and (max-width:1100px), (pointer:coarse) and (max-height:560px) {
+  .dc99-replay>div:not(.dc99-replay-back){position:absolute!important;inset:0;display:flex!important;flex-direction:column!important;border:0!important;border-radius:0!important;min-height:0!important;overflow:hidden!important;}
+  .dc99-replay>div>.dc-race-viewport{height:100%!important;min-height:0!important;flex:1 1 auto!important;}
+  .dc99-replay>div>div:first-child:not(.dc-race-viewport){display:none!important;}
+  .dc99-replay>div>.border-t{display:none!important;}
+}
+@media (pointer:coarse) and (max-width:1100px) and (orientation:landscape) and (max-height:420px){.dc99-topbar .dc99-help{display:none;}}
+
+/* DATACAR Mobile V10: zonas funcionales sin superposición.
+   El centro de la pista permanece vacío; controles en esquinas inferiores,
+   mini mapa y HUD en esquinas superiores, sin barras de escritorio. */
+@media (pointer:coarse) and (max-width:1100px) {
+ .dc100-loading { position:absolute;inset:0;display:grid;place-items:center;padding:20px;background:radial-gradient(ellipse at 50% 40%,#0e3551 0%,#030815 72%);z-index:200;color:#fff; }
+ .dc100-loading-inner {width:min(440px,75vw);display:flex;flex-direction:column;gap:10px;text-align:center;}
+ .dc100-loading-title {color:#9deeff;font-weight:900;font-size:clamp(14px,2.2vw,23px);letter-spacing:.16em;margin-top:10px;}
+ .dc100-loading-track {width:100%;height:12px;border:1px solid #3c829d;border-radius:999px;background:#081a2b;overflow:hidden;}
+ .dc100-loading-track>div {height:100%;background:linear-gradient(90deg,#04a8dc,#70effc);transition:width .16s ease-out;border-radius:inherit;}
+ .dc100-loading-meta {display:flex;justify-content:space-between;align-items:start;gap:15px;text-align:left;font-size:11px;color:#adcadb;}
+ .dc100-loading-meta strong {color:#6be9fb;font-size:13px;}
+ .dc99-race-stage .dc100-race-ranking,.dc99-race-stage .dc100-race-camera-desktop,.dc99-race-stage .dc100-race-insight {display:none!important;}
+ .dc99-race-stage .dc-mobile-game-top {height:34px;top:max(5px,env(safe-area-inset-top));}
+ .dc99-race-stage .dc100-race-map {display:block!important;position:absolute!important;left:max(8px,env(safe-area-inset-left))!important;top:42px!important;bottom:auto!important;transform:scale(.55)!important;transform-origin:top left!important;opacity:.84;z-index:23;}
+ .dc99-race-stage .dc100-race-gauges {display:block!important;position:absolute!important;right:max(9px,env(safe-area-inset-right))!important;top:43px!important;bottom:auto!important;left:auto!important;transform:scale(.43)!important;transform-origin:top right!important;opacity:.92;z-index:23;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-map {max-width:none!important;}
+ .dc99-race-stage .dc-mobile-controls {bottom:max(9px,env(safe-area-inset-bottom))!important;inset:auto 0 max(9px,env(safe-area-inset-bottom))!important;}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-steering {margin-left:max(4px,env(safe-area-inset-left));}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-pedals {margin-right:max(4px,env(safe-area-inset-right));}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-button {width:clamp(50px,7.5vw,70px)!important;height:clamp(50px,7.5vw,70px)!important;}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-throttle {height:clamp(58px,9vw,85px)!important;}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-steering,.dc99-race-stage .dc-mobile-controls .dc-touch-pedals {gap:clamp(5px,1.1vw,10px)!important;}
+ .dc99-race-stage .dc-mobile-clock {margin-right:2px;}
+ .dc99-race-stage .dc-race-viewport > div.absolute.bottom-\[224px\] {display:none!important;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-width:1100px) and (max-height:360px) {
+ .dc99-race-stage .dc100-race-map {transform:scale(.40)!important;}
+ .dc99-race-stage .dc100-race-gauges {transform:scale(.33)!important;}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-button {width:48px!important;height:48px!important;}
+ .dc99-race-stage .dc-mobile-controls .dc-touch-throttle {height:57px!important;}
+}
+/* Mayor especificidad que los estilos heredados de V9.7/V9.9. */
+@media (pointer:coarse) and (max-width:1100px) {
+ .dc99-race-stage .dc-race-viewport > .dc100-race-map.absolute.left-4.bottom-5 {display:block!important;left:max(8px,env(safe-area-inset-left))!important;top:42px!important;bottom:auto!important;transform:scale(.55)!important;transform-origin:top left!important;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-gauges.absolute.bottom-4.right-4 {display:block!important;top:43px!important;bottom:auto!important;right:max(9px,env(safe-area-inset-right))!important;transform:scale(.43)!important;transform-origin:top right!important;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-insight.absolute.top-\[96px\] {display:none!important;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-camera-desktop.absolute.top-3.right-3 {display:none!important;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-ranking.absolute.top-3.left-3 {display:none!important;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-width:1100px) and (max-height:360px){
+ .dc99-race-stage .dc-race-viewport > .dc100-race-map.absolute.left-4.bottom-5 {transform:scale(.40)!important;}
+ .dc99-race-stage .dc-race-viewport > .dc100-race-gauges.absolute.bottom-4.right-4 {transform:scale(.33)!important;}
+}
+
+/* DATACAR V11: mobile-first consolidado. Desktop queda intacto.
+   El HUD primario prioriza legibilidad; la información original vive en DATOS +.
+   Un showroom y resultados completos son overlays desplazables. */
+@media (pointer:coarse) and (max-width:1100px) {
+ .dc99-race-stage .dc11-desktop-hud {display:none!important;}
+ .dc99-race-stage .dc11-mobile-speed {position:absolute;right:max(12px,env(safe-area-inset-right));top:55px;z-index:32;min-width:clamp(132px,18vw,206px);border:1px solid #38d7fa80;border-radius:14px;padding:9px 13px;background:linear-gradient(145deg,#071626f5,#122940f0);box-shadow:0 10px 32px #0008;pointer-events:auto;text-align:right;}
+ .dc11-mobile-speed>span {font-size:9px;letter-spacing:.18em;color:#7ae9fb;font-weight:900;}
+ .dc11-mobile-speed>div {display:flex;align-items:baseline;gap:7px;justify-content:flex-end;}
+ .dc11-mobile-speed>div strong {font-size:clamp(34px,5.8vw,61px);font-weight:950;line-height:1;color:white;font-variant-numeric:tabular-nums;}
+ .dc11-mobile-speed>div small {font-size:11px;color:#acc2d1;font-weight:900;}
+ .dc11-mobile-speed footer {display:flex;align-items:center;gap:9px;justify-content:flex-end;font-size:11px;color:#c4ddec;margin-top:5px;}
+ .dc11-mobile-speed footer b:first-child{color:#facc15;}
+ .dc11-mobile-speed footer button {color:#a5f3fc;border:1px solid #55c4de85;border-radius:6px;background:#0c3447;padding:5px 7px;font-size:10px;font-weight:900;}
+ .dc11-hud-backdrop {position:absolute;z-index:75;inset:0;background:#020917ea;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;pointer-events:auto;}
+ .dc11-hud-close {position:absolute;top:10px;left:18px;display:flex;align-items:center;gap:7px;padding:7px 12px;background:#0b2a3d;color:white;border:1px solid #2a879f;border-radius:9px;z-index:80;font-size:11px;}
+ .dc11-hud-gauge {position:relative;width:365px;height:205px;max-height:60vh;transform:scale(.7);transform-origin:center;}
+ .dc11-hud-gauge .dc100-race-gauges {position:absolute!important;inset:0 auto auto 0!important;transform:none!important;display:block!important;}
+ .dc11-hud-backdrop>p {font-size:9px;color:#8bacc1;letter-spacing:.08em;text-align:center;}
+ .dc11-start-gate {position:absolute;z-index:65;inset:0;display:grid;place-items:center;background:linear-gradient(#05101ca5,#020913ed);pointer-events:auto;}
+ .dc11-start-card {width:min(400px,62vw);border:1px solid #4bbbd486;border-radius:18px;background:#071a2df2;padding:21px;text-align:center;box-shadow:0 20px 60px #000a;}
+ .dc11-start-card>span {font-size:9px;color:#54ddf7;letter-spacing:.17em;font-weight:800;}
+ .dc11-start-card h2 {font-size:clamp(22px,4vw,40px);font-weight:950;line-height:1.2;margin:7px 0;}
+ .dc11-start-card p {font-size:12px;color:#b8cddd;margin-bottom:12px;}
+ .dc11-start-card button{min-width:185px;min-height:51px;display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#41d4f4;color:#061724;border-radius:11px;font-size:23px;font-weight:950;}
+ .dc11-start-card button:disabled{opacity:.5;}
+ .dc11-garage-tools {display:flex;gap:9px;justify-content:center;align-items:center;flex:0 0 auto;margin:3px auto 2px;}
+ .dc11-garage-tools button {display:flex;align-items:center;gap:7px;border-radius:8px;border:1px solid #3fa4c1;background:#0d3143;padding:6px 13px;font-size:11px;font-weight:900;color:#d6f8ff;}
+ .dc11-modal-backdrop {position:absolute;inset:0;z-index:250;background:#010714eb;display:grid;place-items:center;padding:8px;touch-action:pan-y;}
+ .dc11-modal {width:min(950px,96vw);height:min(650px,93dvh);border:1px solid #3b8099;border-radius:16px;background:#071726;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 65px #000d;}
+ .dc11-modal header {min-height:40px;padding:6px 12px;border-bottom:1px solid #214c61;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+ .dc11-modal header h2{font-size:clamp(12px,2vw,18px);font-weight:900;}
+ .dc11-modal header button{border:1px solid #47738b;background:#113045;border-radius:8px;display:grid;place-items:center;width:32px;height:30px;flex-shrink:0;}
+ .dc11-modal-scroll {flex:1;min-height:0;overflow-y:auto;padding:12px;overscroll-behavior:contain;touch-action:pan-y;}
+ .dc11-modal-scroll>p {font-size:11px;color:#b5d0df;margin:7px 0;}
+ .dc11-showroom .dc11-modal-scroll>.relative {max-width:740px;margin:0 auto;}
+ .dc11-showroom .dc11-modal-scroll .h-52 {height:clamp(135px,38dvh,280px)!important;touch-action:pan-x;}
+ .dc11-showroom .dc11-modal-scroll>button{margin:8px auto;display:flex;}
+ .dc11-spec-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0;}
+ .dc11-spec-grid>div {background:#10293b;border:1px solid #244c65;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:3px;min-width:0;}
+ .dc11-spec-grid span{font-size:10px;color:#8cb5ce;}
+ .dc11-spec-grid strong{font-size:12px;color:#ecf7fd;overflow-wrap:anywhere;}
+ .dc11-modal-scroll h3{font-size:15px;font-weight:900;color:#60ddf8;margin-top:12px;}
+ .dc11-result-entry{border-bottom:1px solid #345269;padding-bottom:12px;}
+ .dc11-full-results .dc11-modal-scroll>.space-y-5 {margin-top:15px;}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-width:1100px) and (max-height:400px) {
+ .dc99-race-stage .dc11-mobile-speed {top:41px;padding:5px 10px;min-width:115px;}
+ .dc11-mobile-speed>span {font-size:8px;}
+ .dc11-mobile-speed>div strong {font-size:clamp(31px,5vw,44px);}
+ .dc11-mobile-speed footer {margin-top:1px;font-size:9px;gap:5px;}
+ .dc11-mobile-speed footer button {font-size:8px;padding:3px 5px;}
+ .dc11-garage-tools button{padding:3px 8px;font-size:9px;}
+ .dc11-modal-scroll{padding:6px 10px;}
+ .dc11-spec-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+ .dc11-modal-scroll .dc11-spec-grid strong{font-size:10px;}
+ .dc11-hud-gauge {transform:scale(.55);height:155px;}
+}
+
+.dc11-mobile-speed,.dc11-hud-backdrop,.dc11-race-info-dialog{display:none;}
+@media (pointer:coarse) and (max-width:1100px){
+ .dc99-race-stage .dc11-mobile-speed{display:block;}
+ .dc99-race-stage .dc11-hud-backdrop{display:flex;}
+ .dc11-view-switch{display:flex;gap:6px;justify-content:center;margin-bottom:9px;}
+ .dc11-view-switch button{border:1px solid #38687b;background:#0c2839;color:#b9dae8;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:900;}
+ .dc11-view-switch button.active{color:#001322;background:#56dbf6;border-color:#83ecfd;}
+ .dc11-vehicle-video{display:block;width:100%;height:min(43dvh,300px);object-fit:contain;background:#000;border-radius:12px;}
+ .dc99-race-stage .dc11-race-info-dialog{position:absolute;inset:0;z-index:95;display:grid;place-items:center;background:#030a14ec;pointer-events:auto;padding:15px;}
+ .dc11-race-info-dialog>div{width:min(600px,84vw);max-height:88dvh;overflow:auto;border:1px solid #448caa;background:#0a2032;padding:12px 17px;border-radius:14px;}
+ .dc11-race-info-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+ .dc11-race-info-dialog h2{font-weight:900;font-size:15px;color:#80e9fa;}
+ .dc11-race-info-dialog h3{font-weight:900;font-size:13px;margin-top:10px;}
+ .dc11-race-info-dialog p{font-size:11px;color:#c2d7e4;margin-top:7px;}
+ .dc11-race-info-dialog button{font-weight:900;font-size:11px;color:#72ebfb;border:1px solid #328ba4;padding:5px 9px;border-radius:7px;}
+}
+
+@media (pointer:coarse) and (max-width:1100px){
+ .dc11-telemetry-chart{margin:10px 0;padding:10px;border:1px solid #2f6580;border-radius:10px;background:#06131f;}
+ .dc11-chart-options{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:7px;}
+ .dc11-chart-options strong{font-size:10px;color:#a5e8f9;margin-right:auto;}
+ .dc11-chart-options button{font-size:9px;padding:4px 7px;border:1px solid #31546c;border-radius:7px;color:#c6dfec;}
+ .dc11-chart-options button.active{background:#15536c;border-color:#48c9ed;color:#fff;}
+ .dc11-telemetry-chart svg{width:100%;height:clamp(54px,17dvh,120px);display:block;}
+ .dc11-chart-labels{display:flex;justify-content:space-between;color:#7cacc4;font-size:9px;}
+ .dc11-no-telemetry{font-size:10px;color:#8db5cb;}
+}
+
+/* V11.1: controles exclusivamente móviles (pantallas táctiles compactas).
+   La fuente de entrada se comparte con la física, pero el HUD no se presenta en desktop. */
+@media (pointer: fine) and (min-width: 769px), (min-width: 1101px) {
+  .dc-mobile-controls, .dc-portrait-prompt, .dc-landscape-toggle,
+  .dc-mobile-game-top, .dc-mobile-camera-menu, .dc-mobile-pause-screen {
+    display:none!important;
+  }
+}
+@media (pointer:coarse) and (max-width:1100px), (max-width: 768px) {
+  .dc99-race-stage .dc-mobile-controls {display:flex!important;touch-action:none!important;}
+  .dc99-race-stage .dc-touch-button {touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;}
+  .dc99-race-stage .dc-mockup5-minimap {display:flex!important;position:absolute!important;left:max(8px,env(safe-area-inset-left))!important;top:max(8px,env(safe-area-inset-top))!important;z-index:35!important;transform:none!important;}
+  .dc99-race-stage .dc-mockup5-center-header {display:flex!important;position:absolute!important;top:max(6px,env(safe-area-inset-top))!important;left:50%!important;transform:translateX(-50%)!important;z-index:35!important;}
+  .dc99-race-stage .dc-mockup5-cluster-wrapper {display:flex!important;position:absolute!important;right:max(8px,env(safe-area-inset-right))!important;top:max(6px,env(safe-area-inset-top))!important;z-index:35!important;}
+  .dc99-race-stage .dc-mockup5-driving-iq {display:flex!important;position:absolute!important;bottom:max(12px,env(safe-area-inset-bottom))!important;left:50%!important;transform:translateX(-50%)!important;z-index:35!important;}
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-rhomboid {width:clamp(60px,8.5vw,76px)!important;height:clamp(52px,7.5vw,64px)!important;border-radius:16px!important;transform:skewX(-12deg)!important;}
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-gold-throttle {width:clamp(60px,8.5vw,72px)!important;height:clamp(96px,13.5vw,112px)!important;border-radius:18px!important;border-color:#ffb800!important;background:rgba(26,18,2,0.85)!important;}
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-brake-pedal,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-reverse-pedal {width:clamp(54px,7.5vw,66px)!important;height:clamp(44px,6vw,50px)!important;border-radius:12px!important;}
+}
+
+/* V11.2 · La pista permanece visible detrás del botón START mientras termina de montarse. */
+.dc11-start-gate {background:linear-gradient(90deg,#020b15b8,#05101c44 50%,#020b15b8);}
+.dc11-start-card {background:#061524f5;}
+.dc11-start-card button:disabled {cursor:progress;opacity:.8;}
+
+/* DATACAR V12 · identidad y controles mobile mejorados */
+@media (pointer:coarse) {
+.dc12-featured {touch-action:pan-y;gap:4px;}
+.dc12-featured .dc12-featured-nav {position:relative;z-index:5;flex:0 0 34px;width:34px;height:48px;border:1px solid #57dfff88;border-radius:11px;background:#061728bb;color:#dffaff;display:grid;place-items:center;}
+.dc12-featured img {width:calc(100% - 92px)!important;max-width:100%;height:76%!important;}
+.dc12-featured-label {position:absolute;z-index:6;bottom:1%;left:15%;right:15%;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;text-align:center;background:#061322b9;padding:4px 8px;border-radius:10px;}
+.dc12-featured-label strong {font-size:clamp(10px,1.9vw,16px);color:white;}
+.dc12-featured-label small {font-size:10px;color:#b6cfe1;}
+.dc12-featured-label button {background:#08a8c8;color:#061522;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:900;}
+.dc12-compare-results {overflow-y:auto!important;}
+.dc12-compare-render {max-height:65dvh;overflow:auto;margin:4px 12px;}
+}
+.dc12-video-error {color:#fbbf24!important;font-size:12px;}
+.dc12-stuck-modal {position:absolute;inset:0;z-index:150;background:#030914e8;display:grid;place-items:center;padding:18px;text-align:center;}
+.dc12-stuck-modal>div {background:#0b1c2e;border:1px solid #5ee1f5;border-radius:16px;padding:20px;max-width:420px;}
+.dc12-stuck-modal h2 {font-size:23px;font-weight:950;color:#ffca61;}
+.dc12-stuck-modal p {font-size:14px;color:#e2edf5;margin:12px 0;}
+.dc12-stuck-modal button {padding:12px 15px;margin:5px;border-radius:11px;background:#10bdd8;color:#05121d;font-weight:900;}
+.dc12-stuck-modal button+button {background:#1b3244;color:white;}
+
+.dc12-select-compare{padding:6px 10px!important;border:1px solid #00d2ee!important;border-radius:9px!important;position:relative;z-index:8;cursor:pointer;}
+
+.dc12-media-toggle {display:flex;gap:6px;padding:6px 0;justify-content:center;}
+.dc12-media-toggle button {border:1px solid #3c6078;border-radius:8px;background:#0e1e30;color:#bcdbea;padding:7px 10px;font-size:11px;font-weight:800;}
+.dc12-media-toggle button.active {border-color:#4cdef6;background:#16415a;color:#fff;}
+
+/* ==========================================================================
+   DATACAR ARENA V5 · ARQUITECTURA ZERO-OVERLAP & PORTRAIT-READY (320px–1440px)
+   ========================================================================== */
+
+/* Evitar barra móvil duplicada que colisionaba con minimapa, espejo y velocímetro */
+.dc-mobile-race .dc-mobile-game-top,
+.dc99-race-stage .dc-mobile-game-top {
+  display: none !important;
+}
+
+/* Dimensiones base del retrovisor interior realista (carcasa trapezoidal + vástago superior) y espejos laterales */
+.dc-v5-rearview-wrap {
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.85));
+}
+
+.dc-v5-rearview-stem {
+  width: 24px;
+  height: 7px;
+  margin-bottom: -2px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-left: 1px solid rgba(148, 163, 184, 0.35);
+  border-right: 1px solid rgba(148, 163, 184, 0.35);
+  clip-path: polygon(18% 0%, 82% 0%, 100% 100%, 0% 100%);
+}
+
+.dc-v5-rearview-housing {
+  width: 216px;
+  height: 54px;
+  padding: 4px;
+  background: linear-gradient(180deg, #1e293b 0%, #090f1d 65%, #020617 100%);
+  border: 1.5px solid rgba(100, 116, 139, 0.72);
+  border-radius: 10px 10px 18px 18px;
+  clip-path: polygon(5% 0%, 95% 0%, 100% 100%, 0% 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.dc-v5-rearview-canvas {
+  border-radius: 7px 7px 14px 14px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* Corredor central superior apilado (cronómetro + Weno Bank + retrovisor + señales/ADAS + confirmación breve) */
+.dc-v5-top-center {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(620px, calc(100% - 760px));
+}
+
+/* Banda vial + ADAS vive en flujo vertical dentro de .dc-v5-top-center (jamás superpuesta al retrovisor ni al velocímetro) */
+.dc-v5-road-rules-strip {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  transform: none;
+  translate: none;
+  max-width: 100%;
+}
+
+/* Espejos retrovisores laterales izquierdo y derecho */
+.dc-v5-sidemirror {
+  position: absolute;
+  top: 204px;
+  width: 92px;
+  height: 50px;
+  z-index: 26;
+  padding: 3px;
+  background: linear-gradient(165deg, #1e293b 0%, #090f1d 70%, #030712 100%);
+  border: 1.5px solid rgba(100, 116, 139, 0.72);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dc-v5-sidemirror canvas {
+  border-radius: inherit;
+}
+
+.dc-v5-sidemirror-left {
+  left: 12px;
+  border-radius: 18px 10px 12px 14px;
+}
+
+.dc-v5-sidemirror-right {
+  right: 12px;
+  border-radius: 10px 18px 14px 12px;
+}
+
+.dc-v5-sidemirror-alert {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.65), 0 10px 24px rgba(0, 0, 0, 0.85) !important;
+}
+
+.dc-v5-sidemirror-tag {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(2, 6, 23, 0.78);
+  color: #cbd5e1;
+  font-family: ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.dc-v5-sidemirror-right .dc-v5-sidemirror-tag {
+  left: auto;
+  right: 6px;
+}
+
+.dc-v5-sidemirror-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #475569;
+  border: 1px solid rgba(15, 23, 42, 0.9);
+}
+
+.dc-v5-sidemirror-left .dc-v5-sidemirror-dot {
+  right: auto;
+  left: 6px;
+}
+
+.dc-v5-sidemirror-dot.active {
+  background: #fbbf24;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.dc100-race-ranking {
+  top: 298px !important;
+}
+
+.dc100-race-insight {
+  top: 84px !important;
+  right: 12px !important;
+  left: auto !important;
+  max-width: 264px !important;
+}
+
+/* Modo Auditoría · Live: margen izquierdo despejado, jamás sobre pedales ni sobre controles táctiles */
+.dc-audit-hud {
+  left: 118px;
+  right: auto;
+  bottom: 64px;
+  top: auto;
+  width: 224px;
+}
+
+.dc-audit-hud[data-collapsed="1"] {
+  left: 12px;
+  width: auto;
+  max-width: 256px;
+}
+
+.dc-v5-bsd-left {
+  top: 262px !important;
+  left: 12px !important;
+  transform: none !important;
+}
+
+.dc-v5-bsd-right {
+  top: 262px !important;
+  right: 12px !important;
+  transform: none !important;
+}
+
+.dc-v5-pothole-alert {
+  top: 174px !important;
+}
+
+/* Desktop de altura media (ej. 1280x720, donde el canvas tiene ~412px de alto): separar espejo derecho y tacómetro */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .dc100-race-insight {
+    display: none !important;
+  }
+  .dc-mockup5-minimap > div:first-child {
+    width: 86px !important;
+    height: 86px !important;
+  }
+  .dc-mockup5-minimap > div:nth-child(2) {
+    width: 94px !important;
+    padding: 3px 6px !important;
+  }
+  .dc-v5-rearview-housing {
+    width: 184px;
+    height: 42px;
+  }
+  .dc-v5-sidemirror-left {
+    top: 172px !important;
+    width: 86px !important;
+    height: 46px !important;
+  }
+  .dc-v5-bsd-left {
+    top: 224px !important;
+    left: 12px !important;
+  }
+  .dc-v5-sidemirror-right {
+    top: 90px !important;
+    width: 86px !important;
+    height: 46px !important;
+  }
+  .dc-v5-bsd-right {
+    top: 142px !important;
+    right: 12px !important;
+  }
+  .dc11-desktop-hud .dc100-race-gauges {
+    bottom: 10px !important;
+    right: 12px !important;
+    transform: scale(0.76) !important;
+    transform-origin: bottom right !important;
+  }
+  .dc-audit-hud {
+    left: 114px;
+    right: auto;
+    bottom: 64px;
+    width: 218px;
+  }
+  .dc-audit-hud[data-collapsed="1"] {
+    left: 12px;
+    width: auto;
+  }
+}
+
+@media (max-width: 1023px) {
+  .dc-mobile-speed-wrapper {
+    display: block !important;
+  }
+  .dc-mobile-speed-wrapper .dc11-mobile-speed.dc-mockup5-cluster {
+    display: flex !important;
+  }
+}
+
+/* En Desktop y Vista Arcade (>= 1024px): señaleros + cinturón anclados en esquina inferior izquierda periférica, jamás sobre el auto */
+.dc-v5-turn-signals-pod {
+  left: 12px;
+  bottom: 10px;
+  right: auto;
+  top: auto;
+  transform: none;
+  translate: none;
+}
+
+/* Píldora Driving IQ acoplada arriba a la derecha debajo del selector de cámaras, fuera del eje vial */
+.dc-mockup5-driving-iq {
+  top: 48px;
+  right: 12px;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  translate: none;
+}
+
+/* Desktop intermedio (1024px a 1439px, incluye 1280x720): corredor superior simétrico (50% exacto) entre Minimapa y Cámaras */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .dc100-race-camera-desktop {
+    padding: 3px !important;
+    gap: 2px !important;
+  }
+  .dc100-race-camera-desktop button {
+    padding: 3px 5px !important;
+    font-size: 10px !important;
+    gap: 0 !important;
+  }
+  .dc100-race-camera-desktop button svg {
+    display: none !important;
+  }
+  .dc-v5-top-center,
+  .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
+    left: 320px !important;
+    right: 320px !important;
+    translate: none !important;
+    transform: none !important;
+    max-width: none !important;
+  }
+  .dc-v5-turn-signals-pod {
+    left: 12px !important;
+    bottom: 10px !important;
+    translate: none !important;
+    transform: scale(0.92) !important;
+    transform-origin: bottom left !important;
+  }
+  .dc-mockup5-driving-iq,
+  .dc99-race-stage .dc-mockup5-driving-iq {
+    top: 46px !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: auto !important;
+    translate: none !important;
+    transform: none !important;
+    max-width: 248px !important;
+  }
+}
+
+/* Tablet y Mobile Landscape ancho (641px a 1023px: incluye 768x1024, 667x375, 844x390, 932x430) */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .dc-v5-top-center,
+  .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
+    top: max(6px, env(safe-area-inset-top)) !important;
+    left: calc(max(8px, env(safe-area-inset-left)) + 184px) !important;
+    right: calc(max(8px, env(safe-area-inset-right)) + 184px) !important;
+    translate: none !important;
+    transform: none !important;
+    max-width: none !important;
+  }
+  .dc-v5-rearview-housing {
+    width: 188px;
+    height: 44px;
+  }
+  .dc-v5-sidemirror {
+    top: 192px !important;
+    width: 80px !important;
+    height: 44px !important;
+  }
+  .dc-v5-bsd-left {
+    top: 242px !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    transform: none !important;
+  }
+  .dc-v5-bsd-right {
+    top: 242px !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    transform: none !important;
+  }
+  .dc-audit-hud {
+    left: max(10px, env(safe-area-inset-left));
+    right: auto;
+    bottom: max(128px, calc(env(safe-area-inset-bottom) + 122px));
+    top: auto;
+    width: 232px;
+    max-width: calc(100vw - 220px);
+  }
+  .dc-audit-hud[data-collapsed="1"] {
+    width: auto;
+    max-width: 250px;
+  }
+  /* En Tablet y Mobile Landscape: señaleros + cinturón en margen izquierdo sobre botones de dirección, 100% fuera del auto */
+  .dc-v5-turn-signals-pod {
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: max(82px, calc(env(safe-area-inset-bottom) + 78px)) !important;
+    translate: none !important;
+    transform: scale(0.86) !important;
+    transform-origin: bottom left !important;
+  }
+  .dc-mockup5-driving-iq,
+  .dc99-race-stage .dc-mockup5-driving-iq {
+    display: none !important;
+  }
+}
+
+/* Landscape de baja altura (667x375, 844x390, 932x430): cero colisión entre minimapa, espejos, Weno Bank, ADAS, auditoría y pedales */
+@media (max-height: 500px) and (min-width: 641px) {
+  .dc100-race-ranking,
+  .dc100-race-insight {
+    display: none !important;
+  }
+  .dc-mockup5-minimap > div:first-child {
+    width: 70px !important;
+    height: 70px !important;
+  }
+  .dc-mockup5-minimap > div:nth-child(2) {
+    width: 78px !important;
+    padding: 2px 4px !important;
+    margin-top: 3px !important;
+  }
+  .dc-mockup5-minimap > div:nth-child(2) span {
+    font-size: 8.5px !important;
+  }
+  .dc-v5-top-center,
+  .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
+    top: max(5px, env(safe-area-inset-top)) !important;
+    left: calc(max(8px, env(safe-area-inset-left)) + 138px) !important;
+    right: calc(max(8px, env(safe-area-inset-right)) + 138px) !important;
+    translate: none !important;
+    transform: none !important;
+    max-width: none !important;
+  }
+  .dc-v5-clock-bar {
+    padding: 2px 6px !important;
+    gap: 4px !important;
+  }
+  .dc-v5-rearview-housing {
+    width: 158px !important;
+    height: 36px !important;
+  }
+  .dc-v5-sidemirror {
+    top: 156px !important;
+    width: 68px !important;
+    height: 36px !important;
+  }
+  .dc-v5-sidemirror-left {
+    left: max(8px, env(safe-area-inset-left)) !important;
+  }
+  .dc-v5-sidemirror-right {
+    right: max(8px, env(safe-area-inset-right)) !important;
+  }
+  .dc-v5-bsd-left {
+    top: 196px !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    transform: none !important;
+    padding: 2px 5px !important;
+  }
+  .dc-v5-bsd-right {
+    top: 196px !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    transform: none !important;
+    padding: 2px 5px !important;
+  }
+  .dc-v5-pothole-alert {
+    top: calc(max(5px, env(safe-area-inset-top)) + 132px) !important;
+  }
+  .dc-v5-turn-signals-pod {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    bottom: max(68px, calc(env(safe-area-inset-bottom) + 64px)) !important;
+    translate: none !important;
+    transform: scale(0.76) !important;
+    transform-origin: bottom left !important;
+  }
+  .dc-mockup5-cluster-wrapper > div:first-child button {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .dc-mockup5-cluster > div:first-child {
+    display: none !important;
+  }
+  .dc-mockup5-cluster {
+    width: 126px !important;
+    padding: 4px 7px !important;
+  }
+  .dc-mockup5-cluster strong {
+    font-size: 24px !important;
+  }
+  .dc-mockup5-driving-iq,
+  .dc99-race-stage .dc-mockup5-driving-iq {
+    display: none !important;
+  }
+  /* Modo Auditoría en landscape móvil: a la izquierda del eje vial y lejos de pedales de freno/acelerador */
+  .dc-audit-hud {
+    left: calc(max(8px, env(safe-area-inset-left)) + 84px) !important;
+    right: auto !important;
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 104px)) !important;
+    top: auto !important;
+    width: 210px;
+    max-width: calc(100vw - 252px);
+    padding: 4px 7px !important;
+    font-size: 8px !important;
+  }
+  .dc-audit-hud[data-collapsed="1"] {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-width: 238px !important;
+  }
+  .dc-mobile-controls button.dc-touch-rhomboid,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-rhomboid {
+    width: 56px !important;
+    height: 48px !important;
+  }
+  .dc-mobile-controls button.dc-touch-gold-throttle,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-gold-throttle {
+    width: 56px !important;
+    height: 90px !important;
+  }
+  .dc-mobile-controls button.dc-touch-brake-pedal,
+  .dc-mobile-controls button.dc-touch-reverse-pedal,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-brake-pedal,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-reverse-pedal {
+    width: 50px !important;
+    height: 42px !important;
+  }
+}
+
+/* Mobile Portrait estrecho (<= 640px: cubre 360x640, 390x844, 414x896) */
+@media (max-width: 640px) {
+  .dc-mockup5-minimap,
+  .dc99-race-stage .dc-mockup5-minimap {
+    left: max(6px, env(safe-area-inset-left)) !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+  }
+  .dc-mockup5-minimap > div:first-child {
+    width: 62px !important;
+    height: 62px !important;
+  }
+  .dc-mockup5-minimap > div:nth-child(2) {
+    width: 66px !important;
+    padding: 2px 4px !important;
+    margin-top: 3px !important;
+  }
+  .dc-mockup5-minimap > div:nth-child(2) span {
+    font-size: 8.5px !important;
+  }
+
+  .dc-v5-top-center,
+  .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
+    top: max(6px, env(safe-area-inset-top)) !important;
+    left: calc(max(6px, env(safe-area-inset-left)) + 86px) !important;
+    right: calc(max(6px, env(safe-area-inset-right)) + 86px) !important;
+    translate: none !important;
+    transform: none !important;
+    max-width: none !important;
+  }
+  .dc-v5-clock-bar {
+    padding: 2px 4px !important;
+    gap: 2.5px !important;
+    width: 100%;
+  }
+  .dc-v5-clock-bar span {
+    font-size: 8.5px !important;
+  }
+  .dc-v5-clock-bar button {
+    padding: 1.5px 3.5px !important;
+    font-size: 7px !important;
+    min-height: 20px !important;
+  }
+  [data-testid="weno-bank-hud-strip"] {
+    padding: 2px 5px !important;
+    gap: 3px !important;
+    font-size: 7.5px !important;
+  }
+  .dc-v5-rearview-housing {
+    width: 100% !important;
+    max-width: 148px !important;
+    height: 34px !important;
+  }
+
+  .dc-mockup5-cluster-wrapper,
+  .dc99-race-stage .dc-mockup5-cluster-wrapper {
+    right: max(6px, env(safe-area-inset-right)) !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+    gap: 3px !important;
+  }
+  .dc-mockup5-cluster-wrapper > div:first-child button {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .dc-mockup5-cluster {
+    width: 82px !important;
+    min-width: 0 !important;
+    padding: 4px 5px !important;
+    border-radius: 12px !important;
+  }
+  .dc-mockup5-cluster > div:first-child {
+    display: none !important;
+  }
+  .dc-mockup5-cluster strong {
+    font-size: 21px !important;
+  }
+  .dc-mockup5-cluster .w-10 {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .dc-mockup5-cluster .w-10 span {
+    font-size: 13px !important;
+  }
+  .dc-mockup5-cluster footer {
+    margin-top: 2px !important;
+    padding-top: 2px !important;
+    gap: 2px !important;
+    font-size: 7px !important;
+  }
+  .dc-mockup5-cluster footer b:nth-child(2) {
+    display: none !important;
+  }
+
+  /* Comando de señaleros + cinturón debajo de la banda superior, nunca sobre espejos ni pedales */
+  .dc-v5-turn-signals-pod {
+    top: calc(max(6px, env(safe-area-inset-top)) + 168px) !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    translate: -50% 0 !important;
+    transform: scale(0.84) !important;
+    transform-origin: top center !important;
+    max-width: calc(100vw - 12px) !important;
+  }
+
+  .dc-mockup5-driving-iq,
+  .dc99-race-stage .dc-mockup5-driving-iq {
+    display: none !important;
+  }
+
+  .dc-v5-sidemirror {
+    top: calc(max(6px, env(safe-area-inset-top)) + 210px) !important;
+    width: 68px !important;
+    height: 38px !important;
+  }
+  .dc-v5-sidemirror-left {
+    left: max(6px, env(safe-area-inset-left)) !important;
+  }
+  .dc-v5-sidemirror-right {
+    right: max(6px, env(safe-area-inset-right)) !important;
+  }
+
+  .dc-v5-bsd-left {
+    top: calc(max(6px, env(safe-area-inset-top)) + 254px) !important;
+    left: max(6px, env(safe-area-inset-left)) !important;
+    transform: none !important;
+    padding: 3px 5px !important;
+  }
+
+  .dc-v5-bsd-right {
+    top: calc(max(6px, env(safe-area-inset-top)) + 254px) !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    transform: none !important;
+    padding: 3px 5px !important;
+  }
+
+  .dc-audit-hud {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    bottom: max(118px, calc(env(safe-area-inset-bottom) + 114px)) !important;
+    top: auto !important;
+    width: min(218px, calc(100vw - 134px));
+    padding: 5px 7px !important;
+    font-size: 8px !important;
+  }
+  .dc-audit-hud[data-collapsed="1"] {
+    width: auto !important;
+    max-width: min(232px, calc(100vw - 134px)) !important;
+  }
+}
+
+/* Ultra-compacto 320px–380px: ajustar botones superiores e inferiores para margen limpio */
+@media (max-width: 380px) {
+  .dc-v5-clock-bar svg {
+    display: none !important;
+  }
+  .dc-mockup5-controls,
+  .dc99-race-stage .dc-mobile-controls {
+    padding-left: max(8px, env(safe-area-inset-left)) !important;
+    padding-right: max(8px, env(safe-area-inset-right)) !important;
+  }
+  .dc-touch-rhomboid,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-rhomboid {
+    width: 52px !important;
+    height: 48px !important;
+  }
+  .dc-touch-brake-pedal,
+  .dc-touch-reverse-pedal,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-brake-pedal,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-reverse-pedal {
+    width: 48px !important;
+    height: 42px !important;
+  }
+  .dc-touch-gold-throttle,
+  .dc99-race-stage .dc-mobile-controls button.dc-touch-gold-throttle {
+    width: 54px !important;
+    height: 92px !important;
+  }
+}
+
+/* Soporte completo en vertical para el shell mobile cuando el usuario pulsa "CONTINUAR EN VERTICAL" */
+@media (pointer: coarse) and (max-width: 1100px) and (orientation: portrait) {
+  .dc99-game.dc99-allow-portrait {
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-home {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto minmax(170px, 1fr) auto !important;
+    padding: 12px 16px !important;
+    text-align: center;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-home-copy h1 {
+    white-space: normal !important;
+    font-size: clamp(32px, 9.5vw, 48px) !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-home-copy button {
+    margin-inline: auto !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-snap-slide {
+    flex: 0 0 86% !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-briefing {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto auto !important;
+    overflow-y: auto !important;
+    padding-bottom: 68px !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc99-results-body {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+  }
+  .dc99-game.dc99-allow-portrait .dc11-spec-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Encuadre íntegro de carrera activa en 100dvh sin recortes inferiores (1024x768, 1440x900 y las 9 vistas móviles/tablet) */
+@media (min-width: 1024px) and (min-height: 561px) {
+  body:has(.dc-game-running) .dc-app-main {
+    padding-top: 6px !important;
+    padding-bottom: 8px !important;
+  }
+  .dc-game-running {
+    margin-top: 0 !important;
+  }
+  .dc-game-running > * + * {
+    margin-top: 6px !important;
+  }
+  .dc-game-running > div:first-child h1 {
+    font-size: 20px !important;
+    line-height: 1.05 !important;
+  }
+  .dc-game-running > div:first-child p:last-child,
+  .dc-game-running > p:last-child {
+    display: none !important;
+  }
+  .dc-game-running .dc-race-viewport {
+    height: calc(100dvh - 308px) !important;
+    min-height: 380px !important;
+    max-height: 590px !important;
+  }
+}
+
+@media (max-width: 1023px), (max-height: 560px) {
+  body:has(.dc-game-running):not(:has(.dc-jail-active)) > #root > .dc-app-shell > header,
+  body:has(.dc-game-running) > #root > .dc-app-shell > footer {
+    display: none !important;
+  }
+  body:has(.dc-game-running) .dc-app-main {
+    padding: 4px 6px !important;
+    max-width: none !important;
+  }
+  .dc-game-running > * + * {
+    margin-top: 4px !important;
+  }
+  .dc-game-running > div:first-child {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    height: 32px !important;
+    overflow: hidden !important;
+  }
+  .dc-game-running > div:first-child > div:first-child {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .dc-game-running > div:first-child > div:last-child {
+    flex-wrap: nowrap !important;
+    flex-shrink: 0 !important;
+    gap: 4px !important;
+  }
+  .dc-game-running > div:first-child p,
+  .dc-game-running > p:last-child {
+    display: none !important;
+  }
+  .dc-game-running > div:first-child h1 {
+    font-size: 13px !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .dc-game-running > div:first-child button {
+    padding: 3px 7px !important;
+    min-height: 28px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+  .dc-game-running .dc-mobile-race > div:first-of-type:not(.dc-race-viewport),
+  .dc99-race-stage .dc-mobile-race > div:first-of-type:not(.dc-race-viewport) {
+    display: none !important;
+  }
+  .dc-game-running .dc-race-viewport {
+    height: calc(100dvh - 46px) !important;
+    min-height: 250px !important;
+  }
+}
+
+/* En teléfonos horizontales de baja altura (ej. 844x390 / 932x430): ocultar cabecera externa para dar 100% de alto y ancho al circuito 3D */
+@media (max-height: 500px) and (min-width: 600px) {
+  body:has(.dc-game-running) .dc-app-main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .dc-game-running > * + * {
+    margin-top: 0 !important;
+  }
+  .dc-game-running > div:first-child:not(.dc-mobile-race) {
+    display: none !important;
+  }
+  .dc-game-running,
+  .dc-game-running .dc-mobile-race,
+  .dc-game-running .dc-race-viewport,
+  .dc-game-running .dc99-race-stage {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+  [data-testid="prerace-cinematic-banner"] {
+    max-width: 296px !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ==========================================================================
+   V14 · iOS SAFARI ORIENTATION FALLBACK (rotate(90deg)) & MOBILE COMPARATOR CTA
+   ========================================================================== */
+
+.dc-ios-forced-landscape,
+.dc99-game.dc-ios-forced-landscape {
+  position: fixed !important;
+  inset: auto !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  width: 100vh !important;
+  width: 100dvh !important;
+  height: 100vw !important;
+  height: 100dvw !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+  transform-origin: center center !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
+}
+
+.dc-ios-forced-landscape .dc99-rotate,
+.dc-ios-forced-landscape .dc-portrait-prompt {
+  display: none !important;
+}
+
+.dc-ios-forced-landscape .dc99-race-stage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dc-comparator-sticky-actions {
+  display: flex !important;
+  visibility: visible !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 65 !important;
+}
+
+.dc-comparator-start-race-btn {
+  display: inline-flex !important;
+  visibility: visible !important;
+}
+
+@media (max-width: 768px) {
+  .dc-compare-picker,
+  .dc12-compare-results {
+    padding-bottom: 84px !important;
+  }
+
+  .dc-comparator-sticky-actions {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 14px 14px 0 0 !important;
+    z-index: 75 !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    background: #04101d !important;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.85) !important;
+  }
+
+  .dc-comparator-start-race-btn {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 1 1 auto;
+    min-height: 44px !important;
+  }
+}
+
+
+

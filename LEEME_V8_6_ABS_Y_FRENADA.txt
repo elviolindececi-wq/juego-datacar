@@ -1,0 +1,31 @@
+DATACAR ARENA V8.6 — ABS DOCUMENTADO + SONIDO DE FRENADA BRUSCA
+
+INSTALACIÓN SOBRE V8.5
+1) Descargá el parche ZIP en Descargas de Windows.
+2) Detené el servidor Vite con Ctrl+C en VS Code.
+3) Extraé el ZIP sobre la carpeta del proyecto (sobrescribí los archivos existentes).
+4) Ejecutá: npm run test:v86
+5) Ejecutá: npm run dev
+6) Recargá el navegador con Ctrl+Shift+R y activá Audio ON.
+
+CAMBIOS
+- ABS se incorpora solo cuando el equipamiento de la ficha contiene explícitamente «ABS» o el campo equipment.abs es true.
+- La ficha cargada del Toyota Corolla Cross SEG 2027 contiene «ABS con EBD».
+- En las fichas locales de Tracker, Kicks y Carens no está confirmado el dato; el juego NO afirma que los autos reales carezcan de ABS.
+- Frenada fuerte: en condiciones límite, ABS reduce la presión para evitar bloqueo y ayudar a mantener el control.
+- El efecto es una aproximación a paso fijo (100 Hz), no un sistema de frenos homologado por fabricante.
+- Sonido de frenada brusca: fricción progresiva al mantener Espacio o ↓/S mientras avanzás rápido; no chirría al frenar suavemente.
+- Con ABS activo, el sonido tiene una pulsación sutil, distinta al deslizamiento por bloqueo.
+- Indicador en HUD solo cuando la ficha incluye ABS. Guarda ABS, intensidad de frenada y deslizamiento en la repetición.
+- No se cambiaron los resultados predeterminados del modo Comparar.
+
+CONTROLES DE PRUEBA
+- Modo Carrera, Corolla Cross, lluvia o tormenta, acelerar a >60 km/h.
+- Mantené Espacio para una frenada de emergencia. El indicador debe mostrar «ABS ACTIVO» cuando se alcance el límite de agarre.
+- Fijate que el sonido de fricción aumenta con la intensidad y desaparece al soltar el freno.
+- Una frenada suave no debe activar el ABS ni el sonido intenso.
+- ↓/S frena al avanzar y sigue permitiendo reversa una vez detenido.
+
+IMPORTANTE
+Las equipaciones corresponden a fichas locales del proyecto. Si DATACARPY.COM publica o corrige las fichas de otra versión, se puede agregar ABS en equipment.abs o safetyFeatures. No inferir ABS por número de discos, año ni sistema ADAS.
+El comportamiento en neumáticos, distancias y tacto del freno es orientativo; requiere calibración con datos de ensayos reales para precisión por versión.

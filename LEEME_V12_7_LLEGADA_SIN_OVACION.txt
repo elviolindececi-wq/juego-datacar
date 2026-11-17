@@ -1,0 +1,7 @@
+DATACAR ARENA V12.7
+Instalar sobre V12.6.
+- Suprime ovación en meta y su precarga.
+- Ruedas de vehículos con wheel rig GLB siguen rodando durante los 4 s de travelling final.
+- Motor permanece silenciado al cruzar meta.
+- No altera distancia física, clasificación ni resultados.
+- Modelos GLB que no posean ruedas segmentadas animables pueden continuar sin rodamiento: requieren una modificación del modelo 3D.

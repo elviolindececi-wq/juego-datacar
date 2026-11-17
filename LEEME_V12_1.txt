@@ -1,0 +1,9 @@
+DATACAR V12.1 - GIRO 360 MANUAL Y LARGADA EN SECUENCIA
+
+Instalar sobre V12 consolidada.
+1. Visor 360 manual: swipe/arrastrar o deslizador. Sin autoplay ni giro automático, también en modo video MP4.
+2. Iniciar carrera -> precarga GLB -> pista visible y primer fotograma -> pausa de preparación (1,2 s) -> cuenta regresiva 3,2,1,YA de 1 segundo cada paso.
+3. Ya no hay segundo botón START dentro de la pista.
+4. No se alteran físicos, circuitos o clasificaciones.
+
+Validar con npm run build y probar en dispositivo real antes de publicar.

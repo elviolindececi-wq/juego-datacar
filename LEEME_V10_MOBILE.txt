@@ -1,0 +1,18 @@
+DATACAR ARENA V10.0 - MOBILE UX + CARGA PREVIA
+
+REQUISITO: haber instalado antes la version V9.9 en el proyecto local.
+
+CAMBIOS:
+- Pantalla inicial con barra de progreso de imagenes de garage.
+- Al pulsar EMPEZAR CARRERA, barra de carga de los GLB del jugador y rivales.
+- Se comparten los GLB en cache con el motor 3D, para que no aparezcan tarde una vez iniciada la carrera.
+- Si la carga falla, se puede reintentar o volver a la preparacion.
+- Mobile carrera: mapa y telemetria superiores, controles tactiles inferiores.
+- Se ocultan en mobile las barras de escritorio, ranking e insight largo que ocupaban pantalla.
+
+INSTALACION (PowerShell, estando en tu proyecto actualizado V9.9):
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\DATACAR_ARENA_V10_MOBILE_CARGA_Y_CONTROLES_PARCHE.zip" -DestinationPath (Get-Location).Path -Force
+npm run build
+npm run dev
+
+IMPORTANTE: probar compilacion y movil real antes de subir a GitHub. En navegador movil no siempre es posible forzar fullscreen/orientacion sin interaccion del usuario.

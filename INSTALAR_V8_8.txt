@@ -1,0 +1,22 @@
+DATACAR ARENA V8.8 - TODOS LOS VEHÍCULOS DATACAR
+
+Recomendación: instalar el PROYECTO COMPLETO en una carpeta NUEVA si aún no aplicaste todos los parches.
+
+1. Descargar DATACAR_ARENA_V8_8_PROYECTO_COMPLETO.zip a Descargas.
+2. Abrir PowerShell desde Visual Studio Code.
+3. Ejecutar SOLO los comandos (sin copiar 'PS C:\\...>').
+
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V8_8_PROYECTO_COMPLETO*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw "No se encontró el ZIP completo V8.8 en Descargas" }
+$dest = "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V8.8"
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath $dest -Force
+Set-Location $dest
+npm install
+npm run test:v88
+npm run dev
+
+Si estás 100% seguro de que tu carpeta anterior está en V8.7, podés instalar el PARCHE V8.8 sobre esa carpeta, en vez del completo.
+
+Atención: los tres nuevos autos de DATACAR usan temporalmente la MISMA carrocería 3D que hoy usa Carens (que en esta base es una Tracker RS, no un GLB real de Carens).
+
+Revisá VERIFICACION_FICHAS_V8_8.md antes de presentar aceleraciones o sistemas ADAS como especificaciones oficiales.

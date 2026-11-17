@@ -1,0 +1,35 @@
+DATACAR ARENA V8.0 — CÁMARA ARCADE + CLIMA + AUDIO + ENTORNO URBANO
+==================================================================
+BASE REQUERIDA: V7.9 (parche). No instales V8 sobre una versión anterior.
+
+1. Descargá el ZIP de parche V8.0 en la carpeta Descargas de Windows.
+2. En la terminal de VS Code, detené Vite con Ctrl+C.
+3. Pegá los siguientes comandos de PowerShell (NO copies el prompt PS C:\...>):
+
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V8_0_PARCHE_DESDE_V7_9*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw "No se encontró el ZIP V8.0 en Descargas" }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm run test:v80
+npm run dev
+
+4. Abrí la dirección que te indique Vite (por ejemplo http://localhost:3001/).
+5. Actualizá Chrome con Ctrl+Shift+R.
+
+NOVEDADES
+- En Preparar Partida seleccioná Soleado / Nublado / Lluvia / Tormenta / Raudales.
+- Durante la carrera podés cambiar el clima desde el selector superior.
+- Cámara Arcade NFS sigue a tu auto y adapta FOV / distancia al ritmo.
+- Sonido sintético de motor, neumáticos, golpes y lluvia (requiere interacción del navegador).
+- Grietas y reparaciones en asfalto, texturas de fachadas con ventanas.
+- Publicidad DATACARPY.COM integrada en fachadas; sin vallas grandes sobre postes.
+- Carteles de nombres de calles reducidos a escala urbana.
+- Raudales con resistencia al avance, agarre reducido y deriva lateral simplificada.
+
+AVISOS
+- Las calles son recreaciones ficticias, no modelos geográficos de Asunción.
+- El agua simula fuerzas de manera aproximada, NO dinámica de fluidos real.
+- El sonido es sintetizado, NO grabaciones de motores Toyota/Chevrolet/etc.
+- Las texturas son procedimentales: no se trata de nivel AAA fotorrealista.
+- El juego continúa usando GLB pesados; monitorizá FPS con su control de diagnóstico.
+- Las pruebas de lógica se ejecutaron; compilación completa requiere tu npm / navegador.

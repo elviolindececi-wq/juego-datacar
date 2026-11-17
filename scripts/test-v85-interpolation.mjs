@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { interpolateRenderPose, snapshotRenderPose } from '../src/utils/visualPhysicsInterpolation.ts';
+const suspension = (v=0) => ({heaveM:v,pitchRad:v,rollRad:v,impact:Math.abs(v),wheelRoadM:{FL:v,FR:v,RL:0,RR:0}});
+const car = {x:0,z:10,yaw:Math.PI-.12,speed:8,steer:0,slip:0,bump:0,suspension:suspension(0)};
+const previous = snapshotRenderPose(car);
+car.x=-2;car.z=11;car.yaw=-Math.PI+.12;car.speed=10;car.steer=-.2;car.slip=.5;car.bump=.4;car.suspension=suspension(-.1);
+const mid = interpolateRenderPose(previous,car,.5);
+assert.equal(mid.z,10.5);assert.equal(mid.x,-1);assert.equal(mid.speed,9);
+assert.ok(Math.abs(mid.yaw-Math.PI)<.001,`Los ángulos deben cruzar ±π por el camino corto: ${mid.yaw}`);
+assert.equal(mid.suspension.heaveM,-.05);
+assert.equal(mid.suspension.wheelRoadM.FR,-.05);
+assert.equal(interpolateRenderPose(previous,car,-1).z,10);
+assert.equal(interpolateRenderPose(previous,car,2).z,11);
+const current=snapshotRenderPose(car);
+car.suspension.wheelRoadM.FR=999;
+assert.notEqual(current.suspension.wheelRoadM.FR,999,'La copia no debe mutar con la física');
+console.log('OK V8.5: interpolación visual, ángulos, suspensión, límites y snapshots independientes.');

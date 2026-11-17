@@ -1,0 +1,11 @@
+DATACAR V9.7 MOBILE - ACTUALIZACION LIVIANA
+
+1. Necesitas tener el proyecto V9.6 descomprimido en tu computadora.
+2. Descomprime este ZIP en la carpeta raiz de ese proyecto V9.6.
+3. Acepta reemplazar los archivos existentes y conserva todos los otros archivos.
+4. Abre una terminal en la carpeta del proyecto.
+5. Ejecuta: npm install
+6. Ejecuta: npm run build
+7. Si compila correctamente, publica tu proyecto con tu metodo habitual.
+
+No borres los archivos anteriores ni crees un proyecto vacio: este ZIP SOLO incluye los archivos modificados.

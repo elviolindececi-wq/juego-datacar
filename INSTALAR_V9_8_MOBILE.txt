@@ -1,0 +1,5 @@
+DATACAR ARENA V9.8 Mobile Game UX
+
+Descomprimir sobre proyecto V9.6/V9.7 en la raiz, reemplazando archivos.
+Ejecutar npm run build y npm run dev. Si compila, publicar usando git.
+Nota: validar fisicamente en iOS y Android; orientacion horizontal depende del navegador.

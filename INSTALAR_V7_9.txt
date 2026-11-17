@@ -1,0 +1,26 @@
+DATACAR ARENA V7.9 — CORRECCION VISIBILIDAD DE PUBLICIDAD
+
+Problema corregido:
+En V7.8, la publicidad de datacarpy.com era pequeña, infrecuente y quedaba de canto respecto a la camara de persecucion.
+
+Cambios:
+- Carteles grandes orientados al sentido de aproximacion del vehiculo.
+- Primer anuncio a unos 42 metros de la largada.
+- Otros anuncios en distintos sectores de la ruta, alternando lados.
+- Carteles en caras frontales de edificios, no solo en paredes laterales.
+- Textos grandes de alto contraste: DATACARPY.COM.
+- No agrega obstaculos ni modifica fisica, autos, street signs, videos o circuitos.
+
+Instalacion:
+1. Instalar SOBRE DATACAR ARENA V7.8 (no sirve instalar solo sobre V7.5).
+2. Detener el servidor Vite (Ctrl+C) en VS Code.
+3. Extraer el ZIP en la carpeta raiz del proyecto, preservando carpeta src/, y aceptar sobrescribir.
+4. Ejecutar: npm run dev
+5. Abrir el Local que muestre Vite y usar Ctrl+Shift+R.
+6. Probar MODO CARRERA en cualquier circuito de Asuncion. Avanzar hacia el primer cartel aproximadamente a los 42 m.
+
+Comprobaciones de codigo:
+node --experimental-strip-types scripts/test-v79-ads.mjs
+node --experimental-strip-types scripts/test-v78.mjs (si esta instalado)
+
+La prueba visual completa en la GPU/navegador del usuario queda pendiente.

@@ -1,0 +1,33 @@
+DATACAR ARENA V9.1 — PORTADA Y BACHES MÁS VISIBLES
+
+VERSIÓN COMPLETA (recomendada si no tenés todos los parches):
+1. Descomprimí el ZIP completo en una carpeta NUEVA.
+2. Abrí esa carpeta en VS Code.
+3. En PowerShell ejecutá: npm install
+4. Ejecutá: npm run test:v91
+5. Ejecutá: npm run build
+6. Ejecutá: npm run dev
+7. Abrí la dirección Local que muestra Vite y actualizá con Ctrl + Shift + R.
+
+PARCHE (SOLO sobre V9.0):
+1. Hacé una copia de seguridad de tu carpeta V9.0.
+2. Detené Vite con Ctrl + C.
+3. Descomprimí el parche EN LA RAÍZ del proyecto V9.0 (al lado de package.json).
+4. Aceptá reemplazar los archivos y abrí npm run dev.
+
+CAMBIOS:
+- Nueva portada original: «Los más buscados de DATACAR», selección interactiva entre los 7 vehículos.
+- Botones operativos: Start, Comparar y Modo Carrera con el auto mostrado.
+- No afirmamos que el orden de vehículos sea un ranking real de búsquedas.
+- Baches más legibles desde cámara arcade: desgaste visible antes, grava, borde irregular y sombra.
+- Aviso pequeño «Bache en tu trayectoria» que muestra distancia solo si está adelante y en el carril.
+- Leve corrección de ángulo al aproximarse sin alejar la cámara.
+- Se mantienen los límites físicos, suspensión, sonidos, ABS, ADAS y el HUD V9.0.
+- Se mantiene la llegada cinematográfica SIN el cartel central ¡META!.
+
+DATOS Y LIMITACIONES:
+- La lectura visual más clara de baches NO amplía la zona física de impacto.
+- La altura de depresión sigue siendo un modelo simplificado, no un mapa topográfico real.
+- La portada es una propuesta gráfica original para DATACAR; no usa marcas ni artes de Need for Speed.
+- Los 7 vehículos siguen con sus fichas y calibraciones identificadas según V8.9.
+- La compilación y el render en navegador deben verificarse en tu PC.

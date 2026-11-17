@@ -1,0 +1,50 @@
+[
+  {
+    "id": "run_1794882216604_dz5z9",
+    "circuitId": "aviadores",
+    "mode": "city_trial",
+    "laps": 2,
+    "pilotName": "Piloto643",
+    "isDatacarMember": false,
+    "vehicleId": "toyota-corolla-cross-seg-2027",
+    "vehicleName": "TOYOTA COROLLA CROSS",
+    "finishTimeSec": 268.35,
+    "drivingIq": 351,
+    "occupants": 1,
+    "payloadKg": 0,
+    "medal": "gold",
+    "recordedAtIso": "2026-11-17T02:23:36.604Z"
+  },
+  {
+    "id": "run_1794702213625_wbbpm",
+    "circuitId": "avelino",
+    "mode": "city_trial",
+    "laps": 2,
+    "pilotName": "Piloto939",
+    "isDatacarMember": false,
+    "vehicleId": "nissan-kicks-2027",
+    "vehicleName": "NISSAN KICKS",
+    "finishTimeSec": 341.35,
+    "drivingIq": 497,
+    "occupants": 1,
+    "payloadKg": 0,
+    "medal": "silver",
+    "recordedAtIso": "2026-11-15T00:23:33.625Z"
+  },
+  {
+    "id": "run_1794672346768_l3g59",
+    "circuitId": "oliva",
+    "mode": "city_trial",
+    "laps": 2,
+    "pilotName": "Piloto911",
+    "isDatacarMember": false,
+    "vehicleId": "nissan-kicks-2027",
+    "vehicleName": "NISSAN KICKS",
+    "finishTimeSec": 329.78,
+    "drivingIq": 222,
+    "occupants": 1,
+    "payloadKg": 40,
+    "medal": "over_limit",
+    "recordedAtIso": "2026-11-14T16:05:46.768Z"
+  }
+]

@@ -1,0 +1,15 @@
+DATACAR ARENA V9.7 — MODO MOBILE HORIZONTAL
+
+Incluye el proyecto completo V9.6 con una capa adicional de controles táctiles en Modo Carrera:
+- Girar a izquierda/derecha, acelerar, frenar y marcha atrás con botones multitáctiles.
+- Los botones comparten el estado de la física existente: no se cambian HP, torque, fichas ni resultados.
+- El celular muestra recomendación de girar en modo retrato.
+- En horizontal la carrera ocupa la pantalla, con HUD de velocidad y revoluciones reducido.
+- Botón Modo horizontal intenta pantalla completa y fijar orientación cuando el navegador lo permite.
+- Comparador, garage, showroom y resultados mantienen su diseño responsive y la experiencia de escritorio no cambia.
+
+IMPORTANTE: En iPhone Safari, bloquear orientación por API o usar fullscreen en un elemento puede no estar permitido. Girar el teléfono manualmente funciona si la rotación no está bloqueada en iOS.
+
+PRUEBAS RECOMENDADAS antes de publicar: ejecutar npm install y npm run build; probar Chrome Android y Safari iPhone tanto en horizontal como en vertical, incluidos dos dedos simultáneos, audio y rotación.
+
+El archivo PUBLICAR_DATACAR_V9_7_GITHUB.ps1 clona el repositorio en carpeta nueva para no afectar el proyecto local anterior; requiere Git y npm en Windows.

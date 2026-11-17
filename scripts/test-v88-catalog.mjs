@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import { PRESET_VEHICLES } from '../src/data/presetVehicles.ts';
+import { validateNewVehicle,registerVehicleInCatalog } from '../src/data/vehicleCatalog.ts';
+import { hasVerifiedSystem,getSafetyState } from '../src/utils/vehicleSafetySystems.ts';
+import { readFileSync } from 'node:fs';
+const registrySource=readFileSync(new URL('../src/utils/vehicle3DModelLoader.ts',import.meta.url),'utf8');
+import { InteractiveRacePhysics } from '../src/utils/interactiveRacePhysics.ts';
+const byId = id=> { const car=PRESET_VEHICLES.find(x=>x.id===id); assert.ok(car, `falta ${id}`); return car; };
+const ids = new Set(PRESET_VEHICLES.map(v=>v.id));
+assert.equal(ids.size,PRESET_VEHICLES.length,'IDs duplicados');
+assert.equal(PRESET_VEHICLES.length,7,'6 vehículos de las fichas y Carens legado');
+for (const vehicle of PRESET_VEHICLES) {
+ assert.deepEqual(validateNewVehicle(vehicle),[],`datos obligatorios ${vehicle.id}`);
+ assert.ok(registrySource.includes(`'${vehicle.id}':`),`falta fallback GLB para ${vehicle.id}`);
+}
+const t4=byId('chery-t4-pro-luxury-hev'), t2=byId('chery-t2-pro-max'), fronx=byId('suzuki-fronx');
+const tracker=byId('chevrolet-tracker-lite'), kicks=byId('nissan-kicks-2027'), corolla=byId('toyota-corolla-cross-seg-2027');
+assert.equal(t4.powerHp,195);
+assert.equal(t4.hybridSystem.electricTorqueNm,310);
+assert.equal(t4.hybridSystem.torqueNmIsElectricOnly,true,'NO es torque combinado');
+assert.equal(fronx.powerHp,102,'ISG no se suma continuamente al motor');
+assert.equal(fronx.hybridSystem.kind,'mild-12v');
+assert.ok(t2.estimatedFieldNames.includes('powerHp') && t2.estimatedFieldNames.includes('torqueNm'));
+assert.ok(Math.abs(tracker.powerHp-137.1)<.01, '139 CV convertidos a HP');assert.equal(tracker.torqueNm,220);
+assert.equal(kicks.powerHp,120);assert.equal(kicks.torqueNm,220);
+assert.match(kicks.transmissionDescription,/DCT/);
+assert.equal(getSafetyState(t4,'trafficJamAssist'),'present');
+assert.equal(getSafetyState(kicks,'rearCrossTraffic'),'present');
+assert.equal(hasVerifiedSystem(corolla,'aeb'),false);
+assert.equal(hasVerifiedSystem(t2,'abs'),true);assert.equal(hasVerifiedSystem(fronx,'abs'),true);
+assert.match(registrySource,/'chery-t4-pro-luxury-hev':[\s\S]*?isProvisional3D:true/);
+const testTrack={id:'test88',name:'Asunción',distanceMeters:400,cargoPayloadKg:0,inclineGradePercent:0,surfaceGripFactor:1,surfaceRoughnessFactor:1};
+function rollout(v,secs=4){let sim=new InteractiveRacePhysics([v],testTrack,v.id,false);for(let i=0;i<secs*100;i++)sim.step(.01,{steer:0,throttle:1,brake:0});return sim.getCar(v.id);}
+const low=rollout(t2), high=rollout(corolla), hybrid=rollout(t4), small=rollout(fronx);
+assert.ok(high.speed>low.speed,`auto con mayor potencia/masa acelera más: ${high.speed} vs ${low.speed}`);
+assert.ok(hybrid.speed>small.speed,'HEV debe salir más ágil que motor menor');
+assert.ok(hybrid.batterySoc<.68 && hybrid.batterySoc>.15,'motor eléctrico gasta SOC estimado bajo aceleración');
+const sim=new InteractiveRacePhysics([t4],testTrack,t4.id,false);
+for(let i=0;i<300;i++)sim.step(.01,{steer:0,throttle:1,brake:0});
+const socBefore=sim.getCar(t4.id).batterySoc;
+for(let i=0;i<100;i++)sim.step(.01,{steer:0,throttle:0,brake:.6});
+assert.ok(sim.getCar(t4.id).batterySoc>socBefore,'HEV simula recuperación de energía');
+const fake=structuredClone(fronx);fake.id='nuevo-auto-2028';
+assert.equal(registerVehicleInCatalog(PRESET_VEHICLES,fake).length,8,'Motor escalable para futuros autos');
+console.log('OK V8.8: 7 autos (6 de DATACAR + Carens), fichas, HEV/ISG, potencia/masa, ADAS y GLB de respaldo.');

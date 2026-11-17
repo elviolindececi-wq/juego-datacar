@@ -1,0 +1,20 @@
+DATACAR ARENA — V9.2.1 (hotfix de pantalla negra al entrar a Modo Carrera)
+
+CAUSA:
+Race3DPerspectiveView.tsx llamaba a createAsphaltMicroRelief() pero no la incluía en los imports desde src/utils/race3dTextures.ts.
+El resultado era Uncaught ReferenceError: createAsphaltMicroRelief is not defined, y el lienzo de la carrera quedaba vacío.
+
+CORRECCIÓN:
+Se agregó el import que faltaba. No se alteran las curvas, físicas, vehículos ni cámaras.
+
+INSTALACIÓN (sobre V9.2):
+1. Detener el servidor de Vite con Ctrl+C.
+2. Extraer este ZIP encima de la carpeta raíz de DATACAR ARENA V9.2, reemplazando archivos.
+3. Ejecutar: npm run test:v921
+4. Ejecutar: npm run dev
+5. Recargar Chrome con Ctrl+Shift+R.
+
+ARCHIVOS MODIFICADOS:
+- src/components/Race3DPerspectiveView.tsx
+- package.json (versión 9.2.1 y script test:v921)
+- scripts/test-v921-startup-imports.mjs (prueba de regresión)

@@ -1,0 +1,2 @@
+DATACAR V12.6 - CORRECCION CAMBIO DE CAMARA
+Corrige variables indefinidas en Cenital 3D; evita doble conversion de coordenadas en curvas; agrega respaldo ante posiciones invalidas. Conserva la logica de reinicio desde grilla de V12.4.

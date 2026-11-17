@@ -1,0 +1,47 @@
+DATACAR ARENA V7.0 — INSTALACIÓN EN VS CODE (WINDOWS)
+====================================================
+
+BASE REQUERIDA: la carpeta local DATACAR-ARENA-V5.7 que ya se actualizó a V6.0.
+NO tenés que instalar el parche V6.1 antes: este ZIP incluye todas las modificaciones necesarias.
+
+1. Descargá DATACAR_ARENA_V7_0_ACTUALIZACION_DESDE_V6_0.zip en Descargas.
+2. En VS Code, detené el servidor con Ctrl+C.
+3. Abrí Terminal > New Terminal; utilizá PowerShell.
+4. Copiá SOLAMENTE estas líneas (no copies el prompt PS C:\...>):
+
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter 'DATACAR_ARENA_V7_0_ACTUALIZACION_DESDE_V6_0*.zip' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw 'No se encontró la actualización en Descargas' }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm install
+npm run test:v7
+npm run dev
+
+5. Abrí http://localhost:3000 o el puerto que indique Vite.
+6. Si queda una versión vieja, recargá con Ctrl+Shift+R.
+
+RECORRIDO:
+- COMPARAR: elegir 2 autos -> simulación predeterminada -> resultados.
+- MODO CARRERA: elegir dificultad y circuito de Asunción -> seleccionar auto en showroom 360°
+  -> confirmar -> conducir contra 2 rivales IA -> podio -> Ver repetición (Director TV).
+
+CONTROLES EN MODO CARRERA:
+- ↑ / W acelerar, ↓ / S / espacio frenar, ← → conducir.
+- Arrastrar con mouse/mousepad para girar cámara libre; dos dedos para zoom.
+- Durante la carrera podés colocar baches y obstáculos (botones de pista).
+- Director TV NO aparece durante la conducción. Está solamente en VER REPETICIÓN.
+
+LÍMITES ACTUALES:
+- Los seis circuitos son escenarios de ficción inspirados en nombres de vías asuncenas.
+  El nivel de dificultad/obstáculos NO es una evaluación del estado real de la calle.
+- La geometría 3D utiliza TRAMOS ESTILIZADOS RECTOS con perfiles de suelo y obstáculos,
+  no un mapa vial real con curvas, intersecciones ni fachadas de Asunción.
+- La física es un modelo simplificado jugable, no un simulador de ingeniería certificado.
+- Se reutiliza temporalmente la Tracker GLB para los tres contendientes.
+- Director TV se reproduce desde telemetría grabada (x, z, giro, velocidad, incidentes
+  indirectos mediante sus efectos en el movimiento); aún no tiene cámara lenta por choque.
+- La compilación de Vite y el resultado visual deben verificarse en tu PC con npm run build.
+
+Si npm falla por Vite/esbuild:
+  npm pkg set "devDependencies.esbuild=^0.28.0"
+  npm install

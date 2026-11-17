@@ -1,0 +1,18 @@
+DATACAR ARENA V7.6 - PARCHE DESDE V7.5
+
+1. Descargue el ZIP del parche en Descargas.
+2. Detenga Vite en la terminal VS Code con Ctrl+C.
+3. En PowerShell de VS Code copie y ejecute:
+
+cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+$zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V7_6_CTA_PISTA_Y_ETIQUETAS_PARCHE*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $zip) { throw "No se encontró el parche V7.6 en Descargas" }
+Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+npm run test:v76
+npm run dev
+
+4. Abra el URL Local indicado por Vite y actualice con Ctrl+Shift+R.
+
+NOTAS: Requiere haber instalado V7.5. No modifica GLB ni videos.
+La pista mejorada es estilizada, no un mapa exacto de Asunción.
+Los tests de física y recursos pasaron. No se validó la apariencia final en un navegador.

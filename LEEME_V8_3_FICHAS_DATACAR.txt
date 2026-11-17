@@ -1,0 +1,42 @@
+DATACAR ARENA V8.3 — CRITERIO DE FICHAS TÉCNICAS
+
+Fuente prioritaria para la identificación de modelos, versiones y características:
+https://www.datacarpy.com/
+
+Fecha de consulta web: 10/11/2026.
+
+IMPORTANTE: El catálogo público consultable desde este entorno no permite recuperar
+la ficha íntegra de todas las versiones. Por ejemplo, la página de Kicks publicada en
+https://www.datacarpy.com/catalogo/nissan/all-new-kicks indica "0 versiones" en su
+contenido accesible. No se debe equiparar automáticamente ese All-New Kicks al
+Kicks Sense 1.6 que ya estaba cargado en el juego.
+
+Por ello esta versión NO inventa cifras de DATACAR ni cambia versiones unilateralmente.
+El simulador utiliza las fichas técnicas cargadas en src/data/presetVehicles.ts.
+Al actualizar o importar una ficha exacta de datacarpy.com, esa versión prevalece
+sobre los datos antiguos de la simulación.
+
+VEHÍCULOS ACTUALES DEL JUEGO (PENDIENTES DE VALIDACIÓN UNO A UNO CONTRA FICHAS
+DE VERSIÓN DE DATACARPY.COM):
+- Tracker LITE 1.0T AT: 115 HP / 180 Nm; turbo declarado en ficha del juego.
+- Corolla Cross SEG 2027: 171 HP / 203 Nm; aspirado, CVT. Datos de ficha
+  compartida por el usuario; masa, Cd, consumo y 0-100 son estimaciones.
+- Kicks Sense 2027: 118 HP / 149 Nm; aspirado CVT EN LA VERSIÓN DEL JUEGO,
+  no extrapolar a otros Kicks del catálogo.
+- Carens EX Full 1.5 CRDi: 115 HP / 250 Nm; Turbo Diésel declarado en ficha
+  del juego. CRDi por sí solo no implica turbo: se requiere declaración explícita.
+
+MODELO FÍSICO: no es una certificación de prestaciones. El turbo se modela con
+una constante de respuesta simplificada a partir del tipo de motorización;
+ningún turbo debe superar los máximos de potencia o par declarados. Sin curva
+homologada no se puede afirmar "respuesta real de fábrica" ni importar curvas
+inventadas. La retención al soltar el acelerador depende de la caja y resistencia.
+
+CAMBIOS V8.3:
+- Mayor respuesta visual y sonora a baches y lomos de burro.
+- Retención progresiva al soltar la flecha arriba (rodamiento + aerodinámica + motor).
+- Acumulación/liberación de boost exclusivamente si la ficha cargada declara turbo.
+- Regresión completa de física y cuatro vehículos.
+
+INSTALAR: extraer el parche sobre la carpeta de V8.2, ejecutar npm run test:v83
+antes de npm run dev. Conservar respaldo del proyecto.

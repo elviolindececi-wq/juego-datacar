@@ -1,0 +1,1 @@
+DATACAR V11.2: corrige la largada. Requiere V11.1. START espera el primer frame 3D; conteo 3-2-1 con intervalos consecutivos de 1000 ms, evitando compresión de pitidos tras bloqueos. Audio GO y simulación sincronizados. No modifica física ni clasificación.\n

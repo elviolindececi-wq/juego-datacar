@@ -1,0 +1,52 @@
+DATACAR ARENA V7.5 — TOYOTA COROLLA CROSS SEG 2027
+=================================================
+
+PARCHE para instalar sobre la V7.4 (que ya incluye V7.2/V7.3 y la correccion de arranque).
+
+QUE SE INCORPORA
+- Cuarto vehículo: Toyota Corolla Cross SEG 2027, precio aportado USD 36.800.
+- Ficha técnica aportada por el usuario: motor 2.0 Dynamic Force, 171 HP,
+  203 Nm, CVT 10 marchas preprogramadas, tracción delantera, 7 airbags,
+  cámara de retroceso, pantalla 10", 215/60 R17, dimensiones y equipamiento.
+- Video 360° MP4 original en el showroom (opcional, sin autoplay inicial).
+- 120 JPG extraídos del video para girar manualmente el auto con el mousepad.
+- GLB Meshy propio, comprimido a ~36,6 MB sin modificar la geometría:
+  8 mallas: 1 carrocería y 7 subpiezas agrupadas como 4 ruedas animables.
+- Dirección y rodadura controladas por Three.js. Marcha atrás, frenos,
+  baches, colisiones y rivales IA con la física interactiva existente.
+- Comparación: elegir hasta 2 autos entre 4 disponibles.
+- Carrera: 1 jugador + 2 rivales IA (total 3 vehículos en pista).
+- Director TV se mantiene solo para repeticiones.
+
+IMPORTANTE SOBRE LA FICHA
+Peso, velocidad máxima, 0-100 km/h, aerodinámica, consumo, capacidad del
+ tanque, carga, frenado 100-0 y agarre no aparecen en la ficha recibida.
+Se colocaron valores PROVISIONALES para que el motor físico pueda operar.
+Se identifican como estimados en la interfaz y no deben venderse como
+cifras oficiales ni usarse para análisis comerciales precisos.
+La geometría de Meshy preserva 1.380.310 triángulos: si hay tirones,
+conviene hacer una optimización geométrica posterior que respete las piezas.
+
+INSTALACION DESDE EL PARCHE
+1. Descargar DATACAR_ARENA_V7_5_COROLLA_CROSS_PARCHE.zip en Descargas.
+2. En VS Code, detener npm run dev con Ctrl + C.
+3. En PowerShell:
+   cd "$env:USERPROFILE\Documents\Ceci\Juego\DATACAR-ARENA-V5.7"
+   $zip = Get-ChildItem "$env:USERPROFILE\Downloads" -Filter "DATACAR_ARENA_V7_5_COROLLA_CROSS_PARCHE*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+   if (-not $zip) { throw "No se encontró el ZIP V7.5 en Descargas" }
+   Expand-Archive -LiteralPath $zip.FullName -DestinationPath (Get-Location).Path -Force
+   npm run test:corolla
+   npm run dev
+4. Abrir el localhost que indique Vite; refrescar Ctrl + Shift + R.
+
+PRUEBA
+- Comparar: Toyota disponible como cuarto modelo; máximo dos seleccionados.
+- Modo Carrera > showroom: Corolla, giro manual, ficha y precio, MP4 opcional.
+- Modo Carrera: Corolla con ruedas delanteras que doblan y 4 ruedas que ruedan;
+  conducir con flechas, choques y marcha atrás; ver podio y repetición.
+
+VALIDACION
+- Se validó lectura GLB con trimesh, 8 mallas y cuatro grupos espaciales.
+- Se validó presencia del MP4, 120 fotogramas y archivos de ficha.
+- Pasaron pruebas Node existentes de reversa y circuitos de Asunción.
+- La compilación de Vite no pudo verificarse en este entorno sin npm install.

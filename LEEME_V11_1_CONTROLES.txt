@@ -1,0 +1,14 @@
+DATACAR ARENA V11.1 — Ajuste de controles
+
+Base requerida: V11 Codigo Consolidado (no es un parche compatible con V9.7 o V10).
+
+Cambios:
+- Los controles táctiles de la carrera se muestran solo en dispositivos móviles compactos con pantalla táctil.
+- Teclado y touch mantienen estados independientes; ambos alimentan la misma física.
+- Permite acelerar mientras se gira en mobile con dos dedos y en desktop con dos teclas.
+- Soltar una flecha no debe cortar el acelerador; al soltar, el volante vuelve a su centro.
+- No cambia físicas, modelos, clasificación ni resultados.
+
+Instalación: extraer el ZIP en la raíz del proyecto V11 con reemplazo de archivos.
+Probar: node scripts/test-v111-controls.mjs; npm run build
+Aviso: prueba de código, no sustituye pruebas de multitouch en hardware real.

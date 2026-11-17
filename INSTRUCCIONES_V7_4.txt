@@ -1,0 +1,33 @@
+DATACAR ARENA V7.4 — MARCHA ATRÁS Y RECUPERACIÓN DE CHOQUES
+
+Se instala sobre V7.3 o sobre V7.2 con la corrección de pantalla azul.
+El parche no reemplaza ningún modelo 3D, video, ficha técnica ni circuito.
+
+CONTROLES EN MODO CARRERA:
+↑ / W: Acelerar y avanzar.
+↓ / S: Frenar mientras el auto avanza; una vez detenido, retroceder.
+Espacio: Frenar, sin activar marcha atrás.
+← / →: Girar las ruedas delanteras, tanto al avanzar como retroceder.
+Mouse o mousepad: Control de la cámara.
+
+Al retroceder, el velocímetro muestra velocidad positiva y la marcha indica R.
+Marcha atrás limitada a 25 km/h para facilitar maniobras después de una colisión.
+Para volver hacia adelante, soltá ↓/S y mantené ↑/W: el vehículo se detiene primero.
+
+INSTALACIÓN:
+1. Cerrá el servidor con Ctrl+C en VS Code.
+2. Extraé el ZIP en la carpeta raíz del proyecto, aceptando sobreescribir.
+3. Ejecutá npm run dev.
+4. Actualizá Chrome con Ctrl+Shift+R.
+
+PRUEBA RECOMENDADA:
+Colocá un obstáculo en la trayectoria del auto. Acelerá hasta chocar,
+mantené ↓ hasta que el auto retroceda, girá y volvé a acelerar con ↑.
+
+TESTS:
+node --experimental-strip-types scripts/test-interactive-physics.mjs
+node --experimental-strip-types scripts/test-reverse-v74.mjs
+
+LIMITACIÓN:
+Es una simulación arcade con dinámica física aproximada. El modelo de colisiones
+sigue utilizando discos de contacto y no reproduce deformación de carrocería.
