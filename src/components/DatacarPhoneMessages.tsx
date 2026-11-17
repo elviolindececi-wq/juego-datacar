@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
   ChevronRight,
@@ -54,6 +54,16 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
   const totalCount = messages.length;
   const [visibleCount, setVisibleCount] = useState(1);
   const [isTyping, setIsTyping] = useState(() => totalCount > 1);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = messageListRef.current;
+    if (!el) return;
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: visibleCount <= 1 ? 'auto' : 'smooth',
+    });
+  }, [visibleCount, isTyping]);
 
   const allRevealed = visibleCount >= totalCount;
   const visibleMessages = messages.slice(0, visibleCount);
@@ -172,6 +182,7 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
 
       {/* Historial de mensajes progresivos */}
       <div
+        ref={messageListRef}
         className="flex flex-1 min-h-0 flex-col gap-2 overflow-y-auto px-3.5 py-2.5 sm:px-4 sm:py-4 bg-gradient-to-b from-[#040d16] via-[#061421] to-[#040c14]"
         aria-live="polite"
       >

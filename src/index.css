@@ -380,7 +380,7 @@
   .dc99-race-stage .dc-mobile-controls {display:flex!important;touch-action:none!important;}
   .dc99-race-stage .dc-touch-button {touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;}
   .dc99-race-stage .dc-mockup5-minimap {display:flex!important;position:absolute!important;left:max(8px,env(safe-area-inset-left))!important;top:max(8px,env(safe-area-inset-top))!important;z-index:35!important;transform:none!important;}
-  .dc99-race-stage .dc-mockup5-center-header {display:flex!important;position:absolute!important;top:max(6px,env(safe-area-inset-top))!important;left:50%!important;transform:translateX(-50%)!important;z-index:35!important;}
+  .dc99-race-stage .dc-mockup5-center-header {display:flex!important;position:absolute!important;top:max(6px,env(safe-area-inset-top))!important;left:50%!important;right:auto!important;translate:none!important;transform:translateX(-50%)!important;max-width:calc(100% - 220px)!important;z-index:35!important;}
   .dc99-race-stage .dc-mockup5-cluster-wrapper {display:flex!important;position:absolute!important;right:max(8px,env(safe-area-inset-right))!important;top:max(6px,env(safe-area-inset-top))!important;z-index:35!important;}
   .dc99-race-stage .dc-mockup5-driving-iq {display:flex!important;position:absolute!important;bottom:max(12px,env(safe-area-inset-bottom))!important;left:50%!important;transform:translateX(-50%)!important;z-index:35!important;}
   .dc99-race-stage .dc-mobile-controls button.dc-touch-rhomboid {width:clamp(60px,8.5vw,76px)!important;height:clamp(52px,7.5vw,64px)!important;border-radius:16px!important;transform:skewX(-12deg)!important;}
@@ -724,11 +724,11 @@
   .dc-v5-top-center,
   .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
     top: max(6px, env(safe-area-inset-top)) !important;
-    left: calc(max(8px, env(safe-area-inset-left)) + 184px) !important;
-    right: calc(max(8px, env(safe-area-inset-right)) + 184px) !important;
+    left: 50% !important;
+    right: auto !important;
     translate: none !important;
-    transform: none !important;
-    max-width: none !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 260px) !important;
   }
   .dc-v5-rearview-housing {
     width: 188px;
@@ -798,11 +798,11 @@
   .dc-v5-top-center,
   .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
     top: max(5px, env(safe-area-inset-top)) !important;
-    left: calc(max(8px, env(safe-area-inset-left)) + 138px) !important;
-    right: calc(max(8px, env(safe-area-inset-right)) + 138px) !important;
+    left: 50% !important;
+    right: auto !important;
     translate: none !important;
-    transform: none !important;
-    max-width: none !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 250px) !important;
   }
   .dc-v5-clock-bar {
     padding: 2px 6px !important;
@@ -921,11 +921,11 @@
   .dc-v5-top-center,
   .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
     top: max(6px, env(safe-area-inset-top)) !important;
-    left: calc(max(6px, env(safe-area-inset-left)) + 86px) !important;
-    right: calc(max(6px, env(safe-area-inset-right)) + 86px) !important;
+    left: 50% !important;
+    right: auto !important;
     translate: none !important;
-    transform: none !important;
-    max-width: none !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 172px) !important;
   }
   .dc-v5-clock-bar {
     padding: 2px 4px !important;
