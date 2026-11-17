@@ -941,8 +941,20 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const fuelPitStageRef = useRef<'none' | 'approaching_pump' | 'at_pump_prompt' | 'filling' | 'exiting'>('none');
   const [fuelPitModalStage, setFuelPitModalStage] = useState<'closed' | 'prompt' | 'filling'>('closed');
   const [fuelFillPercent, setFuelFillPercent] = useState(0);
+  const [fuelBannerDismissedAfterRefuel, setFuelBannerDismissedAfterRefuel] = useState(false);
   const loadedFuelRef = useRef<FuelProductSpec | null>(null);
   const lastFuelHudKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!fuelStationHud?.refueled) {
+      setFuelBannerDismissedAfterRefuel(false);
+      return;
+    }
+    const hideTimer = window.setTimeout(() => {
+      setFuelBannerDismissedAfterRefuel(true);
+    }, 4500);
+    return () => window.clearTimeout(hideTimer);
+  }, [fuelStationHud?.refueled]);
 
   useEffect(() => {
     if (fuelPitModalStage !== 'filling') return;
@@ -5346,23 +5358,25 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                 )}
 
                 {/* Alerta de Estación de Servicio 3D en circuito + recomendación de combustible por auto (Sponsor-Ready) */}
-                {fuelStationHud && (fuelStationHud.isApproachingStation || fuelStationHud.refueled) && (
+                {fuelStationHud &&
+                  (fuelStationHud.isApproachingStation ||
+                    (fuelStationHud.refueled && !fuelBannerDismissedAfterRefuel)) && (
                   <div
                     data-testid="fuel-station-hud-banner"
-                    className={`mt-1 flex flex-wrap items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1 text-[8.5px] sm:text-[9.5px] shadow-[0_6px_18px_rgba(0,0,0,0.65)] pointer-events-auto max-w-[94vw] transition-all ${
+                    className={`mt-1 flex flex-wrap items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1 text-[8.5px] sm:text-[9.5px] shadow-[0_6px_18px_rgba(0,0,0,0.65)] pointer-events-auto w-[min(560px,calc(100vw-170px))] sm:w-auto max-w-[92vw] text-center transition-all ${
                       fuelStationHud.refueled
-                        ? 'border-emerald-400/60 bg-emerald-950/90 text-emerald-100'
+                        ? 'border-emerald-400/60 bg-emerald-950/92 text-emerald-100'
                         : fuelStationHud.isInPitBay
                           ? 'border-amber-300 bg-amber-950/95 text-amber-100 animate-pulse'
                           : 'border-cyan-400/55 bg-[#04101e]/94 text-slate-100'
                     }`}
                   >
-                    <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 border border-amber-400/50 px-1.5 py-0.5 font-mono font-black uppercase tracking-wider text-amber-300">
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 border border-amber-400/50 px-1.5 py-0.5 font-mono font-black uppercase tracking-wider text-amber-300 shrink-0">
                       ⛽ {ACTIVE_FUEL_SPONSOR.displayName}
                     </span>
                     {fuelStationHud.refueled ? (
-                      <span className="font-bold text-emerald-200">
-                        ¡Tanque cargado con {fuelStationHud.loadedFuel?.displayName ?? fuelStationHud.recommendation.recommendedFuel.displayName}! (+{fuelStationHud.recommendation.recommendedFuel.powerResponseBonusPct}% respuesta · +{fuelStationHud.recommendation.recommendedFuel.iqBonusPoints} pts IQ)
+                      <span className="font-bold text-emerald-200 leading-tight">
+                        ¡Cargado {fuelStationHud.loadedFuel?.code ?? fuelStationHud.recommendation.recommendedFuel.code}! (+{fuelStationHud.recommendation.recommendedFuel.powerResponseBonusPct}% resp. · +{fuelStationHud.recommendation.recommendedFuel.iqBonusPoints} pts IQ)
                       </span>
                     ) : (
                       <>
@@ -5404,109 +5418,6 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                         </button>
                       </>
                     )}
-                  </div>
-                )}
-
-                {/* Diálogo interactivo en pantalla grande en el surtidor: Bienvenida + "¿Tanque lleno?" + Recomendación + Carga animada + Salida automática */}
-                {fuelPitModalStage !== 'closed' && fuelStationHud && (
-                  <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[2px] pointer-events-auto">
-                    <div
-                      data-testid="fuel-station-pump-dialog"
-                      role="dialog"
-                      aria-label="Atención en surtidor de combustible"
-                      className="w-[min(560px,95vw)] rounded-3xl border-2 border-amber-400/85 bg-gradient-to-b from-[#06182c]/98 to-[#030b14]/98 p-6 text-left shadow-[0_24px_64px_rgba(0,0,0,0.92)]"
-                    >
-                      <div className="flex items-center justify-between gap-3 border-b border-cyan-400/25 pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-400/70 bg-amber-400/15 text-2xl shadow-inner">
-                            ⛽
-                          </div>
-                          <div>
-                            <span className="block font-mono text-[11px] font-black uppercase tracking-wider text-amber-300">
-                              {ACTIVE_FUEL_SPONSOR.displayName} · ATENCIÓN EN ISLA 02
-                            </span>
-                            <span className="block text-xs font-semibold text-cyan-200">
-                              Playero de Estación · {selectedVehicle?.brand} {selectedVehicle?.model}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="rounded-full border border-emerald-400/50 bg-emerald-950/80 px-2.5 py-0.5 font-mono text-[10px] font-black uppercase text-emerald-300">
-                          EN SURTIDOR
-                        </span>
-                      </div>
-
-                      {fuelPitModalStage === 'prompt' ? (
-                        <>
-                          <div className="mt-4 rounded-2xl border border-cyan-400/30 bg-[#081d33]/85 p-4">
-                            <h3 className="font-display text-2xl sm:text-3xl font-black italic uppercase tracking-wide text-white">
-                              “¡Bienvenido a {ACTIVE_FUEL_SPONSOR.displayName}! ¿Tanque lleno?”
-                            </h3>
-                            <p className="mt-2 text-sm text-slate-200 leading-relaxed">
-                              Viendo tu{' '}
-                              <strong className="text-white">
-                                {selectedVehicle?.brand} {selectedVehicle?.model}
-                              </strong>{' '}
-                              ({fuelStationHud.recommendation.reasonHeadline}), te recomiendo cargar{' '}
-                              <strong className="text-amber-300">
-                                {fuelStationHud.recommendation.recommendedFuel.displayName}
-                              </strong>{' '}
-                              <span className="text-cyan-300">
-                                ({fuelStationHud.recommendation.recommendedFuel.octaneOrCetaneLabel})
-                              </span>.
-                            </p>
-                            <p className="mt-2 text-xs text-cyan-200/90 leading-relaxed">
-                              {fuelStationHud.recommendation.technicalExplanation}
-                            </p>
-                          </div>
-                          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                fuelPitStageRef.current = 'exiting';
-                                fuelAutoPitRef.current = false;
-                                setFuelPitModalStage('closed');
-                              }}
-                              className="rounded-xl border border-slate-600 bg-slate-900/90 px-4 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 cursor-pointer"
-                            >
-                              Seguir sin cargar
-                            </button>
-                            <button
-                              type="button"
-                              data-testid="fuel-station-confirm-fill-btn"
-                              onClick={() => {
-                                soundEngine.playSeatbeltClick();
-                                setFuelPitModalStage('filling');
-                              }}
-                              className="rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-amber-500 px-6 py-2.5 font-display text-base font-black italic uppercase tracking-wider text-slate-950 shadow-[0_0_22px_rgba(245,158,11,0.55)] hover:brightness-110 cursor-pointer"
-                            >
-                              OK · Llenar Tanque ({fuelStationHud.recommendation.recommendedFuel.code})
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="mt-4 space-y-3 rounded-2xl border border-emerald-400/35 bg-[#061b26]/90 p-4">
-                          <div className="flex items-center justify-between text-sm font-bold">
-                            <span className="text-emerald-300">
-                              {fuelFillPercent >= 100
-                                ? '✅ ¡TANQUE LLENO! Saliendo automáticamente a pista…'
-                                : `⛽ Cargando ${fuelStationHud.recommendation.recommendedFuel.displayName}…`}
-                            </span>
-                            <span className="font-mono text-base font-black text-amber-300 tabular-nums">
-                              {fuelFillPercent}% · {Math.round((fuelFillPercent / 100) * 52)} L
-                            </span>
-                          </div>
-                          <div className="h-4 w-full overflow-hidden rounded-full border border-cyan-400/45 bg-slate-950">
-                            <div
-                              className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-100"
-                              style={{ width: `${fuelFillPercent}%` }}
-                            />
-                          </div>
-                          <p className="text-xs font-mono text-cyan-200">
-                            Bonus aplicado: +{fuelStationHud.recommendation.recommendedFuel.powerResponseBonusPct}% respuesta · +{fuelStationHud.recommendation.recommendedFuel.iqBonusPoints} pts Driving IQ
-                          </p>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )}
 
@@ -5690,6 +5601,109 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Diálogo interactivo centrado en el viewport (fuera de dc-v5-top-center para no heredar translateX) */}
+              {fuelPitModalStage !== 'closed' && fuelStationHud && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-3 py-3 backdrop-blur-[2px] pointer-events-auto">
+                  <div
+                    data-testid="fuel-station-pump-dialog"
+                    role="dialog"
+                    aria-label="Atención en surtidor de combustible"
+                    className="w-[min(480px,92vw)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl sm:rounded-3xl border-2 border-amber-400/85 bg-gradient-to-b from-[#06182c]/98 to-[#030b14]/98 p-3.5 sm:p-5 text-left shadow-[0_24px_64px_rgba(0,0,0,0.92)]"
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-cyan-400/25 pb-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/70 bg-amber-400/15 text-lg sm:text-2xl shadow-inner">
+                          ⛽
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block truncate font-mono text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-amber-300">
+                            {ACTIVE_FUEL_SPONSOR.displayName} · ISLA 02
+                          </span>
+                          <span className="block truncate text-[11px] sm:text-xs font-semibold text-cyan-200">
+                            Playero · {selectedVehicle?.brand} {selectedVehicle?.model}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-400/50 bg-emerald-950/80 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-emerald-300">
+                        EN SURTIDOR
+                      </span>
+                    </div>
+
+                    {fuelPitModalStage === 'prompt' ? (
+                      <>
+                        <div className="mt-3 rounded-xl border border-cyan-400/30 bg-[#081d33]/85 p-3 sm:p-3.5">
+                          <h3 className="font-display text-lg sm:text-2xl font-black italic uppercase tracking-wide text-white leading-tight">
+                            “¡Bienvenido a {ACTIVE_FUEL_SPONSOR.displayName}! ¿Tanque lleno?”
+                          </h3>
+                          <p className="mt-1.5 text-xs sm:text-sm text-slate-200 leading-snug">
+                            Para tu{' '}
+                            <strong className="text-white">
+                              {selectedVehicle?.brand} {selectedVehicle?.model}
+                            </strong>{' '}
+                            te recomiendo{' '}
+                            <strong className="text-amber-300">
+                              {fuelStationHud.recommendation.recommendedFuel.displayName}
+                            </strong>{' '}
+                            <span className="text-cyan-300">
+                              ({fuelStationHud.recommendation.recommendedFuel.octaneOrCetaneLabel})
+                            </span>.
+                          </p>
+                          <p className="mt-1 text-[11px] text-cyan-200/85 leading-snug hidden sm:block">
+                            {fuelStationHud.recommendation.technicalExplanation}
+                          </p>
+                        </div>
+                        <div className="mt-3.5 flex flex-wrap items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              fuelPitStageRef.current = 'exiting';
+                              fuelAutoPitRef.current = false;
+                              setFuelPitModalStage('closed');
+                            }}
+                            className="rounded-xl border border-slate-600 bg-slate-900/90 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 cursor-pointer"
+                          >
+                            Seguir sin cargar
+                          </button>
+                          <button
+                            type="button"
+                            data-testid="fuel-station-confirm-fill-btn"
+                            onClick={() => {
+                              soundEngine.playSeatbeltClick();
+                              setFuelPitModalStage('filling');
+                            }}
+                            className="rounded-xl border border-amber-300 bg-gradient-to-r from-amber-400 to-amber-500 px-4 py-2 font-display text-sm sm:text-base font-black italic uppercase tracking-wider text-slate-950 shadow-[0_0_18px_rgba(245,158,11,0.5)] hover:brightness-110 cursor-pointer"
+                          >
+                            OK · Llenar Tanque ({fuelStationHud.recommendation.recommendedFuel.code})
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-3 space-y-2.5 rounded-xl border border-emerald-400/35 bg-[#061b26]/90 p-3.5">
+                        <div className="flex items-center justify-between text-xs sm:text-sm font-bold gap-2">
+                          <span className="text-emerald-300">
+                            {fuelFillPercent >= 100
+                              ? '✅ ¡TANQUE LLENO! Saliendo a pista…'
+                              : `⛽ Cargando ${fuelStationHud.recommendation.recommendedFuel.code}…`}
+                          </span>
+                          <span className="font-mono text-sm sm:text-base font-black text-amber-300 tabular-nums shrink-0">
+                            {fuelFillPercent}% · {Math.round((fuelFillPercent / 100) * 52)} L
+                          </span>
+                        </div>
+                        <div className="h-3.5 w-full overflow-hidden rounded-full border border-cyan-400/45 bg-slate-950">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-100"
+                            style={{ width: `${fuelFillPercent}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] font-mono text-cyan-200">
+                          Bonus: +{fuelStationHud.recommendation.recommendedFuel.powerResponseBonusPct}% respuesta · +{fuelStationHud.recommendation.recommendedFuel.iqBonusPoints} pts Driving IQ
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Espejos retrovisores laterales izquierdo y derecho (cámaras secundarias reales) */}
               {showRearviewMirror && showSideMirrors && (

@@ -93,33 +93,33 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
       </div>
 
       {/* CABECERA DEL HANGAR DATACAR */}
-      <header className="relative z-20 flex flex-wrap items-center justify-between gap-3 border-b border-[#00E5F5]/25 bg-[#040c16]/90 px-4 py-3 sm:px-8">
-        <div className="flex items-center gap-2.5">
+      <header className="relative z-20 shrink-0 flex flex-wrap items-center justify-between gap-2 border-b border-[#00E5F5]/25 bg-[#040c16]/90 px-3 py-2 sm:px-8 sm:py-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           <Lightbulb
-            className={`h-4 w-4 transition-colors ${
+            className={`h-4 w-4 shrink-0 transition-colors ${
               lightStage === 2 ? 'text-[#FFAA12]' : 'text-cyan-400 animate-pulse'
             }`}
           />
-          <span className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-[#00E5F5]">
+          <span className="truncate font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#00E5F5]">
             HANGAR SECRETO DATACAR · LUCES {lightStage === 2 ? '100% ACTIVAS' : 'ENCENDIENDO…'}
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={onSkipPrologueToGarage}
             data-testid="reveal-skip-prologue-btn"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 min-h-[36px] text-xs font-bold uppercase tracking-wider text-slate-300 hover:border-amber-400 hover:text-white cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/90 px-2.5 py-1 min-h-[32px] text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 hover:border-amber-400 hover:text-white cursor-pointer"
           >
-            <FastForward className="h-3.5 w-3.5" />
+            <FastForward className="h-3 w-3" />
             <span>Omitir prólogo</span>
           </button>
           {onBackToMenu && (
             <button
               type="button"
               onClick={onBackToMenu}
-              className="rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1.5 min-h-[36px] text-xs font-bold uppercase text-slate-300 hover:text-white cursor-pointer"
+              className="rounded-lg border border-slate-700 bg-slate-900/90 px-2.5 py-1 min-h-[32px] text-[10px] sm:text-xs font-bold uppercase text-slate-300 hover:text-white cursor-pointer"
             >
               Volver
             </button>
@@ -127,93 +127,93 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
         </div>
       </header>
 
-      {/* CUERPO PRINCIPAL: TÍTULOS + VISOR 3D GLB DEL LAMBORGHINI + DIÁLOGO Y OBJETIVOS */}
-      <div className="relative z-20 mx-auto my-auto grid w-full max-w-[1320px] grid-cols-1 gap-5 px-4 py-4 sm:px-8 lg:grid-cols-12 items-center">
-        {/* COLUMNA IZQUIERDA (5 cols): Textos obligatorios y objetivos jugables (§6) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-2xl border border-[#FFAA12]/55 bg-[#071320]/95 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.85)]">
-            <div className="inline-flex items-center gap-1.5 rounded-md border border-[#FFAA12]/50 bg-[#FFAA12]/15 px-2.5 py-1 text-[10px] font-mono font-black uppercase tracking-[0.2em] text-[#FFAA12]">
-              <Sparkles className="h-3.5 w-3.5" />
+      {/* CUERPO PRINCIPAL: LAYOUT LADO A LADO EN MÓVIL HORIZONTAL Y ESCRITORIO */}
+      <div className="relative z-20 mx-auto my-auto grid w-full max-w-[1320px] grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-3 sm:gap-5 px-3 py-2.5 sm:px-8 sm:py-4 items-center">
+        {/* COLUMNA IZQUIERDA: Textos obligatorios y objetivos jugables (§6) */}
+        <div className="landscape:col-span-6 md:col-span-5">
+          <div className="rounded-2xl border border-[#FFAA12]/55 bg-[#071320]/95 p-3 sm:p-5 shadow-[0_18px_50px_rgba(0,0,0,0.85)]">
+            <div className="inline-flex items-center gap-1.5 rounded-md border border-[#FFAA12]/50 bg-[#FFAA12]/15 px-2 py-0.5 text-[9.5px] sm:text-[10px] font-mono font-black uppercase tracking-[0.18em] text-[#FFAA12]">
+              <Sparkles className="h-3 w-3" />
               <span>UNIDAD PROTOTIPO REVELADA</span>
             </div>
 
-            <div className="mt-3 space-y-0.5">
+            <div className="mt-2 space-y-0.5">
               <p
                 data-testid="reveal-title-brand"
-                className="font-display text-2xl sm:text-3xl font-black italic uppercase tracking-[0.14em] text-[#00E5F5]"
+                className="font-display text-lg sm:text-2xl font-black italic uppercase tracking-[0.14em] text-[#00E5F5] leading-none"
               >
                 LAMBORGHINI
               </p>
               <h1
                 data-testid="reveal-title-project"
-                className="font-display text-3xl sm:text-5xl font-black italic uppercase leading-none tracking-tight text-white"
+                className="font-display text-2xl sm:text-4xl lg:text-5xl font-black italic uppercase leading-none tracking-tight text-white"
               >
                 PROYECTO FANTASMA
               </h1>
               <p
                 data-testid="reveal-title-mission0"
-                className="pt-1 font-mono text-xs sm:text-sm font-black uppercase tracking-[0.18em] text-[#FFAA12]"
+                className="pt-0.5 font-mono text-[10.5px] sm:text-xs font-black uppercase tracking-[0.16em] text-[#FFAA12]"
               >
                 MISIÓN 0 — PRUEBA DE CONDUCCIÓN
               </p>
             </div>
 
             {/* Diálogo exacto de CENTRAL DATACAR */}
-            <div className="mt-4 rounded-xl border-l-4 border-[#00E5F5] bg-[#040d17] p-3.5 space-y-1.5">
-              <p className="text-[10px] font-mono font-black uppercase tracking-widest text-[#00E5F5]">
+            <div className="mt-2.5 rounded-xl border-l-4 border-[#00E5F5] bg-[#040d17] px-3 py-2 space-y-0.5">
+              <p className="text-[9.5px] font-mono font-black uppercase tracking-widest text-[#00E5F5]">
                 CENTRAL DATACAR:
               </p>
               {preDialogues.map((msg) => (
-                <p key={msg.id} className="text-sm sm:text-base font-bold text-slate-100">
+                <p key={msg.id} className="text-xs sm:text-sm font-bold text-slate-100 leading-snug">
                   "{msg.text}"
                 </p>
               ))}
             </div>
 
             {/* Especificaciones rápidas del Lamborghini */}
-            <div className="mt-4 grid grid-cols-3 gap-2 border-y border-slate-800 py-3 text-center">
+            <div className="mt-2.5 grid grid-cols-3 gap-1.5 border-y border-slate-800 py-2 text-center">
               <div>
-                <span className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-slate-400">
+                <span className="flex items-center justify-center gap-1 text-[9.5px] font-bold uppercase text-slate-400">
                   <Zap className="h-3 w-3 text-[#FFAA12]" /> Potencia
                 </span>
-                <p className="font-display text-lg font-black italic text-white">640 HP</p>
+                <p className="font-display text-sm sm:text-lg font-black italic text-white">640 HP</p>
               </div>
               <div>
-                <span className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-slate-400">
-                  <Timer className="h-3 w-3 text-[#00E5F5]" /> 0–100 km/h
+                <span className="flex items-center justify-center gap-1 text-[9.5px] font-bold uppercase text-slate-400">
+                  <Timer className="h-3 w-3 text-[#00E5F5]" /> 0–100
                 </span>
-                <p className="font-display text-lg font-black italic text-[#00E5F5]">2,9 s</p>
+                <p className="font-display text-sm sm:text-lg font-black italic text-[#00E5F5]">2,9 s</p>
               </div>
               <div>
-                <span className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-slate-400">
+                <span className="flex items-center justify-center gap-1 text-[9.5px] font-bold uppercase text-slate-400">
                   <Gauge className="h-3 w-3 text-emerald-400" /> Tracción
                 </span>
-                <p className="font-display text-lg font-black italic text-emerald-300">AWD V10</p>
+                <p className="font-display text-sm sm:text-lg font-black italic text-emerald-300">AWD V10</p>
               </div>
             </div>
 
             {/* Objetivos jugables de la Misión 0 */}
-            <div className="mt-4 space-y-1.5">
-              <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-300">
-                OBJETIVOS DE LA PRUEBA (DURACIÓN APROX. 60–90 S):
+            <div className="mt-2.5 space-y-1 [@media(max-height:400px)]:hidden">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-300">
+                OBJETIVOS DE LA PRUEBA (60–90 S):
               </p>
-              <ul className="space-y-1 text-xs text-slate-200">
+              <ul className="space-y-0.5 text-[11px] text-slate-200">
                 {mission0Spec.playableChecklist.map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#00E5F5]" />
+                  <li key={item} className="flex items-start gap-1.5">
+                    <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-[#00E5F5]" />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="mt-5 flex flex-col gap-2.5">
+            <div className="mt-3">
               <button
                 type="button"
                 onClick={onStartMission0TestDrive}
                 data-testid="start-mission-0-btn"
                 data-start="true"
-                className="dc-btn-gold w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 min-h-[48px] font-display text-base sm:text-lg font-black italic uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(255,170,18,0.4)] cursor-pointer"
+                className="dc-btn-gold w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 sm:py-3.5 min-h-[42px] font-display text-sm sm:text-lg font-black italic uppercase tracking-wider text-slate-950 shadow-[0_0_24px_rgba(255,170,18,0.4)] cursor-pointer"
               >
                 <ChevronsRight className="h-5 w-5 stroke-[3]" />
                 <span>INICIAR MISIÓN 0 · PROBAR LAMBORGHINI</span>
@@ -222,9 +222,9 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
           </div>
         </div>
 
-        {/* COLUMNA DERECHA (7 cols): Escenario 3D del Hangar con el archivo GLB real `/models/lamborghini-bonus.glb` */}
-        <div className="lg:col-span-7">
-          <div className="relative h-[320px] sm:h-[440px] w-full overflow-hidden rounded-2xl border-2 border-[#00E5F5]/45 bg-[#050f19] shadow-[0_24px_70px_rgba(0,0,0,0.92)]">
+        {/* COLUMNA DERECHA: Escenario 3D del Hangar con el archivo GLB real `/models/lamborghini-bonus.glb` */}
+        <div className="landscape:col-span-6 md:col-span-7">
+          <div className="relative h-[230px] landscape:h-[calc(100dvh-5.5rem)] sm:h-[400px] lg:h-[440px] w-full overflow-hidden rounded-2xl border-2 border-[#00E5F5]/45 bg-[#050f19] shadow-[0_24px_70px_rgba(0,0,0,0.92)]">
             <div
               className="pointer-events-none absolute inset-0 transition-opacity duration-700"
               style={{
