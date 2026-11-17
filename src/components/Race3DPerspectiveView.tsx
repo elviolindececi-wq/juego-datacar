@@ -5129,7 +5129,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               : null;
           return (
             <>
-              <div className="dc-mockup5-center-header dc-v5-top-center absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center select-none">
+              <div className="dc-mockup5-center-header dc-v5-top-center absolute top-2 left-1/2 z-30 pointer-events-none flex flex-col items-center select-none">
                 {/* Barra superior compacta: circuito + cronómetro + Meta Oro + faros + espejos + aviso discreto 3D */}
                 <div className="dc-v5-clock-bar flex flex-wrap items-center justify-center gap-1 px-2 py-1 bg-[#030914]/94 border border-cyan-400/40 rounded-xl shadow-[0_0_14px_rgba(0,229,255,0.22)] text-white pointer-events-auto max-w-full">
                   <div className="dc-v5-track-label hidden 2xl:flex items-center gap-1 font-bold text-slate-100 text-[10px] tracking-wide truncate max-w-[135px]">
@@ -5257,7 +5257,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                   <div className="relative mt-1 flex flex-col items-center max-w-full pointer-events-auto">
                     <div
                       data-testid="weno-bank-hud-strip"
-                      className="flex items-center gap-1.5 rounded-lg border border-amber-400/45 bg-[#040d18]/94 px-2 py-0.5 text-[8.5px] sm:text-[9px] leading-none shadow-[0_4px_12px_rgba(0,0,0,0.55)] max-w-full"
+                      className="flex flex-wrap items-center justify-center gap-1.5 rounded-lg border border-amber-400/45 bg-[#040d18]/94 px-2 py-0.5 text-[8.5px] sm:text-[9px] leading-none shadow-[0_4px_12px_rgba(0,0,0,0.55)] max-w-full"
                     >
                       <span className="hidden xl:inline font-mono font-black uppercase tracking-wider text-amber-300 shrink-0">
                         {DATACAR_HUD_OBJECTIVE_LABEL}
@@ -5296,7 +5296,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                       <span aria-hidden="true" className="text-slate-600 shrink-0">·</span>
                       <span
                         data-testid="weno-bank-hud-alert"
-                        className={`font-bold uppercase tracking-wide whitespace-nowrap shrink-0 ${
+                        className={`font-bold uppercase tracking-wide whitespace-normal text-center ${
                           wenoProgress.stage === 'urgent' || wenoProgress.stage === 'arrived'
                             ? 'text-rose-200'
                             : 'text-slate-100'
@@ -5363,7 +5363,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                     (fuelStationHud.refueled && !fuelBannerDismissedAfterRefuel)) && (
                   <div
                     data-testid="fuel-station-hud-banner"
-                    className={`mt-1 flex flex-wrap items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1 text-[8.5px] sm:text-[9.5px] shadow-[0_6px_18px_rgba(0,0,0,0.65)] pointer-events-auto w-[min(560px,calc(100vw-170px))] sm:w-auto max-w-[92vw] text-center transition-all ${
+                    className={`mt-1 flex flex-wrap items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1 text-[8.5px] sm:text-[9.5px] shadow-[0_6px_18px_rgba(0,0,0,0.65)] pointer-events-auto w-full max-w-full text-center transition-all ${
                       fuelStationHud.refueled
                         ? 'border-emerald-400/60 bg-emerald-950/92 text-emerald-100'
                         : fuelStationHud.isInPitBay
@@ -5584,7 +5584,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                   <div
                     data-testid="hud-traffic-notice"
                     role="status"
-                    className={`mt-1 rounded-md border px-2 py-0.5 text-center shadow pointer-events-none max-w-full overflow-hidden select-none ${
+                    className={`mt-1 rounded-md border px-2 py-0.5 text-center shadow pointer-events-none max-w-full select-none ${
                       trafficNotice.kind === 'penalty'
                         ? 'border-rose-400/90 bg-rose-950/94 text-rose-100'
                         : trafficNotice.kind === 'ok'
@@ -5592,10 +5592,10 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                           : 'border-amber-400/90 bg-amber-950/94 text-amber-100'
                     }`}
                   >
-                    <div className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-wide truncate whitespace-nowrap">
+                    <div className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-wide whitespace-normal break-words leading-snug">
                       {trafficNotice.title}
                       {trafficNotice.subtitle && (
-                        <span className="hidden lg:inline font-medium opacity-90"> · {trafficNotice.subtitle}</span>
+                        <span className="font-medium opacity-90"> · {trafficNotice.subtitle}</span>
                       )}
                     </div>
                   </div>
@@ -5609,7 +5609,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                     data-testid="fuel-station-pump-dialog"
                     role="dialog"
                     aria-label="Atención en surtidor de combustible"
-                    className="w-[min(480px,92vw)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl sm:rounded-3xl border-2 border-amber-400/85 bg-gradient-to-b from-[#06182c]/98 to-[#030b14]/98 p-3.5 sm:p-5 text-left shadow-[0_24px_64px_rgba(0,0,0,0.92)]"
+                    className="w-[min(480px,92vw)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl sm:rounded-3xl border-2 border-amber-400/85 bg-gradient-to-b from-[#06182c]/98 to-[#030b14]/98 p-3 sm:p-5 text-left shadow-[0_24px_64px_rgba(0,0,0,0.92)]"
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-cyan-400/25 pb-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -5632,11 +5632,11 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
 
                     {fuelPitModalStage === 'prompt' ? (
                       <>
-                        <div className="mt-3 rounded-xl border border-cyan-400/30 bg-[#081d33]/85 p-3 sm:p-3.5">
-                          <h3 className="font-display text-lg sm:text-2xl font-black italic uppercase tracking-wide text-white leading-tight">
+                        <div className="mt-2.5 sm:mt-3 rounded-xl border border-cyan-400/30 bg-[#081d33]/85 p-2.5 sm:p-3.5">
+                          <h3 className="font-display text-base sm:text-2xl font-black italic uppercase tracking-wide text-white leading-tight">
                             “¡Bienvenido a {ACTIVE_FUEL_SPONSOR.displayName}! ¿Tanque lleno?”
                           </h3>
-                          <p className="mt-1.5 text-xs sm:text-sm text-slate-200 leading-snug">
+                          <p className="mt-1 sm:mt-1.5 text-[11px] sm:text-sm text-slate-200 leading-snug">
                             Para tu{' '}
                             <strong className="text-white">
                               {selectedVehicle?.brand} {selectedVehicle?.model}
