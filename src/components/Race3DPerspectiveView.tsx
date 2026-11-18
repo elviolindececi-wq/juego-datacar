@@ -1180,7 +1180,19 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
   const [loadedVehicleModels, setLoadedVehicleModels] = useState(0);
   const requiredVehicleModels = vehicles.filter(v => hasVehicle3DModel(v.id)).length;
   const [glbLoadError, setGlbLoadError] = useState<string | null>(null);
-  const raceGateReady = canStartCountdown({sceneRendered: visualReady, loadedModels: loadedVehicleModels, requiredModels: requiredVehicleModels, modelError: false});
+  const activePlayerPreloadId = playerVehicleId || vehicles[0]?.id || '';
+  const playerGlbPending =
+    experience === 'race' &&
+    hasVehicle3DModel(activePlayerPreloadId) &&
+    playerUsesProvisional3D &&
+    !glbLoadError;
+  const raceGateReady =
+    canStartCountdown({
+      sceneRendered: visualReady,
+      loadedModels: loadedVehicleModels,
+      requiredModels: requiredVehicleModels,
+      modelError: false,
+    }) && !playerGlbPending;
   const isPreloading = !raceGateReady;
   const isPreloadingRef = useRef(isPreloading);
   useEffect(() => {
@@ -6311,7 +6323,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
               <div className={`w-full grid grid-cols-1 ${vehicles.length > 1 ? 'sm:grid-cols-3' : 'max-w-xs mx-auto'} gap-3 mb-6`}>
                 {vehicles.map((v, i) => {
                   const isPlayer = v.id === (playerVehicleId || vehicles[0]?.id);
-                  const isModelReady = i < loadedVehicleModels;
+                  const isModelReady = isPlayer
+                    ? i < loadedVehicleModels && !playerUsesProvisional3D
+                    : i < loadedVehicleModels;
                   return (
                     <div
                       key={v.id}
@@ -6341,7 +6355,9 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
                         ) : (
                           <span className="text-sky-400 flex items-center gap-1 bg-sky-500/10 border border-sky-500/30 px-2 py-0.5 rounded-md animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
-                            CARGANDO 3D...
+                            {isPlayer && playerGlbDownloadPercent !== null && playerGlbDownloadPercent > 0
+                              ? `CARGANDO 3D ${playerGlbDownloadPercent}%`
+                              : 'CARGANDO 3D...'}
                           </span>
                         )}
                       </div>

@@ -5,14 +5,13 @@ import {
   FastForward,
   Gauge,
   Lightbulb,
-  ShieldCheck,
+  RotateCcw,
   Sparkles,
   Timer,
   Zap,
 } from 'lucide-react';
 import { PROYECTO_FANTASMA_LAMBORGHINI } from '../data/presetVehicles';
 import { STORY_CONNECTED_MISSIONS, STORY_DIALOGUES_BY_CHAPTER } from '../utils/storyCampaign';
-import { LoadingFallbackBadge } from './LoadingFallbackBadge';
 
 const LazyArenaHero3DStage = lazy(() =>
   import('./ArenaHero3DStage').then((m) => ({ default: m.ArenaHero3DStage })),
@@ -235,21 +234,16 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
             />
 
             <div className="relative z-10 h-full w-full">
-              {/* Retículas y telemetría biométrica de proyección holográfica */}
-              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-[#00E5F5]/35 bg-[#04101d]/80 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-cyan-200">
-                <span className="font-black uppercase tracking-widest text-[#00E5F5]">
-                  ● HOLOGRAMA 3D · MALLA POLIGONAL
-                </span>
-                <span className="text-slate-200">BIOMETRÍA PILOTO: VERIFICADA · V10 640 HP</span>
-                <span className="text-amber-300/90">PROYECCIÓN ACTIVA · ESCANEO 100%</span>
-              </div>
-
               <Suspense
                 fallback={
-                  <LoadingFallbackBadge
-                    compact
-                    label="Encendiendo luces del hangar y cargando modelo 3D Lamborghini Proyecto Fantasma…"
-                  />
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 px-6">
+                    <span className="font-mono text-[10px] font-black uppercase tracking-widest text-sky-300">
+                      CARGANDO PROTOTIPO 3D…
+                    </span>
+                    <div className="h-2 w-48 overflow-hidden rounded-full border border-sky-400/40 bg-slate-900">
+                      <div className="h-full w-1/3 animate-pulse bg-gradient-to-r from-sky-500 to-cyan-300" />
+                    </div>
+                  </div>
                 }
               >
                 <LazyArenaHero3DStage
@@ -258,17 +252,18 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
                   spinWheels={false}
                   hologramMode={true}
                   overrideGlbUrl="/models/Lamborghini prototipo.glb"
-                  imageBadgeLabel="MODELO 3D REAL · PROYECTO FANTASMA (Lamborghini prototipo.glb)"
+                  imageBadgeLabel={null}
                 />
               </Suspense>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 inset-x-4 z-20 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-500/35 bg-[#0a060c]/90 px-3.5 py-2 text-[11px] font-mono text-slate-300">
-              <span className="inline-flex items-center gap-1.5 text-rose-300 font-bold">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>GLB ACTIVO: /models/Lamborghini prototipo.glb</span>
-              </span>
-              <span className="text-amber-300">Arrastrá horizontalmente para inspeccionar en 360°</span>
+            {/* Ícono discreto 360° para indicar que se puede girar */}
+            <div
+              className="pointer-events-none absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-full border border-sky-400/40 bg-[#04101c]/80 px-2.5 py-1 font-mono text-[11px] font-black text-sky-300 shadow-lg"
+              aria-hidden="true"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>360°</span>
             </div>
           </div>
         </div>

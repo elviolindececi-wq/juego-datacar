@@ -837,7 +837,8 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
         </div>
       )}
 
-      {/* Indicador de estado 3D GLB o Vista WebP/PNG Estudio y controles discretos */}
+      {/* Indicador de estado 3D GLB o Vista WebP/PNG Estudio y controles discretos (ocultos en hologramMode para dejar solo los gráficos) */}
+      {!hologramMode && (
       <div className="absolute top-2 right-2 sm:right-6 z-30 flex flex-wrap items-center justify-end gap-1.5">
         {pngOnly ? (
           imageBadgeLabel ? (
@@ -898,6 +899,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 };
