@@ -6174,7 +6174,8 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           );
         })()}
 
-        {/* Floating Mini Camera Selector (Top Right of Canvas) */}
+        {/* Floating Mini Camera Selector (solo fuera de carrera; en carrera se usa el botón compacto de cámara) */}
+        {experience !== 'race' && (
         <div className="dc100-race-camera-desktop absolute top-2.5 right-3 z-20 hidden lg:flex items-center gap-0.5 bg-slate-950/94 p-1 rounded-xl border border-slate-800/80 shadow-xl select-none">
           {experience === 'race' && (
             <>
@@ -6286,6 +6287,7 @@ export const Race3DPerspectiveView: React.FC<Race3DPerspectiveViewProps> = ({
           </button>
           </>)}
         </div>
+        )}
 
         {/* Full-screen Arcade Preloader Gate */}
         {isPreloading && (
