@@ -846,7 +846,10 @@ export async function resolveDedicatedVehicleGLTF(
       };
     }
     try {
-      const gltf = await loadVehicleGLTF(normalizedOverride, onProgress, { vehicleId });
+      const gltf = await loadVehicleGLTF(normalizedOverride, onProgress, {
+        vehicleId,
+        timeoutMs: 120000,
+      });
       return {
         gltf,
         url: normalizedOverride,

@@ -8,6 +8,7 @@ import {
   clearGlbAvailabilityCache,
   createCalibratedVehicle3DInstance,
   getVehicle3DConfig,
+  getVehicleModelDiagnostic,
   resolveDedicatedVehicleGLTF,
 } from '../utils/vehicle3DModelLoader';
 import { createVehicleWheelRig, type VehicleWheelRig } from '../utils/vehicleWheelRig';
@@ -518,6 +519,15 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       rt.requestRender();
     }
 
+    // Si otro componente (ej. mensajes del celular) ya inició la descarga, sincronizamos el progreso real
+    const diagPollId = window.setInterval(() => {
+      if (cancelled) return;
+      const diag = getVehicleModelDiagnostic(vehicle.id);
+      if (diag && diag.progressPercent > 0) {
+        setGlbProgress((prev) => Math.max(prev, Math.min(99, Math.round(diag.progressPercent))));
+      }
+    }, 150);
+
     resolveDedicatedVehicleGLTF(
       vehicle.id,
       (loadedBytes, totalBytes) => {
@@ -641,8 +651,9 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
 
     return () => {
       cancelled = true;
+      window.clearInterval(diagPollId);
     };
-  }, [vehicle.id, pngOnly, reloadNonce]);
+  }, [vehicle.id, pngOnly, reloadNonce, overrideGlbUrl]);
 
   useEffect(() => {
     if (!pngOnly && glbStatus === 'ready') {
@@ -756,16 +767,54 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
         aria-hidden="true"
       />
 
-      {/* Contenedor WebGL dedicado para el modelo 3D `.glb` (omitido si pngOnly) */}
+      {/* Contenedor WebGL dedicado para el modelo 3D `.glb` (omitido si pngOnly; oculto en modo holograma hasta completar carga) */}
       {!pngOnly && (
         <div
           ref={canvasMountRef}
-          className="absolute inset-0 z-10 pointer-events-none"
+          className={`absolute inset-0 z-10 pointer-events-none transition-opacity duration-300 ${
+            hologramMode && glbStatus !== 'ready' ? 'opacity-0' : 'opacity-100'
+          }`}
         />
       )}
 
-      {/* Visualización de estudio PNG (siempre activa en Garage pngOnly o mientras GLB esté pendiente) */}
-      {(pngOnly || glbStatus !== 'ready') && (
+      {/* En modo holograma: barra de progreso centrada hasta que el GLB esté 100% cargado (sin mostrar dibujo de respaldo) */}
+      {hologramMode && glbStatus !== 'ready' && (
+        <div className="relative z-20 flex flex-col items-center justify-center gap-3 px-6 py-4 text-center max-w-xs w-full">
+          <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/45 bg-[#041220]/90 px-3 py-1 font-mono text-[10px] font-black uppercase tracking-widest text-sky-300">
+            <Box size={12} className="animate-pulse text-sky-400" />
+            <span>
+              {glbStatus === 'pending'
+                ? 'No se pudo cargar el modelo 3D'
+                : `Cargando prototipo 3D · ${glbProgress}%`}
+            </span>
+          </div>
+          {glbStatus === 'loading' ? (
+            <div className="w-full space-y-1.5">
+              <div className="h-2.5 w-full overflow-hidden rounded-full border border-sky-400/40 bg-slate-900/95 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-sky-500 via-cyan-400 to-sky-300 transition-all duration-150"
+                  style={{ width: `${Math.max(6, glbProgress)}%` }}
+                />
+              </div>
+              <p className="font-mono text-[10px] text-slate-300">
+                Sincronizando malla poligonal y texturas…
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={retryGlbCheck}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/60 bg-sky-500/20 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider text-sky-200 hover:bg-sky-500/30 cursor-pointer"
+            >
+              <RefreshCw size={13} />
+              <span>Reintentar carga 3D</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Visualización de estudio PNG (solo fuera de hologramMode) */}
+      {!hologramMode && (pngOnly || glbStatus !== 'ready') && (
         <div className="relative w-full h-full flex items-end justify-center pb-[5.5%] sm:pb-[4.5%] px-4 sm:px-8 pointer-events-none z-20">
           <div
             className="dc-arena-contact-shadow absolute bottom-[4.5%] w-[76%] max-w-[640px] h-[14%] rounded-full"
