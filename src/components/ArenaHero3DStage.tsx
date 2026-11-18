@@ -110,6 +110,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
   const [isRotated, setIsRotated] = useState(false);
 
   const stageRuntimeRef = useRef<{
+    scene: THREE.Scene;
     turntable: THREE.Group;
     envMap: THREE.Texture;
     currentYaw: number;
@@ -430,6 +431,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     };
 
     stageRuntimeRef.current = {
+      scene,
       turntable,
       envMap,
       currentYaw: DEFAULT_HERO_YAW,
@@ -556,7 +558,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
         let instance: THREE.Group;
         if (hologramModeRef.current) {
           // En modo holograma preservamos al 100% los materiales y texturas originales del GLB sin reescribirlos
-          scene.environment = activeRt.envMap;
+          activeRt.scene.environment = activeRt.envMap;
           const rawModel = resolved.gltf.scene.clone(true);
           const rawBox = new THREE.Box3().setFromObject(rawModel);
           const rawSize = rawBox.getSize(new THREE.Vector3());
