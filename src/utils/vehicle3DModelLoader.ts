@@ -828,7 +828,35 @@ export function getCachedDedicatedVehicleGLTF(
 export async function resolveDedicatedVehicleGLTF(
   vehicleId: string,
   onProgress?: (loadedBytes: number, totalBytes: number) => void,
+  overrideUrl?: string,
 ): Promise<{ gltf: GLTF; url: string; config: Vehicle3DConfig } | null> {
+  const config = getVehicle3DConfig(vehicleId);
+  if (!config) return null;
+
+  if (overrideUrl) {
+    const normalizedOverride = encodeURI(normalizePublicModelUrl(overrideUrl));
+    const cachedOverride = gltfCache.get(normalizedOverride);
+    if (cachedOverride?.gltf) {
+      const total = cachedOverride.byteLength || 1;
+      onProgress?.(total, total);
+      return {
+        gltf: cachedOverride.gltf,
+        url: normalizedOverride,
+        config: { ...config, glbUrl: normalizedOverride, isProvisional3D: false },
+      };
+    }
+    try {
+      const gltf = await loadVehicleGLTF(normalizedOverride, onProgress, { vehicleId });
+      return {
+        gltf,
+        url: normalizedOverride,
+        config: { ...config, glbUrl: normalizedOverride, isProvisional3D: false },
+      };
+    } catch {
+      // Si falla la URL explícita, continuar con los candidatos estándar del vehículo
+    }
+  }
+
   const cachedImmediate = getCachedDedicatedVehicleGLTF(vehicleId);
   if (cachedImmediate) {
     const total = gltfCache.get(cachedImmediate.url)?.byteLength || 1;
@@ -847,9 +875,6 @@ export async function resolveDedicatedVehicleGLTF(
     });
     return cachedImmediate;
   }
-
-  const config = getVehicle3DConfig(vehicleId);
-  if (!config) return null;
 
   const customUrl = getCustomVehicleGlbUrl(vehicleId);
   const preferredWheeled = (config.preferredWheeledGlbUrls ?? []).map((c) =>

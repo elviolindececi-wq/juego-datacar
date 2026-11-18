@@ -235,13 +235,22 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
             />
 
             <div className="relative z-10 h-full w-full">
+              {/* Líneas sutiles de proyección holográfica + resplandor acorde al color del vehículo */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-10 opacity-55"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(0deg, rgba(255, 46, 59, 0.06) 0px, rgba(255, 46, 59, 0.06) 1px, transparent 1px, transparent 5px)',
+                }}
+              />
               {/* Retículas y telemetría biométrica de proyección holográfica */}
-              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-[#00E5F5]/35 bg-[#04101d]/80 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-cyan-200">
-                <span className="font-black uppercase tracking-widest text-[#00E5F5]">
+              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-rose-500/45 bg-[#12060c]/85 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-rose-100 shadow-[0_0_16px_rgba(255,46,59,0.2)]">
+                <span className="font-black uppercase tracking-widest text-rose-400">
                   ● HOLOGRAMA 3D · MALLA POLIGONAL
                 </span>
-                <span className="text-slate-300">BIOMETRÍA PILOTO: VERIFICADA · V10 640 HP</span>
-                <span className="text-amber-300/90">ESCANEO ESTRUCTURAL: 100%</span>
+                <span className="text-slate-200">BIOMETRÍA PILOTO: VERIFICADA · V10 640 HP</span>
+                <span className="text-amber-300/90">PROYECCIÓN ACTIVA · ESCANEO 100%</span>
               </div>
 
               <Suspense
@@ -257,15 +266,16 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
                   pngOnly={false}
                   spinWheels={false}
                   hologramMode={true}
-                  imageBadgeLabel="MODELO 3D REAL · PROYECTO FANTASMA (lamborghini-bonus.glb)"
+                  overrideGlbUrl="/models/Lamborghini prototipo.glb"
+                  imageBadgeLabel="MODELO 3D REAL · PROYECTO FANTASMA (Lamborghini prototipo.glb)"
                 />
               </Suspense>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 inset-x-4 z-20 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-700/80 bg-[#030912]/90 px-3.5 py-2 text-[11px] font-mono text-slate-300">
-              <span className="inline-flex items-center gap-1.5 text-[#00E5F5] font-bold">
+            <div className="pointer-events-none absolute bottom-3 inset-x-4 z-20 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-500/35 bg-[#0a060c]/90 px-3.5 py-2 text-[11px] font-mono text-slate-300">
+              <span className="inline-flex items-center gap-1.5 text-rose-300 font-bold">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                <span>GLB ACTIVO: /models/lamborghini-bonus.glb</span>
+                <span>GLB ACTIVO: /models/Lamborghini prototipo.glb</span>
               </span>
               <span className="text-amber-300">Arrastrá horizontalmente para inspeccionar en 360°</span>
             </div>

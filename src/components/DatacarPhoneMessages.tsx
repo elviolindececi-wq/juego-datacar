@@ -63,10 +63,14 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
     let cancelled = false;
     import('../utils/vehicle3DModelLoader')
       .then(({ resolveDedicatedVehicleGLTF }) =>
-        resolveDedicatedVehicleGLTF('lamborghini-proyecto-fantasma', (loaded, total) => {
-          if (cancelled || total <= 0) return;
-          setHangarPreloadPercent(Math.min(100, Math.round((loaded / total) * 100)));
-        }),
+        resolveDedicatedVehicleGLTF(
+          'lamborghini-proyecto-fantasma',
+          (loaded, total) => {
+            if (cancelled || total <= 0) return;
+            setHangarPreloadPercent(Math.min(100, Math.round((loaded / total) * 100)));
+          },
+          '/models/Lamborghini prototipo.glb',
+        ),
       )
       .then((res) => {
         if (!cancelled && res) setHangarPreloadPercent(100);
