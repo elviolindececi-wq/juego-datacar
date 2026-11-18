@@ -240,19 +240,18 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     contactShadowMesh.position.y = 0.006;
     turntable.add(contactShadowMesh);
 
-    // Base circular holográfica con malla wireframe poligonal (color sincronizado con las líneas del GLB)
+    // Base circular holográfica con malla wireframe poligonal (color azul-celeste idéntico a las líneas del prototipo)
     let hologramPedestal: THREE.Group | null = null;
     const hologramLineMaterials: THREE.Material[] = [];
     if (hologramModeRef.current) {
       hologramPedestal = new THREE.Group();
-      const defaultHoloColor = 0x00e5f5;
+      const defaultHoloColor = 0x38bdf8;
 
       const holoWireMat = new THREE.MeshBasicMaterial({
         color: defaultHoloColor,
         wireframe: true,
         transparent: true,
-        opacity: 0.42,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.48,
         depthWrite: false,
       });
       hologramLineMaterials.push(holoWireMat);
@@ -265,8 +264,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
         color: defaultHoloColor,
         wireframe: true,
         transparent: true,
-        opacity: 0.32,
-        blending: THREE.AdditiveBlending,
+        opacity: 0.36,
         depthWrite: false,
       });
       hologramLineMaterials.push(holoInnerRingMat);
@@ -279,7 +277,6 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
         color: defaultHoloColor,
         transparent: true,
         opacity: 0.85,
-        blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
       hologramLineMaterials.push(holoEdgeMat);
@@ -292,8 +289,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       const gridMats = Array.isArray(polarGrid.material) ? polarGrid.material : [polarGrid.material];
       gridMats.forEach((m) => {
         m.transparent = true;
-        m.opacity = 0.3;
-        m.blending = THREE.AdditiveBlending;
+        m.opacity = 0.34;
         m.depthWrite = false;
         hologramLineMaterials.push(m);
       });
@@ -547,15 +543,38 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
           activeRt.turntable.remove(prevChild);
         }
 
-        const instance = createCalibratedVehicle3DInstance(
-          resolved.config,
-          resolved.gltf,
-          activeRt.envMap,
-        );
-        optimizeModelTexturesForComparator(
-          instance,
-          detectMobilePerformanceMode() || isSoftwareGl ? 512 : 1024,
-        );
+        let instance: THREE.Group;
+        if (hologramModeRef.current) {
+          // En modo holograma preservamos al 100% los materiales y texturas originales del GLB sin reescribirlos
+          scene.environment = activeRt.envMap;
+          const rawModel = resolved.gltf.scene.clone(true);
+          const rawBox = new THREE.Box3().setFromObject(rawModel);
+          const rawSize = rawBox.getSize(new THREE.Vector3());
+          const rawLength = Math.max(rawSize.x, rawSize.z) || 0.12;
+          const targetLength = resolved.config.targetLengthMeters || 4.52;
+          const actualScale = targetLength / rawLength;
+          rawModel.scale.set(actualScale, actualScale, actualScale);
+          rawModel.rotation.y = rawSize.x >= rawSize.z ? resolved.config.rotationY : 0;
+          rawModel.position.y = -rawBox.min.y * actualScale;
+          rawModel.traverse((node) => {
+            if ((node as THREE.Mesh).isMesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+            }
+          });
+          instance = new THREE.Group();
+          instance.add(rawModel);
+        } else {
+          instance = createCalibratedVehicle3DInstance(
+            resolved.config,
+            resolved.gltf,
+            activeRt.envMap,
+          );
+          optimizeModelTexturesForComparator(
+            instance,
+            detectMobilePerformanceMode() || isSoftwareGl ? 512 : 1024,
+          );
+        }
         const calibratedModel = instance.children[0] as THREE.Group | undefined;
         let rig: VehicleWheelRig | null = null;
         if (calibratedModel) {
@@ -564,7 +583,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
           rig?.setDistanceMeters(0);
         }
 
-        // Extraer el color exacto de las líneas/emisión del GLB para igualar toda la base circular
+        // Extraer el color saturado de las líneas/emisión del GLB (ignorando blancos/grises para no blanquear la base)
         if (hologramModeRef.current && activeRt.syncHologramColor) {
           let bestColor: THREE.Color | null = null;
           let bestScore = -1;
@@ -589,7 +608,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
                 const minC = Math.min(c.r, c.g, c.b);
                 const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
                 const score = bonus + sat * 1.4 + maxC * 0.5;
-                if (maxC > 0.12 && score > bestScore) {
+                if (maxC > 0.15 && sat > 0.28 && score > bestScore) {
                   bestScore = score;
                   bestColor = c.clone();
                 }
