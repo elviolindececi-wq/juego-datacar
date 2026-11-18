@@ -19,6 +19,7 @@ interface ArenaHero3DStageProps {
   compact?: boolean;
   pngOnly?: boolean;
   spinWheels?: boolean;
+  hologramMode?: boolean;
   imageBadgeLabel?: string | null;
   onOpen360Modal?: (vehicleId: string) => void;
 }
@@ -86,6 +87,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
   compact = false,
   pngOnly = false,
   spinWheels = true,
+  hologramMode = false,
   imageBadgeLabel = 'Vista PNG · Garage',
   onOpen360Modal,
 }) => {
@@ -94,6 +96,8 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
   compactRef.current = compact;
   const spinWheelsRef = useRef(spinWheels);
   spinWheelsRef.current = spinWheels;
+  const hologramModeRef = useRef(hologramMode);
+  hologramModeRef.current = hologramMode;
 
   const [glbStatus, setGlbStatus] = useState<'loading' | 'ready' | 'pending'>(pngOnly ? 'pending' : 'loading');
   const [glbProgress, setGlbProgress] = useState<number>(0);
@@ -233,6 +237,58 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     contactShadowMesh.position.y = 0.006;
     turntable.add(contactShadowMesh);
 
+    // Base circular holográfica con malla wireframe poligonal (solo en modo holograma del prólogo)
+    let hologramPedestal: THREE.Group | null = null;
+    if (hologramModeRef.current) {
+      hologramPedestal = new THREE.Group();
+      const holoWireMat = new THREE.MeshBasicMaterial({
+        color: 0x00e5f5,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.34,
+        depthWrite: false,
+      });
+      const holoTorus = new THREE.Mesh(new THREE.TorusGeometry(2.65, 0.2, 10, 36), holoWireMat);
+      holoTorus.rotation.x = Math.PI / 2;
+      holoTorus.position.y = 0.015;
+      hologramPedestal.add(holoTorus);
+
+      const holoInnerRingMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+      });
+      const holoInnerRing = new THREE.Mesh(new THREE.RingGeometry(1.35, 2.38, 32, 3), holoInnerRingMat);
+      holoInnerRing.rotation.x = -Math.PI / 2;
+      holoInnerRing.position.y = 0.012;
+      hologramPedestal.add(holoInnerRing);
+
+      const holoEdgeMat = new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        transparent: true,
+        opacity: 0.72,
+        depthWrite: false,
+      });
+      const holoEdgeRing = new THREE.Mesh(new THREE.TorusGeometry(2.84, 0.014, 6, 48), holoEdgeMat);
+      holoEdgeRing.rotation.x = Math.PI / 2;
+      holoEdgeRing.position.y = 0.05;
+      hologramPedestal.add(holoEdgeRing);
+
+      const polarGrid = new THREE.PolarGridHelper(2.45, 12, 5, 48, 0x00e5f5, 0x0ea5e9);
+      const gridMats = Array.isArray(polarGrid.material) ? polarGrid.material : [polarGrid.material];
+      gridMats.forEach((m) => {
+        m.transparent = true;
+        m.opacity = 0.22;
+        m.depthWrite = false;
+      });
+      polarGrid.position.y = 0.01;
+      hologramPedestal.add(polarGrid);
+
+      scene.add(hologramPedestal);
+    }
+
     let lastWidth = 0;
     let lastHeight = 0;
     const syncCameraFraming = () => {
@@ -243,12 +299,12 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
 
       // Calibración de distancia para lente de 25.5° + altura de ojos baja (1.02m..1.25m)
       // Así las ruedas apoyan exactamente en el tercio inferior sobre el asfalto del estadio.
-      const baseDist = compactRef.current ? 7.35 : 7.05;
+      const baseDist = hologramModeRef.current ? 8.45 : compactRef.current ? 7.35 : 7.05;
       const narrowBoost = aspect < 1.55 ? (1.55 - aspect) * 4.2 : 0;
       const dist = baseDist + narrowBoost;
 
       const pitch = stageRuntimeRef.current?.currentPitch ?? DEFAULT_HERO_PITCH;
-      const targetY = compactRef.current ? 0.64 : 0.62;
+      const targetY = hologramModeRef.current ? 0.56 : compactRef.current ? 0.64 : 0.62;
       const eyeY = targetY + 0.34 + Math.sin(pitch) * dist * 0.48;
       const eyeZ = Math.cos(pitch * 0.6) * dist;
 
@@ -325,6 +381,10 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
           if (rt.wheelRig && rt.turntable.visible && !isSoftwareGl && spinWheelsRef.current) {
             rt.rollMeters += dt * 4.8;
             rt.wheelRig.setDistanceMeters(rt.rollMeters);
+            needsMoreFrames = true;
+          }
+          if (hologramPedestal && rt.turntable.visible && !isSoftwareGl) {
+            hologramPedestal.rotation.y += dt * 0.22;
             needsMoreFrames = true;
           }
         }

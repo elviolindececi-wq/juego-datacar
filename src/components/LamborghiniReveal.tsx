@@ -235,6 +235,15 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
             />
 
             <div className="relative z-10 h-full w-full">
+              {/* Retículas y telemetría biométrica de proyección holográfica */}
+              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-[#00E5F5]/35 bg-[#04101d]/80 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-cyan-200">
+                <span className="font-black uppercase tracking-widest text-[#00E5F5]">
+                  ● HOLOGRAMA 3D · MALLA POLIGONAL
+                </span>
+                <span className="text-slate-300">BIOMETRÍA PILOTO: VERIFICADA · V10 640 HP</span>
+                <span className="text-amber-300/90">ESCANEO ESTRUCTURAL: 100%</span>
+              </div>
+
               <Suspense
                 fallback={
                   <LoadingFallbackBadge
@@ -247,6 +256,7 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
                   vehicle={PROYECTO_FANTASMA_LAMBORGHINI}
                   pngOnly={false}
                   spinWheels={false}
+                  hologramMode={true}
                   imageBadgeLabel="MODELO 3D REAL · PROYECTO FANTASMA (lamborghini-bonus.glb)"
                 />
               </Suspense>
