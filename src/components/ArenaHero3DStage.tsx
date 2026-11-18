@@ -120,6 +120,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     onNextFrameRendered: (() => void) | null;
     requestRender: () => void;
     syncCameraFraming: () => void;
+    syncHologramColor?: (color: THREE.Color) => void;
   } | null>(null);
 
   const dragStateRef = useRef<{
@@ -239,92 +240,77 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     contactShadowMesh.position.y = 0.006;
     turntable.add(contactShadowMesh);
 
-    // Base circular holográfica con malla wireframe poligonal + haz de proyección (color del prototipo)
+    // Base circular holográfica con malla wireframe poligonal (color sincronizado con las líneas del GLB)
     let hologramPedestal: THREE.Group | null = null;
-    let hologramScanRing: THREE.Mesh | null = null;
-    let hologramElapsed = 0;
+    const hologramLineMaterials: THREE.Material[] = [];
     if (hologramModeRef.current) {
       hologramPedestal = new THREE.Group();
-      const holoColor = 0xff2e3b; // Rojo carmesí a juego con la carrocería del Lamborghini prototipo
-      const holoAccentColor = 0xff7b54;
+      const defaultHoloColor = 0x00e5f5;
 
       const holoWireMat = new THREE.MeshBasicMaterial({
-        color: holoColor,
+        color: defaultHoloColor,
         wireframe: true,
         transparent: true,
         opacity: 0.42,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
+      hologramLineMaterials.push(holoWireMat);
       const holoTorus = new THREE.Mesh(new THREE.TorusGeometry(2.65, 0.2, 10, 36), holoWireMat);
       holoTorus.rotation.x = Math.PI / 2;
       holoTorus.position.y = 0.015;
       hologramPedestal.add(holoTorus);
 
       const holoInnerRingMat = new THREE.MeshBasicMaterial({
-        color: holoAccentColor,
+        color: defaultHoloColor,
         wireframe: true,
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.32,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
+      hologramLineMaterials.push(holoInnerRingMat);
       const holoInnerRing = new THREE.Mesh(new THREE.RingGeometry(1.35, 2.38, 32, 3), holoInnerRingMat);
       holoInnerRing.rotation.x = -Math.PI / 2;
       holoInnerRing.position.y = 0.012;
       hologramPedestal.add(holoInnerRing);
 
       const holoEdgeMat = new THREE.MeshBasicMaterial({
-        color: holoColor,
+        color: defaultHoloColor,
         transparent: true,
         opacity: 0.85,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
+      hologramLineMaterials.push(holoEdgeMat);
       const holoEdgeRing = new THREE.Mesh(new THREE.TorusGeometry(2.84, 0.016, 6, 48), holoEdgeMat);
       holoEdgeRing.rotation.x = Math.PI / 2;
-      holoEdgeRing.position.y = 0.05;
+      holoEdgeRing.position.y = 0.04;
       hologramPedestal.add(holoEdgeRing);
 
-      const polarGrid = new THREE.PolarGridHelper(2.45, 12, 5, 48, holoColor, holoAccentColor);
+      const polarGrid = new THREE.PolarGridHelper(2.45, 12, 5, 48, defaultHoloColor, defaultHoloColor);
       const gridMats = Array.isArray(polarGrid.material) ? polarGrid.material : [polarGrid.material];
       gridMats.forEach((m) => {
         m.transparent = true;
-        m.opacity = 0.28;
+        m.opacity = 0.3;
         m.blending = THREE.AdditiveBlending;
         m.depthWrite = false;
+        hologramLineMaterials.push(m);
       });
       polarGrid.position.y = 0.01;
       hologramPedestal.add(polarGrid);
 
-      // Cono vertical translúcido que simula el haz de proyección desde la base circular
-      const beamMat = new THREE.MeshBasicMaterial({
-        color: holoColor,
-        transparent: true,
-        opacity: 0.075,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const holoBeam = new THREE.Mesh(new THREE.CylinderGeometry(2.38, 2.78, 2.2, 36, 1, true), beamMat);
-      holoBeam.position.y = 1.12;
-      hologramPedestal.add(holoBeam);
-
-      // Anillo láser de escaneo ascendente/descendente
-      const scanMat = new THREE.MeshBasicMaterial({
-        color: 0xff6b75,
-        transparent: true,
-        opacity: 0.52,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      hologramScanRing = new THREE.Mesh(new THREE.TorusGeometry(2.58, 0.012, 6, 48), scanMat);
-      hologramScanRing.rotation.x = Math.PI / 2;
-      hologramScanRing.position.y = 0.25;
-      hologramPedestal.add(hologramScanRing);
-
       scene.add(hologramPedestal);
     }
+
+    const syncHologramColor = (color: THREE.Color) => {
+      for (const mat of hologramLineMaterials) {
+        if ('color' in mat && mat.color instanceof THREE.Color) {
+          mat.color.copy(color);
+          mat.needsUpdate = true;
+        }
+      }
+    };
 
     let lastWidth = 0;
     let lastHeight = 0;
@@ -421,11 +407,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
             needsMoreFrames = true;
           }
           if (hologramPedestal && rt.turntable.visible && !isSoftwareGl) {
-            hologramElapsed += dt;
             hologramPedestal.rotation.y += dt * 0.22;
-            if (hologramScanRing) {
-              hologramScanRing.position.y = 0.14 + (0.5 + 0.5 * Math.sin(hologramElapsed * 1.9)) * 1.32;
-            }
             needsMoreFrames = true;
           }
         }
@@ -462,6 +444,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       onNextFrameRendered: null,
       requestRender,
       syncCameraFraming,
+      syncHologramColor,
     };
 
     const resizeObserver =
@@ -579,6 +562,43 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
           rig = createVehicleWheelRig(calibratedModel, calibratedModel.scale.x);
           rig?.setSteeringRadians(0.21, 1);
           rig?.setDistanceMeters(0);
+        }
+
+        // Extraer el color exacto de las líneas/emisión del GLB para igualar toda la base circular
+        if (hologramModeRef.current && activeRt.syncHologramColor) {
+          let bestColor: THREE.Color | null = null;
+          let bestScore = -1;
+          instance.traverse((node) => {
+            const mesh = node as THREE.Mesh & THREE.Line;
+            const rawMat = mesh.material;
+            if (!rawMat) return;
+            const mats = Array.isArray(rawMat) ? rawMat : [rawMat];
+            for (const mat of mats) {
+              const std = mat as THREE.MeshStandardMaterial & THREE.LineBasicMaterial;
+              const candidates: Array<{ c: THREE.Color; bonus: number }> = [];
+              if (std.emissive instanceof THREE.Color) {
+                const lum = std.emissive.r + std.emissive.g + std.emissive.b;
+                if (lum > 0.12) candidates.push({ c: std.emissive, bonus: 2.0 });
+              }
+              if (std.color instanceof THREE.Color) {
+                const isLineOrWire = Boolean(mesh.isLine || std.wireframe);
+                candidates.push({ c: std.color, bonus: isLineOrWire ? 1.5 : 0.2 });
+              }
+              for (const { c, bonus } of candidates) {
+                const maxC = Math.max(c.r, c.g, c.b);
+                const minC = Math.min(c.r, c.g, c.b);
+                const sat = maxC > 0 ? (maxC - minC) / maxC : 0;
+                const score = bonus + sat * 1.4 + maxC * 0.5;
+                if (maxC > 0.12 && score > bestScore) {
+                  bestScore = score;
+                  bestColor = c.clone();
+                }
+              }
+            }
+          });
+          if (bestColor) {
+            activeRt.syncHologramColor(bestColor);
+          }
         }
 
         activeRt.onNextFrameRendered = null;

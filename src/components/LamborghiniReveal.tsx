@@ -235,18 +235,9 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
             />
 
             <div className="relative z-10 h-full w-full">
-              {/* Líneas sutiles de proyección holográfica + resplandor acorde al color del vehículo */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-10 opacity-55"
-                style={{
-                  backgroundImage:
-                    'repeating-linear-gradient(0deg, rgba(255, 46, 59, 0.06) 0px, rgba(255, 46, 59, 0.06) 1px, transparent 1px, transparent 5px)',
-                }}
-              />
               {/* Retículas y telemetría biométrica de proyección holográfica */}
-              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-rose-500/45 bg-[#12060c]/85 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-rose-100 shadow-[0_0_16px_rgba(255,46,59,0.2)]">
-                <span className="font-black uppercase tracking-widest text-rose-400">
+              <div className="pointer-events-none absolute top-2.5 left-3 z-20 hidden sm:flex flex-col gap-0.5 rounded-lg border border-[#00E5F5]/35 bg-[#04101d]/80 px-2.5 py-1.5 font-mono text-[9.5px] leading-tight text-cyan-200">
+                <span className="font-black uppercase tracking-widest text-[#00E5F5]">
                   ● HOLOGRAMA 3D · MALLA POLIGONAL
                 </span>
                 <span className="text-slate-200">BIOMETRÍA PILOTO: VERIFICADA · V10 640 HP</span>
