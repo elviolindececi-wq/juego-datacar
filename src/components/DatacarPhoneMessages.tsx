@@ -55,6 +55,29 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
   const [visibleCount, setVisibleCount] = useState(1);
   const [isTyping, setIsTyping] = useState(() => totalCount > 1);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const [hangarPreloadPercent, setHangarPreloadPercent] = useState<number>(0);
+
+  // Precargar en segundo plano el GLB del Lamborghini Proyecto Fantasma mientras el jugador lee los mensajes
+  useEffect(() => {
+    if (!isRecruitmentPrompt) return;
+    let cancelled = false;
+    import('../utils/vehicle3DModelLoader')
+      .then(({ resolveDedicatedVehicleGLTF }) =>
+        resolveDedicatedVehicleGLTF('lamborghini-proyecto-fantasma', (loaded, total) => {
+          if (cancelled || total <= 0) return;
+          setHangarPreloadPercent(Math.min(100, Math.round((loaded / total) * 100)));
+        }),
+      )
+      .then((res) => {
+        if (!cancelled && res) setHangarPreloadPercent(100);
+      })
+      .catch(() => {
+        // Silencioso: el hangar volverá a intentar si hace falta
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isRecruitmentPrompt]);
 
   useEffect(() => {
     const el = messageListRef.current;
@@ -283,6 +306,17 @@ export const DatacarPhoneMessages: React.FC<DatacarPhoneMessagesProps> = ({
           </div>
         ) : isRecruitmentPrompt ? (
           <div className="space-y-2">
+            {hangarPreloadPercent > 0 && hangarPreloadPercent < 100 && (
+              <div className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-[#04111f] px-2.5 py-1 text-[10px] font-mono text-cyan-200">
+                <span className="shrink-0">Preparando Hangar 3D · {hangarPreloadPercent}%</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#00E5F5] to-amber-400 transition-all duration-150"
+                    style={{ width: `${hangarPreloadPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"

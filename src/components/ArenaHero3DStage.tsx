@@ -18,6 +18,7 @@ interface ArenaHero3DStageProps {
   vehicle: Vehicle;
   compact?: boolean;
   pngOnly?: boolean;
+  spinWheels?: boolean;
   imageBadgeLabel?: string | null;
   onOpen360Modal?: (vehicleId: string) => void;
 }
@@ -84,14 +85,18 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
   vehicle,
   compact = false,
   pngOnly = false,
+  spinWheels = true,
   imageBadgeLabel = 'Vista PNG · Garage',
   onOpen360Modal,
 }) => {
   const canvasMountRef = useRef<HTMLDivElement | null>(null);
   const compactRef = useRef(compact);
   compactRef.current = compact;
+  const spinWheelsRef = useRef(spinWheels);
+  spinWheelsRef.current = spinWheels;
 
   const [glbStatus, setGlbStatus] = useState<'loading' | 'ready' | 'pending'>(pngOnly ? 'pending' : 'loading');
+  const [glbProgress, setGlbProgress] = useState<number>(0);
   const [wheelSplitDetected, setWheelSplitDetected] = useState(false);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [cutoutStopIndex, setCutoutStopIndex] = useState(0);
@@ -239,7 +244,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       // Calibración de distancia para lente de 25.5° + altura de ojos baja (1.02m..1.25m)
       // Así las ruedas apoyan exactamente en el tercio inferior sobre el asfalto del estadio.
       const baseDist = compactRef.current ? 7.35 : 7.05;
-      const narrowBoost = aspect < 1.42 ? (1.42 - aspect) * 3.15 : 0;
+      const narrowBoost = aspect < 1.55 ? (1.55 - aspect) * 4.2 : 0;
       const dist = baseDist + narrowBoost;
 
       const pitch = stageRuntimeRef.current?.currentPitch ?? DEFAULT_HERO_PITCH;
@@ -317,7 +322,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
             rt.currentPitch = rt.targetPitch;
             rt.turntable.rotation.y = rt.currentYaw;
           }
-          if (rt.wheelRig && rt.turntable.visible && !isSoftwareGl) {
+          if (rt.wheelRig && rt.turntable.visible && !isSoftwareGl && spinWheelsRef.current) {
             rt.rollMeters += dt * 4.8;
             rt.wheelRig.setDistanceMeters(rt.rollMeters);
             needsMoreFrames = true;
@@ -411,6 +416,7 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
     }
 
     setGlbStatus('loading');
+    setGlbProgress(0);
 
     const rt = stageRuntimeRef.current;
     if (rt) {
@@ -432,7 +438,13 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       rt.requestRender();
     }
 
-    resolveDedicatedVehicleGLTF(vehicle.id)
+    resolveDedicatedVehicleGLTF(vehicle.id, (loadedBytes, totalBytes) => {
+      if (cancelled) return;
+      if (totalBytes > 0) {
+        const pct = Math.min(99, Math.max(2, Math.round((loadedBytes / totalBytes) * 100)));
+        setGlbProgress(pct);
+      }
+    })
       .then((resolved) => {
         if (cancelled) return;
         const activeRt = stageRuntimeRef.current;
@@ -547,7 +559,9 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
       rt.targetYaw += dx * 0.011;
       rt.targetPitch = THREE.MathUtils.clamp(rt.targetPitch + dy * 0.0022, -0.015, 0.22);
       rt.rollMeters += dx * 0.008;
-      rt.wheelRig?.setDistanceMeters(rt.rollMeters);
+      if (spinWheelsRef.current) {
+        rt.wheelRig?.setDistanceMeters(rt.rollMeters);
+      }
       rt.wheelRig?.setSteeringRadians(THREE.MathUtils.clamp(dx * 0.025, -0.32, 0.32), 0.12);
       rt.requestRender();
       return;
@@ -642,10 +656,18 @@ export const ArenaHero3DStage: React.FC<ArenaHero3DStageProps> = ({
             <span>3D GLB{wheelSplitDetected ? ' · Ruedas Split' : ''}</span>
           </span>
         ) : glbStatus === 'loading' ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#06141d]/90 border border-[#00E5F5]/35 text-[10px] font-bold uppercase tracking-wider text-cyan-200 whitespace-nowrap">
-            <Box size={11} />
-            <span>Cargando 3D GLB…</span>
-          </span>
+          <div className="inline-flex flex-col gap-1 px-2.5 py-1.5 rounded-md bg-[#06141d]/95 border border-[#00E5F5]/45 text-[10px] font-bold uppercase tracking-wider text-cyan-200 whitespace-nowrap shadow-lg">
+            <div className="flex items-center gap-1.5">
+              <Box size={11} className="text-[#00E5F5] animate-pulse" />
+              <span>Cargando 3D GLB{glbProgress > 0 ? ` · ${glbProgress}%` : '…'}</span>
+            </div>
+            <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-800 border border-cyan-500/30">
+              <div
+                className="h-full bg-gradient-to-r from-[#00E5F5] to-amber-400 transition-all duration-150"
+                style={{ width: `${Math.max(8, glbProgress)}%` }}
+              />
+            </div>
+          </div>
         ) : glbStatus === 'pending' ? (
           <button
             type="button"

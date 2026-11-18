@@ -668,12 +668,13 @@
   translate: none;
 }
 
-/* Píldora Driving IQ acoplada arriba a la derecha debajo del selector de cámaras, fuera del eje vial */
+/* Píldora Driving IQ acoplada a la derecha debajo del velocímetro, sin superponerse con el corredor central */
 .dc-mockup5-driving-iq {
-  top: 48px;
+  top: 238px;
   right: 12px;
   left: auto;
   bottom: auto;
+  max-width: 220px;
   transform: none;
   translate: none;
 }
@@ -694,11 +695,11 @@
   }
   .dc-v5-top-center,
   .dc99-race-stage .dc-mockup5-center-header.dc-v5-top-center {
-    left: 320px !important;
-    right: 320px !important;
+    left: 50% !important;
+    right: auto !important;
     translate: none !important;
-    transform: none !important;
-    max-width: none !important;
+    transform: translateX(-50%) !important;
+    max-width: min(560px, calc(100% - 460px)) !important;
   }
   .dc-v5-turn-signals-pod {
     left: 12px !important;
@@ -709,13 +710,13 @@
   }
   .dc-mockup5-driving-iq,
   .dc99-race-stage .dc-mockup5-driving-iq {
-    top: 46px !important;
+    top: 236px !important;
     right: 12px !important;
     left: auto !important;
     bottom: auto !important;
     translate: none !important;
     transform: none !important;
-    max-width: 248px !important;
+    max-width: 220px !important;
   }
 }
 

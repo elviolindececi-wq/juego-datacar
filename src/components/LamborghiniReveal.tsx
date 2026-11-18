@@ -128,9 +128,9 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
       </header>
 
       {/* CUERPO PRINCIPAL: LAYOUT LADO A LADO EN MÓVIL HORIZONTAL Y ESCRITORIO */}
-      <div className="relative z-20 mx-auto my-auto grid w-full max-w-[1320px] grid-cols-1 landscape:grid-cols-12 md:grid-cols-12 gap-2.5 sm:gap-5 px-3 py-1.5 sm:px-8 sm:py-4 items-center">
+      <div className="relative z-20 mx-auto my-auto grid w-full max-w-[1320px] grid-cols-1 [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-12 md:grid-cols-12 gap-2.5 sm:gap-5 px-3 py-1.5 sm:px-8 sm:py-4 items-center">
         {/* COLUMNA IZQUIERDA: Textos obligatorios y objetivos jugables (§6) */}
-        <div className="landscape:col-span-6 md:col-span-5">
+        <div className="[@media(orientation:landscape)_and_(max-height:520px)]:col-span-6 md:col-span-5">
           <div className="rounded-2xl border border-[#FFAA12]/55 bg-[#071320]/95 p-2.5 sm:p-5 shadow-[0_18px_50px_rgba(0,0,0,0.85)]">
             <div className="inline-flex items-center gap-1.5 rounded-md border border-[#FFAA12]/50 bg-[#FFAA12]/15 px-2 py-0.5 text-[9px] sm:text-[10px] font-mono font-black uppercase tracking-[0.18em] text-[#FFAA12]">
               <Sparkles className="h-3 w-3" />
@@ -223,8 +223,8 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
         </div>
 
         {/* COLUMNA DERECHA: Escenario 3D del Hangar con el archivo GLB real `/models/lamborghini-bonus.glb` */}
-        <div className="landscape:col-span-6 md:col-span-7">
-          <div className="relative h-[210px] landscape:h-[calc(100dvh-4.25rem)] sm:h-[400px] lg:h-[440px] w-full overflow-hidden rounded-2xl border-2 border-[#00E5F5]/45 bg-[#050f19] shadow-[0_24px_70px_rgba(0,0,0,0.92)]">
+        <div className="[@media(orientation:landscape)_and_(max-height:520px)]:col-span-6 md:col-span-7">
+          <div className="relative h-[210px] [@media(orientation:landscape)_and_(max-height:520px)]:h-[calc(100dvh-4.25rem)] sm:h-[400px] lg:h-[460px] w-full overflow-hidden rounded-2xl border-2 border-[#00E5F5]/45 bg-[#050f19] shadow-[0_24px_70px_rgba(0,0,0,0.92)]">
             <div
               className="pointer-events-none absolute inset-0 transition-opacity duration-700"
               style={{
@@ -246,6 +246,7 @@ export const LamborghiniReveal: React.FC<LamborghiniRevealProps> = ({
                 <LazyArenaHero3DStage
                   vehicle={PROYECTO_FANTASMA_LAMBORGHINI}
                   pngOnly={false}
+                  spinWheels={false}
                   imageBadgeLabel="MODELO 3D REAL · PROYECTO FANTASMA (lamborghini-bonus.glb)"
                 />
               </Suspense>
